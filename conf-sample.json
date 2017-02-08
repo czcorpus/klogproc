@@ -1,0 +1,15 @@
+{
+    "worklogPath": "/home/tomas/work/go/src/github.com/tomachalek/klogproc/worklog/worklog.txt",
+    "logDir": "/home/tomas/work/data/kontext-logs/klog",
+    "elasticServer": "http://192.168.1.23:9200",
+    "elasticIndex": "cnk-logs-test1",
+    "updates": [
+        {
+            "disabled": "false",
+            "fromDate": "2017-01-01T10:00:00",
+            "toDate": "2017-02-07T10:00:00",
+            "ipAddress": "141.20.212.106",
+            "userAgent": "Mozilla"
+        }
+    ]
+}
