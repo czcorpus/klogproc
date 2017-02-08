@@ -52,16 +52,31 @@ func NewClient(server string, index string) *ESClient {
 
 // UpdateSetAPIFlag sets a (new) attribute "isApi" to "true" for all
 // the matching documents
-func (c *ESClient) UpdateSetAPIFlag(conf APIFlagUpdateConf) ([]byte, error) {
+func (c *ESClient) UpdateSetAPIFlag(conf APIFlagUpdateConf) ([]UpdResponse, error) {
 	if !conf.Disabled {
-		ans, err := CreateClientSrchQuery(conf.FromDate, conf.ToDate, conf.IPAddress, conf.UserAgent)
-		if err == nil {
-			fmt.Println("Q: ", string(ans))
-			return c.Do("GET", "/"+c.index+"/_search", ans)
+		items, err := c.SearchForAgents(conf)
+		if err != nil {
+			return make([]UpdResponse, 0), err
 		}
-		return make([]byte, 0), err
+		responses := make([]UpdResponse, len(items.Hits.Hits))
+		for i, item := range items.Hits.Hits {
+			updQuery, err := CreateClientAPIFlagUpdQuery()
+			if err != nil {
+				return responses[:i], err
+			}
+			ans, err2 := c.Do("POST", "/"+c.index+"/"+item.Type+"/"+item.ID+"/_update", updQuery)
+			if err2 != nil {
+				return responses[:i], err2
+			}
+			var respObj UpdResponse
+			if err3 := json.Unmarshal(ans, &respObj); err != nil {
+				return responses[:i], err3
+			}
+			responses[i] = respObj
+		}
+		return responses, err
 	}
-	return make([]byte, 0), nil
+	return make([]UpdResponse, 0), nil
 }
 
 // Do sends a general request to ElasticSearch server where
@@ -98,7 +113,6 @@ func (c *ESClient) Search(query []byte) (Result, error) {
 		return srchResult, err2
 	}
 	return NewEmptyResult(), err2
-
 }
 
 func (c *ESClient) SearchForAgents(conf APIFlagUpdateConf) (Result, error) {

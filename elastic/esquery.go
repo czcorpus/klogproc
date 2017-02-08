@@ -82,18 +82,26 @@ type APIFlagUpdateConf struct {
 
 // ------------------ record update -------------------
 
-/*
-TODO:
-
-partial update;
-POST /website/blog/1/_update
-{
-   "doc" : {
-      "tags" : [ "testing" ],
-      "views": 0
-   }
+type docUpdObj struct {
+	Doc docRecord `json:"doc"`
 }
-*/
+
+func (duo *docUpdObj) ToJSONQuery() ([]byte, error) {
+	return json.Marshal(duo)
+}
+
+type docRecord struct {
+	IsAPI bool `json:"isAPI"`
+}
+
+type UpdResponse struct {
+	Index   string      `json:"_index"`
+	Type    string      `json:"_type"`
+	ID      string      `json:"_id"`
+	Version int         `json:"_version"`
+	Result  string      `json:"result"`
+	Shards  interface{} `json:"_shards"` // we don't care much about this (yet)
+}
 
 // ----------------- result -------------------------
 
@@ -102,7 +110,7 @@ type ResultHit struct {
 	Index  string      `json:"_index"`
 	Type   string      `json:"_type"`
 	ID     string      `json:"_id"`
-	Score  string      `json:"_score"`
+	Score  float32     `json:"_score"`
 	Source interface{} `json:"_source"`
 }
 
@@ -143,4 +151,9 @@ func CreateClientSrchQuery(fromDate string, toDate string, ipAddress string, use
 	}
 	q := srchQuery{Query: query{Bool: m}}
 	return q.ToJSONQuery()
+}
+
+func CreateClientAPIFlagUpdQuery() ([]byte, error) {
+	d := docUpdObj{Doc: docRecord{IsAPI: true}}
+	return d.ToJSONQuery()
 }

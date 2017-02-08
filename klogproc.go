@@ -50,7 +50,13 @@ func updateIsAPIStatus(conf *Conf) {
 	client := elastic.NewClient(conf.ElasticServer, conf.ElasticIndex)
 	for _, updConf := range conf.Updates {
 		ans, err := client.UpdateSetAPIFlag(updConf)
-		fmt.Printf("CLIENT resp - ans: [%s], err: [%s]\n", ans, err)
+		if err == nil {
+			fmt.Printf("Updated %d items\n", len(ans))
+
+		} else {
+			fmt.Println("Update error: ", err)
+		}
+
 	}
 }
 
