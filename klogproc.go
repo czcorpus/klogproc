@@ -18,8 +18,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/tomachalek/klogproc/elastic"
-	"github.com/tomachalek/klogproc/logs"
+	"github.com/czcorpus/klogproc/elastic"
+	"github.com/czcorpus/klogproc/logs"
 	"io/ioutil"
 )
 
