@@ -63,6 +63,8 @@ type query struct {
 
 type srchQuery struct {
 	Query query `json:"query"`
+	From  int   `json:"from"`
+	Size  int   `json:"size"`
 }
 
 func (sq *srchQuery) ToJSONQuery() ([]byte, error) {
@@ -94,6 +96,17 @@ type docRecord struct {
 	IsAPI bool `json:"isAPI"`
 }
 
+type docBulkUpdateMetaObj struct {
+	Update docBulkMetaRecord `json:"update"`
+}
+
+type docBulkMetaRecord struct {
+	// "/"+c.index+"/"+item.Type+"/"+item.ID+"/_update", updQuery)
+	Index string `json:"_index"`
+	Type  string `json:"_type"`
+	ID    string `json:"_id"`
+}
+
 type UpdResponse struct {
 	Index   string      `json:"_index"`
 	Type    string      `json:"_type"`
@@ -101,6 +114,13 @@ type UpdResponse struct {
 	Version int         `json:"_version"`
 	Result  string      `json:"result"`
 	Shards  interface{} `json:"_shards"` // we don't care much about this (yet)
+}
+
+// ----------------- scroll -------------------------
+
+type scrollObj struct {
+	Scroll   string `json:"scroll"`
+	ScrollID string `json:"scroll_id"`
 }
 
 // ----------------- result -------------------------
@@ -123,6 +143,7 @@ type Hits struct {
 
 // Result represents an ElasticSearch query result object
 type Result struct {
+	ScrollID string      `json:"_scroll_id"`
 	Took     int         `json:"took"`
 	TimedOut bool        `json:"timed_out"`
 	Shards   interface{} `json:"_shards"`
@@ -134,10 +155,23 @@ func NewEmptyResult() Result {
 	return Result{Hits: Hits{Total: 0}}
 }
 
+// ------------------------- error response -------------------
+
+type ErrorResult struct {
+	RootCause []interface{} `json:"root_cause"`
+	Type      string        `json:"type"`
+	Reason    string        `json:"string"`
+}
+
+type ErrorResultObj struct {
+	Error  ErrorResult `json:"error"`
+	Status int         `json:"status"`
+}
+
 // CreateClientSrchQuery generates a JSON-encoded query for ElastiSearch to
 // find documents matching specified datetime range, optional IP
 // address and optional userAgent substring/pattern
-func CreateClientSrchQuery(fromDate string, toDate string, ipAddress string, userAgent string) ([]byte, error) {
+func CreateClientSrchQuery(fromDate string, toDate string, ipAddress string, userAgent string, chunkSize int) ([]byte, error) {
 	m := boolObj{Must: make([]interface{}, 1)}
 	dateInterval := datetimeRangeExpr{From: fromDate, To: toDate}
 	m.Must[0] = &rangeObj{Range: datetimeRangeQuery{Datetime: dateInterval}}
@@ -149,11 +183,17 @@ func CreateClientSrchQuery(fromDate string, toDate string, ipAddress string, use
 		userAgentObj := userAgentMatchObj{userAgentExpr{UserAgent: userAgent}}
 		m.Must = append(m.Must, userAgentObj)
 	}
-	q := srchQuery{Query: query{Bool: m}}
+	q := srchQuery{Query: query{Bool: m}, From: 0, Size: chunkSize}
 	return q.ToJSONQuery()
 }
 
 func CreateClientAPIFlagUpdQuery() ([]byte, error) {
 	d := docUpdObj{Doc: docRecord{IsAPI: true}}
 	return d.ToJSONQuery()
+}
+
+func CreateDocBulkMetaRecord(index string, objType string, id string) ([]byte, error) {
+	d := docBulkMetaRecord{Index: index, Type: objType, ID: id}
+	obj := docBulkUpdateMetaObj{Update: d}
+	return json.Marshal(obj)
 }

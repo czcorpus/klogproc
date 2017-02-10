@@ -3,6 +3,8 @@
     "logDir": "/home/tomas/work/data/kontext-logs/klog",
     "elasticServer": "http://192.168.1.23:9200",
     "elasticIndex": "cnk-logs-test1",
+    "elasticSearchChunkSize": 10,
+    "elasticScrollTtl": "3m",
     "updates": [
         {
             "disabled": "false",
