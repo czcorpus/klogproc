@@ -23,12 +23,24 @@ import (
 	"io/ioutil"
 )
 
+// Conf describes klogproc's configuration
 type Conf struct {
-	WorklogPath   string                      `json:"worklogPath"`
-	LogDir        string                      `json:"logDir"`
-	ElasticServer string                      `json:"elasticServer"`
-	ElasticIndex  string                      `json:"elasticIndex"`
-	Updates       []elastic.APIFlagUpdateConf `json:"updates"`
+	WorklogPath            string                      `json:"worklogPath"`
+	LogDir                 string                      `json:"logDir"`
+	ElasticServer          string                      `json:"elasticServer"`
+	ElasticIndex           string                      `json:"elasticIndex"`
+	ElasticSearchChunkSize int                         `json:"elasticSearchChunkSize"`
+	Updates                []elastic.APIFlagUpdateConf `json:"updates"`
+	ElasticScrollTTL       string                      `json:"elasticScrollTtl"`
+}
+
+func validateConf(conf *Conf) {
+	if conf.ElasticSearchChunkSize < 1 {
+		panic("elasticSearchChunkSize must be >= 1")
+	}
+	if conf.ElasticScrollTTL == "" {
+		panic("elasticScrollTtl must be a valid ElasticSearch scroll arg value (e.g. '2m', '30s')")
+	}
 }
 
 func processLogs(conf *Conf) {
@@ -47,11 +59,11 @@ func processLogs(conf *Conf) {
 }
 
 func updateIsAPIStatus(conf *Conf) {
-	client := elastic.NewClient(conf.ElasticServer, conf.ElasticIndex)
+	client := elastic.NewClient(conf.ElasticServer, conf.ElasticIndex, conf.ElasticSearchChunkSize)
 	for _, updConf := range conf.Updates {
-		ans, err := client.UpdateSetAPIFlag(updConf)
+		totalUpdated, err := client.BulkUpdateSetAPIFlag(conf.ElasticIndex, updConf, conf.ElasticScrollTTL)
 		if err == nil {
-			fmt.Printf("Updated %d items\n", len(ans))
+			fmt.Printf("Updated %d items", totalUpdated)
 
 		} else {
 			fmt.Println("Update error: ", err)
@@ -84,6 +96,7 @@ func main() {
 
 	} else if len(flag.Args()) == 2 {
 		conf := loadConfig(flag.Arg(1))
+		validateConf(conf)
 		switch flag.Arg(0) {
 		case "setapiflag":
 			updateIsAPIStatus(conf)
