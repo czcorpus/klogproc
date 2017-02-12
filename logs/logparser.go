@@ -17,7 +17,8 @@ package logs
 import (
 	"bufio"
 	"encoding/json"
-	// "fmt"
+	"fmt"
+	"net"
 	"os"
 	"regexp"
 	"time"
@@ -26,6 +27,7 @@ import (
 type Request struct {
 	HTTPForwardedFor string `json:"HTTP_X_FORWARDED_FOR"`
 	HTTPUserAgent    string `json:"HTTP_USER_AGENT"`
+	HTTPRemoteAddr   string `json:"HTTP_REMOTE_ADDR"`
 }
 
 type LogRecord struct {
@@ -44,6 +46,20 @@ func (rec *LogRecord) GetTime() time.Time {
 	return time.Time{}
 }
 
+func (rec *LogRecord) GetClientIP() net.IP {
+	if rec.Request.HTTPForwardedFor != "" {
+		return net.ParseIP(rec.Request.HTTPForwardedFor)
+
+	} else if rec.Request.HTTPUserAgent != "" {
+		return net.ParseIP(rec.Request.HTTPRemoteAddr)
+	}
+	return make([]byte, 0)
+}
+
+type LogInterceptor interface {
+	ProcItem(appType string, record *LogRecord)
+}
+
 func parseRawLine(s string) string {
 	reg := regexp.MustCompile("^.+\\sINFO:\\s+(\\{.+)$")
 	srch := reg.FindStringSubmatch(s)
@@ -53,32 +69,48 @@ func parseRawLine(s string) string {
 	return ""
 }
 
-func NewParser(path string) *Parser {
-	f, err := os.Open(path)
-	if err == nil {
-		sc := bufio.NewScanner(f)
-		return &Parser{fr: sc}
+func importDatetimeString(dateStr string, localTimezone string) string {
+	rg := regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2})\\s([012]\\d:[0-5]\\d:[0-5]\\d\\.\\d+)")
+	srch := rg.FindStringSubmatch(dateStr)
+	if len(srch) > 0 {
+		return fmt.Sprintf("%sT%s%s", srch[1], srch[2], localTimezone)
 	}
-	panic(err)
+	return ""
+}
+
+func NewParser(path string, geoIPPath string, localTimezone string) *Parser {
+	f, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+	if err != nil {
+		panic(err)
+	}
+	sc := bufio.NewScanner(f)
+	return &Parser{fr: sc, localTimezone: localTimezone}
 }
 
 type Parser struct {
-	fr *bufio.Scanner
+	fr            *bufio.Scanner
+	localTimezone string
 }
 
-func (p *Parser) parseLine(s string) {
+func (p *Parser) parseLine(s string, recType string, proc LogInterceptor) {
 	jsonLine := parseRawLine(s)
+	//fmt.Println("LINE: ", jsonLine)
 	if jsonLine != "" {
 		var record LogRecord
 		err := json.Unmarshal([]byte(jsonLine), &record)
 		if err == nil {
-			//fmt.Println(record)
+			record.Date = importDatetimeString(record.Date, p.localTimezone)
+			proc.ProcItem(recType, &record)
 		}
 	}
 }
 
-func (p *Parser) Parse(fromTimestamp int) {
+func (p *Parser) Parse(fromTimestamp int, recType string, proc LogInterceptor) {
+	fmt.Println("parsing from timestamp: ", fromTimestamp)
 	for p.fr.Scan() {
-		p.parseLine(p.fr.Text())
+		p.parseLine(p.fr.Text(), recType, proc)
 	}
 }

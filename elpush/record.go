@@ -14,9 +14,107 @@
 
 package elpush
 
+import (
+	"crypto/sha1"
+	"encoding/hex"
+	// "fmt"
+	"encoding/json"
+	"fmt"
+	"github.com/czcorpus/klogproc/logs"
+	"net/url"
+	"strconv"
+	"strings"
+)
+
+func importQueryType(recordParams map[string]string) string {
+	switch recordParams["queryselector"] {
+	case "iqueryrow":
+		return "basic"
+	case "lemmarow":
+		return "lemma"
+	case "phraserow":
+		return "phrase"
+	case "wordrow":
+		return "word"
+	case "charrow":
+		return "char"
+	case "cqlrow":
+		return "cql"
+	default:
+		return ""
+	}
+}
+
+type GeoDataRecord struct {
+	ContinentCode string     `json:"continent_code"`
+	CountryCode2  string     `json:"country_code2"`
+	CountryCode3  string     `json:"country_code3"`
+	CountryName   string     `json:"country_name"`
+	IP            string     `json:"ip"`
+	Latitude      float32    `json:"latitude"`
+	Longitude     float32    `json:"longitude"`
+	Location      [2]float32 `json:"location"`
+	Timezone      string     `json:"timezone"`
+}
+
 type CNKRecord struct {
-	ID   string `json:"_id"`
-	Type string `json:"_type"`
+	ID          string        `json:"_id"`
+	Type        string        `json:"_type"`
+	Action      string        `json:"action"`
+	Corpus      string        `json:"corpus"`
+	Datetime    string        `json:"datetime"`
+	IPAddress   string        `json:"ipAddress"`
+	IsAnonymous bool          `json:"isAnonymous"`
+	IsQuery     bool          `json:"isQuery"`
+	Limited     bool          `json:"limited"`
+	ProcTime    float32       `json:"procTime"`
+	QueryType   string        `json:"queryType"`
+	Type2       string        `json:"type"` // TODO do we need this?
+	UserAgent   string        `json:"userAgent"`
+	UserID      int           `json:"userId"`
+	GeoIP       GeoDataRecord `json:"geoip"`
+}
+
+func (cnkr *CNKRecord) ToJSON() ([]byte, error) {
+	return json.Marshal(cnkr)
+}
+
+// TODO do we need this?
+type CNKRecordError struct {
+	Message string
+	Cause   error
+}
+
+func (cnkre *CNKRecordError) Error() string {
+	return fmt.Sprintf("CNKRecordError: %s", cnkre.Message)
+}
+
+// New creates a new CNKRecord out of an existing LogRecord
+func New(logRecord *logs.LogRecord, recType string) *CNKRecord {
+	fullCorpname := importCorpname(logRecord)
+	r := &CNKRecord{
+		Type:      recType,
+		Action:    logRecord.Action,
+		Corpus:    fullCorpname.Corpname,
+		Limited:   fullCorpname.limited,
+		QueryType: importQueryType(logRecord.Params),
+		UserID:    logRecord.UserID,
+		Datetime:  logRecord.Date,
+	}
+	r.ID = createID(r)
+	return r
+}
+
+type fullCorpname struct {
+	Corpname string
+	limited  bool
+}
+
+func createID(cnkr *CNKRecord) string {
+	str := cnkr.Action + cnkr.Corpus + cnkr.Datetime + cnkr.IPAddress +
+		cnkr.Type + cnkr.UserAgent + strconv.Itoa(cnkr.UserID)
+	sum := sha1.Sum([]byte(str))
+	return hex.EncodeToString(sum[:])
 }
 
 func isEntryQuery(action string) bool {
@@ -27,4 +125,24 @@ func isEntryQuery(action string) bool {
 		}
 	}
 	return false
+}
+
+func importCorpname(record *logs.LogRecord) fullCorpname {
+	var corpname string
+	var limited bool
+
+	if record.Params["corpname"] != "" {
+		corpname = record.Params["corpname"]
+		corpname, _ = url.QueryUnescape(corpname)
+		corpname = strings.Split(corpname, ";")[0]
+		if strings.Index(corpname, "omezeni/") == 0 {
+			corpname = corpname[len("omezeni/"):]
+			limited = true
+
+		} else {
+			limited = false
+		}
+		return fullCorpname{corpname, limited}
+	}
+	return fullCorpname{}
 }
