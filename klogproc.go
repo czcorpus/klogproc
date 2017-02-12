@@ -19,19 +19,21 @@ import (
 	"flag"
 	"fmt"
 	"github.com/czcorpus/klogproc/elastic"
-	"github.com/czcorpus/klogproc/logs"
 	"io/ioutil"
 )
 
 // Conf describes klogproc's configuration
 type Conf struct {
 	WorklogPath            string                      `json:"worklogPath"`
+	AppType                string                      `json:"appType"`
 	LogDir                 string                      `json:"logDir"`
 	ElasticServer          string                      `json:"elasticServer"`
 	ElasticIndex           string                      `json:"elasticIndex"`
 	ElasticSearchChunkSize int                         `json:"elasticSearchChunkSize"`
 	Updates                []elastic.APIFlagUpdateConf `json:"updates"`
 	ElasticScrollTTL       string                      `json:"elasticScrollTtl"`
+	GeoIPDbPath            string                      `json:"geoIpDbPath"`
+	LocalTimezone          string                      `json:"localTimezone"`
 }
 
 func validateConf(conf *Conf) {
@@ -40,21 +42,6 @@ func validateConf(conf *Conf) {
 	}
 	if conf.ElasticScrollTTL == "" {
 		panic("elasticScrollTtl must be a valid ElasticSearch scroll arg value (e.g. '2m', '30s')")
-	}
-}
-
-func processLogs(conf *Conf) {
-	worklog, err := logs.LoadWorklog(conf.WorklogPath)
-	if err != nil {
-		panic(err)
-	}
-	last := worklog.FindLastRecord()
-	fmt.Println(worklog, last)
-	files := logs.GetFilesInDir(conf.LogDir)
-	fmt.Println("FILES: ", files)
-	for _, file := range files {
-		p := logs.NewParser(file)
-		p.Parse(last)
 	}
 }
 
@@ -101,7 +88,7 @@ func main() {
 		case "setapiflag":
 			updateIsAPIStatus(conf)
 		case "proclogs":
-			processLogs(conf)
+			ProcessLogs(conf)
 		}
 
 	} else {
