@@ -21,6 +21,7 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -54,6 +55,28 @@ func (rec *LogRecord) GetClientIP() net.IP {
 		return net.ParseIP(rec.Request.HTTPRemoteAddr)
 	}
 	return make([]byte, 0)
+}
+
+func (rec *LogRecord) AgentIsBot() bool {
+	agentStr := strings.ToLower(rec.Request.HTTPUserAgent)
+	return strings.Index(agentStr, "googlebot") > -1 ||
+		strings.Index(agentStr, "ahrefsbot") > -1 ||
+		strings.Index(agentStr, "yandexbot") > -1 ||
+		strings.Index(agentStr, "yahoo") > -1 && strings.Index(agentStr, "slurp") > -1 ||
+		strings.Index(agentStr, "baiduspider") > -1 ||
+		strings.Index(agentStr, "seznambot") > -1 ||
+		strings.Index(agentStr, "bingbot") > -1 ||
+		strings.Index(agentStr, "megaindex.ru") > -1
+}
+
+func (rec *LogRecord) AgentIsMonitor() bool {
+	agentStr := strings.ToLower(rec.Request.HTTPUserAgent)
+	return strings.Index(agentStr, "python-urllib/2.7") > -1 ||
+		strings.Index(agentStr, "zabbix-test") > -1
+}
+
+func (rec *LogRecord) AgentIsHuman() bool {
+	return !rec.AgentIsBot() && !rec.AgentIsMonitor()
 }
 
 type LogInterceptor interface {
