@@ -20,10 +20,11 @@ import (
 	// "fmt"
 	"encoding/json"
 	"fmt"
-	"github.com/czcorpus/klogproc/logs"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/czcorpus/klogproc/logs"
 )
 
 func importQueryType(recordParams map[string]string) string {
@@ -96,10 +97,16 @@ func New(logRecord *logs.LogRecord, recType string) *CNKRecord {
 		Type:      recType,
 		Action:    logRecord.Action,
 		Corpus:    fullCorpname.Corpname,
-		Limited:   fullCorpname.limited,
-		QueryType: importQueryType(logRecord.Params),
-		UserID:    logRecord.UserID,
 		Datetime:  logRecord.Date,
+		IPAddress: logRecord.GetClientIP().String(),
+		// IsAnonymous - not set here
+		IsQuery:   isEntryQuery(logRecord.Action),
+		Limited:   fullCorpname.limited,
+		ProcTime:  logRecord.ProcTime,
+		QueryType: importQueryType(logRecord.Params),
+		Type2:     recType,
+		UserAgent: logRecord.Request.HTTPUserAgent,
+		UserID:    logRecord.UserID,
 	}
 	r.ID = createID(r)
 	return r

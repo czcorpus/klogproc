@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"regexp"
@@ -75,7 +76,7 @@ func (rec *LogRecord) AgentIsMonitor() bool {
 		strings.Index(agentStr, "zabbix-test") > -1
 }
 
-func (rec *LogRecord) AgentIsHuman() bool {
+func (rec *LogRecord) AgentIsLoggable() bool {
 	return !rec.AgentIsBot() && !rec.AgentIsMonitor()
 }
 
@@ -85,6 +86,15 @@ type LogInterceptor interface {
 
 func parseRawLine(s string) string {
 	reg := regexp.MustCompile("^.+\\sINFO:\\s+(\\{.+)$")
+	srch := reg.FindStringSubmatch(s)
+	if srch != nil {
+		return srch[1]
+	}
+	return ""
+}
+
+func getLineType(s string) string {
+	reg := regexp.MustCompile("^.+\\s([A-Z]+):\\s+.+$")
 	srch := reg.FindStringSubmatch(s)
 	if srch != nil {
 		return srch[1]
@@ -128,6 +138,9 @@ func (p *Parser) parseLine(s string, recType string, proc LogInterceptor) {
 			record.Date = importDatetimeString(record.Date, p.localTimezone)
 			proc.ProcItem(recType, &record)
 		}
+
+	} else if tp := getLineType(s); tp == "QUERY" {
+		log.Printf("Failed to process QUERY entry: %s", s)
 	}
 }
 

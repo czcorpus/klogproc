@@ -16,41 +16,55 @@ package main
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/czcorpus/klogproc/elpush"
 	"github.com/czcorpus/klogproc/logs"
 	"github.com/oschwald/geoip2-golang"
 )
 
 type CNKLogProcessor struct {
-	geoIPDb *geoip2.Reader
+	geoIPDb   *geoip2.Reader
+	chunk     chan *elpush.CNKRecord
+	chunkSize int
+	currIdx   int
 }
 
+// ProcItem is a callback function called by log parser
 func (clp *CNKLogProcessor) ProcItem(appType string, record *logs.LogRecord) {
-	rec := elpush.New(record, appType)
-	ip := record.GetClientIP()
-	city, err := clp.geoIPDb.City(ip)
-	//fmt.Println("CITY: ", city.Country.Names["en"])
-	if err != nil {
-		// TODO create error record
+	if record.AgentIsLoggable() {
+		rec := elpush.New(record, appType)
+		ip := record.GetClientIP()
+		if ip != nil {
+			city, err := clp.geoIPDb.City(ip)
+			if err != nil {
+				log.Printf("Failed to fetch GeoIP data for IP %s: %s", ip.String(), err)
 
-	} else {
-		rec.GeoIP.IP = ip.String()
-		rec.GeoIP.CountryName = city.Country.Names["en"]
-		rec.GeoIP.Latitude = float32(city.Location.Latitude)
-		rec.GeoIP.Longitude = float32(city.Location.Longitude)
-		rec.GeoIP.Location[0] = rec.GeoIP.Latitude
-		rec.GeoIP.Location[1] = rec.GeoIP.Longitude
-		rec.GeoIP.Timezone = city.Location.TimeZone
-	}
-	out, err := rec.ToJSON()
-	if err == nil {
-		fmt.Println("DATA ", string(out))
-
-	} else {
-		fmt.Println("ERROR: ", err)
+			} else {
+				rec.GeoIP.IP = ip.String()
+				rec.GeoIP.CountryName = city.Country.Names["en"]
+				rec.GeoIP.Latitude = float32(city.Location.Latitude)
+				rec.GeoIP.Longitude = float32(city.Location.Longitude)
+				rec.GeoIP.Location[0] = rec.GeoIP.Latitude
+				rec.GeoIP.Location[1] = rec.GeoIP.Longitude
+				rec.GeoIP.Timezone = city.Location.TimeZone
+			}
+		}
+		clp.chunk <- rec
 	}
 }
 
+func pushDataToElastic(data [][]byte) {
+	fmt.Println("SENDING chunk...", len(data))
+	// TODO
+}
+
+// ProcessLogs runs through all the logs found in configuration and matching
+// some basic properties (it is a query, preferably from a human user etc.).
+// The "producer" part of the processing runs in a separate goroutine while
+// the main goroutine consumes values via a channel and after each
+// n-th (conf.ElasticPushChunkSize) item it stores data to the ElasticSearch
+// server.
 func ProcessLogs(conf *Conf) {
 	worklog, err := logs.LoadWorklog(conf.WorklogPath)
 	if err != nil {
@@ -64,10 +78,39 @@ func ProcessLogs(conf *Conf) {
 		panic(err)
 	}
 	defer geoDb.Close()
-	processor := &CNKLogProcessor{geoIPDb: geoDb}
-	files := logs.GetFilesInDir(conf.LogDir)
-	for _, file := range files {
-		p := logs.NewParser(file, conf.GeoIPDbPath, conf.LocalTimezone)
-		p.Parse(last, conf.AppType, processor)
+
+	chunkChannel := make(chan *elpush.CNKRecord, conf.ElasticPushChunkSize)
+	go func() {
+		processor := &CNKLogProcessor{
+			geoIPDb:   geoDb,
+			chunk:     chunkChannel,
+			chunkSize: conf.ElasticPushChunkSize,
+		}
+
+		files := logs.GetFilesInDir(conf.LogDir)
+		for _, file := range files {
+			p := logs.NewParser(file, conf.GeoIPDbPath, conf.LocalTimezone)
+			p.Parse(last, conf.AppType, processor)
+		}
+		close(chunkChannel)
+	}()
+
+	i := 0
+	data := make([][]byte, conf.ElasticPushChunkSize)
+	for v := range chunkChannel {
+		fmt.Println(v.ID)
+		jsonData, err := v.ToJSON()
+		if err == nil {
+			data[i] = jsonData
+			i++
+
+		} else {
+			log.Print("Failed to encode item ", v.Datetime)
+		}
+		if i == conf.ElasticPushChunkSize {
+			pushDataToElastic(data)
+			i = 0
+		}
 	}
+	pushDataToElastic(data[:i])
 }
