@@ -35,6 +35,11 @@ func GetFilesInDir(dirPath string) []string {
 	return []string{}
 }
 
+func WorklogExists(s string) bool {
+	_, err := os.Stat(s)
+	return !os.IsNotExist(err)
+}
+
 type Worklog struct {
 	reader *bufio.Scanner
 	writer *bufio.Writer
@@ -58,12 +63,20 @@ func (w *Worklog) FindLastRecord() int {
 
 func LoadWorklog(path string) (*Worklog, error) {
 	var ans *Worklog
-	f, err := os.Open(path)
-	if err == nil {
-		ans = &Worklog{reader: bufio.NewScanner(f)}
+	var err error
+
+	if WorklogExists(path) {
+		f, err := os.Open(path)
+		if err == nil {
+			ans = &Worklog{reader: bufio.NewScanner(f)}
+
+		} else {
+			ans = &Worklog{}
+		}
 
 	} else {
-		ans = &Worklog{reader: nil}
+		ans = &Worklog{}
+		err = nil
 	}
 	return ans, err
 }
