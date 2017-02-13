@@ -16,13 +16,14 @@ package elpush
 
 import (
 	"fmt"
-	"github.com/czcorpus/klogproc/logs"
 	"testing"
+
+	"github.com/czcorpus/klogproc/logs"
 )
 
 // cnkr.Action + cnkr.Corpus + cnkr.Datetime + cnkr.IPAddress + cnkr.Type + cnkr.UserAgent + cnkr.UserID
-func createRecord() CNKRecord {
-	return CNKRecord{
+func createRecord() *CNKRecord {
+	return &CNKRecord{
 		ID:          "abcdef",
 		Type:        "kontext",
 		Action:      "view",
@@ -36,7 +37,7 @@ func createRecord() CNKRecord {
 		QueryType:   "cql",
 		Type2:       "kontext",
 		UserAgent:   "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:51.0) Gecko/20100101 Firefox/51.0",
-		UserID:      "100",
+		UserID:      100,
 		GeoIP: GeoDataRecord{
 			CountryCode2: "CZ",
 			CountryName:  "Czech Republic",
@@ -50,8 +51,8 @@ func createRecord() CNKRecord {
 
 func TestCreateID(t *testing.T) {
 	rec := createRecord()
-	fmt.Println("HASH: ", rec.CreateID())
-	if rec.CreateID() != "2452d6c39ddd4dfcba2df61e1115511e547c09af" {
+	fmt.Println("HASH: ", createID(rec))
+	if createID(rec) != "2452d6c39ddd4dfcba2df61e1115511e547c09af" {
 		t.Error("Hash match error")
 	}
 }
@@ -59,7 +60,7 @@ func TestCreateID(t *testing.T) {
 func TestImportCorpname(t *testing.T) {
 	p := make(map[string]string)
 	p["corpname"] = "omezeni/foobar7;x=10"
-	r := logs.LogRecord{Params: p}
+	r := &logs.LogRecord{Params: p}
 	c := importCorpname(r)
 	if c.Corpname != "foobar7" || c.limited != true {
 		t.Error("Failed import corpname: ", c)
