@@ -18,8 +18,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/czcorpus/klogproc/elastic"
 	"io/ioutil"
+
+	"github.com/czcorpus/klogproc/elastic"
 )
 
 // Conf describes klogproc's configuration
@@ -34,11 +35,16 @@ type Conf struct {
 	ElasticScrollTTL       string                      `json:"elasticScrollTtl"`
 	GeoIPDbPath            string                      `json:"geoIpDbPath"`
 	LocalTimezone          string                      `json:"localTimezone"`
+	AnonymousUsers         int                         `json:"anonymousUsers"`
+	ElasticPushChunkSize   int                         `json:"elasticPushChunkSize"`
 }
 
 func validateConf(conf *Conf) {
 	if conf.ElasticSearchChunkSize < 1 {
 		panic("elasticSearchChunkSize must be >= 1")
+	}
+	if conf.AppType == "" {
+		panic("Application type not set")
 	}
 	if conf.ElasticScrollTTL == "" {
 		panic("elasticScrollTtl must be a valid ElasticSearch scroll arg value (e.g. '2m', '30s')")
