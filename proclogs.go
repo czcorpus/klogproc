@@ -55,6 +55,11 @@ func (clp *CNKLogProcessor) ProcItem(appType string, record *logs.LogRecord) {
 }
 
 func pushDataToElastic(data [][]byte) {
+	fmt.Println("PUSH DATA TO ELASTIC:...")
+	for i := 0; i < len(data); i += 2 {
+		fmt.Println("M: ", string(data[i]))
+		fmt.Println("D: ", string(data[i+1]))
+	}
 	fmt.Println("SENDING chunk...", len(data))
 	// TODO
 }
@@ -79,7 +84,7 @@ func ProcessLogs(conf *Conf) {
 	}
 	defer geoDb.Close()
 
-	chunkChannel := make(chan *elpush.CNKRecord, conf.ElasticPushChunkSize)
+	chunkChannel := make(chan *elpush.CNKRecord, conf.ElasticPushChunkSize*2)
 	go func() {
 		processor := &CNKLogProcessor{
 			geoIPDb:   geoDb,
@@ -96,18 +101,21 @@ func ProcessLogs(conf *Conf) {
 	}()
 
 	i := 0
-	data := make([][]byte, conf.ElasticPushChunkSize)
+	data := make([][]byte, conf.ElasticPushChunkSize*2+i)
 	for v := range chunkChannel {
 		fmt.Println(v.ID)
 		jsonData, err := v.ToJSON()
-		if err == nil {
+		jsonMeta := elpush.CNKRecordMeta{ID: v.ID, Type: v.Type, Index: conf.ElasticIndex}
+		jsonMetaES, err2 := (&elpush.ElasticCNKRecordMeta{Index: jsonMeta}).ToJSON()
+		if err == nil && err2 == nil {
 			data[i] = jsonData
-			i++
+			data[i+1] = jsonMetaES
+			i += 2
 
 		} else {
 			log.Print("Failed to encode item ", v.Datetime)
 		}
-		if i == conf.ElasticPushChunkSize {
+		if i == conf.ElasticPushChunkSize*2 {
 			pushDataToElastic(data)
 			i = 0
 		}

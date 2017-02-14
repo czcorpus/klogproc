@@ -58,9 +58,23 @@ type GeoDataRecord struct {
 	Timezone      string     `json:"timezone"`
 }
 
+type CNKRecordMeta struct {
+	Index string `json:"_index"`
+	ID    string `json:"_id"`
+	Type  string `json:"_type"`
+}
+
+type ElasticCNKRecordMeta struct {
+	Index CNKRecordMeta `json:"index"`
+}
+
+func (ecrm *ElasticCNKRecordMeta) ToJSON() ([]byte, error) {
+	return json.Marshal(ecrm)
+}
+
 type CNKRecord struct {
-	ID          string        `json:"_id"`
-	Type        string        `json:"_type"`
+	ID          string        `json:"-"`
+	Type        string        `json:"-"`
 	Action      string        `json:"action"`
 	Corpus      string        `json:"corpus"`
 	Datetime    string        `json:"datetime"`

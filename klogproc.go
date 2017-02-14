@@ -49,6 +49,9 @@ func validateConf(conf *Conf) {
 	if conf.ElasticScrollTTL == "" {
 		panic("elasticScrollTtl must be a valid ElasticSearch scroll arg value (e.g. '2m', '30s')")
 	}
+	if conf.ElasticPushChunkSize == 0 {
+		panic("elasticPushChunkSize is missing")
+	}
 }
 
 func updateIsAPIStatus(conf *Conf) {
