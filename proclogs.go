@@ -57,8 +57,8 @@ func (clp *CNKLogProcessor) ProcItem(appType string, record *logs.LogRecord) {
 func pushDataToElastic(data [][]byte) {
 	fmt.Println("PUSH DATA TO ELASTIC:...")
 	for i := 0; i < len(data); i += 2 {
-		fmt.Println("M: ", string(data[i]))
-		fmt.Println("D: ", string(data[i+1]))
+		//fmt.Println("M: ", string(data[i]))
+		//fmt.Println("D: ", string(data[i+1]))
 	}
 	fmt.Println("SENDING chunk...", len(data))
 	// TODO
@@ -76,7 +76,7 @@ func ProcessLogs(conf *Conf) {
 		panic(err)
 	}
 	last := worklog.FindLastRecord()
-	fmt.Println(worklog, last)
+	fmt.Println("LAST RECORD: ", worklog, last)
 
 	geoDb, err := geoip2.Open(conf.GeoIPDbPath)
 	if err != nil {
