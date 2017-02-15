@@ -25,18 +25,19 @@ import (
 
 // Conf describes klogproc's configuration
 type Conf struct {
-	WorklogPath            string                      `json:"worklogPath"`
-	AppType                string                      `json:"appType"`
-	LogDir                 string                      `json:"logDir"`
-	ElasticServer          string                      `json:"elasticServer"`
-	ElasticIndex           string                      `json:"elasticIndex"`
-	ElasticSearchChunkSize int                         `json:"elasticSearchChunkSize"`
-	Updates                []elastic.APIFlagUpdateConf `json:"updates"`
-	ElasticScrollTTL       string                      `json:"elasticScrollTtl"`
-	GeoIPDbPath            string                      `json:"geoIpDbPath"`
-	LocalTimezone          string                      `json:"localTimezone"`
-	AnonymousUsers         int                         `json:"anonymousUsers"`
-	ElasticPushChunkSize   int                         `json:"elasticPushChunkSize"`
+	WorklogPath                 string                      `json:"worklogPath"`
+	AppType                     string                      `json:"appType"`
+	LogDir                      string                      `json:"logDir"`
+	ElasticServer               string                      `json:"elasticServer"`
+	ElasticIndex                string                      `json:"elasticIndex"`
+	ElasticSearchChunkSize      int                         `json:"elasticSearchChunkSize"`
+	Updates                     []elastic.APIFlagUpdateConf `json:"updates"`
+	ElasticScrollTTL            string                      `json:"elasticScrollTtl"`
+	GeoIPDbPath                 string                      `json:"geoIpDbPath"`
+	LocalTimezone               string                      `json:"localTimezone"`
+	AnonymousUsers              int                         `json:"anonymousUsers"`
+	ElasticPushChunkSize        int                         `json:"elasticPushChunkSize"`
+	ImportPartiallyMatchingLogs bool                        `json:"importPartiallyMatchingLogs"`
 }
 
 func validateConf(conf *Conf) {

@@ -144,7 +144,7 @@ func (p *Parser) parseLine(s string, recType string, proc LogInterceptor) {
 	}
 }
 
-func (p *Parser) Parse(fromTimestamp int, recType string, proc LogInterceptor) {
+func (p *Parser) Parse(fromTimestamp int64, recType string, proc LogInterceptor) {
 	fmt.Println("parsing from timestamp: ", fromTimestamp)
 	for p.fr.Scan() {
 		p.parseLine(p.fr.Text(), recType, proc)

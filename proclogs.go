@@ -57,8 +57,8 @@ func (clp *CNKLogProcessor) ProcItem(appType string, record *logs.LogRecord) {
 func pushDataToElastic(data [][]byte) {
 	fmt.Println("PUSH DATA TO ELASTIC:...")
 	for i := 0; i < len(data); i += 2 {
-		//fmt.Println("M: ", string(data[i]))
-		//fmt.Println("D: ", string(data[i+1]))
+		fmt.Println("M: ", string(data[i]))
+		fmt.Println("D: ", string(data[i+1]))
 	}
 	fmt.Println("SENDING chunk...", len(data))
 	// TODO
@@ -71,12 +71,9 @@ func pushDataToElastic(data [][]byte) {
 // n-th (conf.ElasticPushChunkSize) item it stores data to the ElasticSearch
 // server.
 func ProcessLogs(conf *Conf) {
-	worklog, err := logs.LoadWorklog(conf.WorklogPath)
-	if err != nil {
-		panic(err)
-	}
-	last := worklog.FindLastRecord()
-	fmt.Println("LAST RECORD: ", worklog, last)
+	worklog := logs.NewWorklog(conf.WorklogPath)
+	defer worklog.Save()
+	minTimestamp := worklog.GetLastRecord()
 
 	geoDb, err := geoip2.Open(conf.GeoIPDbPath)
 	if err != nil {
@@ -92,10 +89,10 @@ func ProcessLogs(conf *Conf) {
 			chunkSize: conf.ElasticPushChunkSize,
 		}
 
-		files := logs.GetFilesInDir(conf.LogDir)
+		files := logs.GetFilesInDir(conf.LogDir, minTimestamp, !conf.ImportPartiallyMatchingLogs, conf.LocalTimezone)
 		for _, file := range files {
 			p := logs.NewParser(file, conf.GeoIPDbPath, conf.LocalTimezone)
-			p.Parse(last, conf.AppType, processor)
+			p.Parse(minTimestamp, conf.AppType, processor)
 		}
 		close(chunkChannel)
 	}()
