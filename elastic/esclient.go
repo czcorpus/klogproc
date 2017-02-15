@@ -23,6 +23,14 @@ import (
 	"net/http"
 )
 
+type ElasticSearchConf struct {
+	ElasticServer          string `json:"elasticServer"`
+	ElasticIndex           string `json:"elasticIndex"`
+	ElasticSearchChunkSize int    `json:"elasticSearchChunkSize"`
+	ElasticPushChunkSize   int    `json:"elasticPushChunkSize"`
+	ElasticScrollTTL       string `json:"elasticScrollTtl"`
+}
+
 type ESClientError struct {
 	Message string
 	Query   []byte
@@ -54,6 +62,10 @@ func NewClient(server string, index string, srchChunkSize int) *ESClient {
 		srchChunkSize: srchChunkSize,
 	}
 	return &c
+}
+
+func (c *ESClient) Stringer() string {
+	return fmt.Sprintf("ElasticSearchClient[server: %s, index; %s]", c.server, c.index)
 }
 
 func (c *ESClient) BulkUpdateSetAPIFlag(index string, conf APIFlagUpdateConf, scrollTTL string) (int, error) {

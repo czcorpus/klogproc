@@ -15,12 +15,13 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
-	"log"
-
+	"github.com/czcorpus/klogproc/elastic"
 	"github.com/czcorpus/klogproc/elpush"
 	"github.com/czcorpus/klogproc/logs"
 	"github.com/oschwald/geoip2-golang"
+	"log"
 )
 
 type CNKLogProcessor struct {
@@ -45,8 +46,8 @@ func (clp *CNKLogProcessor) ProcItem(appType string, record *logs.LogRecord) {
 				rec.GeoIP.CountryName = city.Country.Names["en"]
 				rec.GeoIP.Latitude = float32(city.Location.Latitude)
 				rec.GeoIP.Longitude = float32(city.Location.Longitude)
-				rec.GeoIP.Location[0] = rec.GeoIP.Latitude
-				rec.GeoIP.Location[1] = rec.GeoIP.Longitude
+				rec.GeoIP.Location[0] = rec.GeoIP.Longitude
+				rec.GeoIP.Location[1] = rec.GeoIP.Latitude
 				rec.GeoIP.Timezone = city.Location.TimeZone
 			}
 		}
@@ -54,14 +55,16 @@ func (clp *CNKLogProcessor) ProcItem(appType string, record *logs.LogRecord) {
 	}
 }
 
-func pushDataToElastic(data [][]byte) {
-	fmt.Println("PUSH DATA TO ELASTIC:...")
-	for i := 0; i < len(data); i += 2 {
-		fmt.Println("M: ", string(data[i]))
-		fmt.Println("D: ", string(data[i+1]))
+func pushDataToElastic(data [][]byte, esconf *elastic.ElasticSearchConf) {
+	esclient := elastic.NewClient(esconf.ElasticServer, esconf.ElasticIndex, esconf.ElasticSearchChunkSize)
+	q := bytes.Join(data, []byte("\n"))
+	_, err := esclient.Do("POST", "/_bulk", q)
+	if err != nil {
+		log.Printf("Failed to push log chunk: %s\n", err)
+
+	} else {
+		log.Printf("Processed chunk of %d items\n", (len(data)-1)/2)
 	}
-	fmt.Println("SENDING chunk...", len(data))
-	// TODO
 }
 
 // ProcessLogs runs through all the logs found in configuration and matching
@@ -98,24 +101,26 @@ func ProcessLogs(conf *Conf) {
 	}()
 
 	i := 0
-	data := make([][]byte, conf.ElasticPushChunkSize*2+i)
+	data := make([][]byte, conf.ElasticPushChunkSize*2+1)
 	for v := range chunkChannel {
 		fmt.Println(v.ID)
 		jsonData, err := v.ToJSON()
 		jsonMeta := elpush.CNKRecordMeta{ID: v.ID, Type: v.Type, Index: conf.ElasticIndex}
 		jsonMetaES, err2 := (&elpush.ElasticCNKRecordMeta{Index: jsonMeta}).ToJSON()
 		if err == nil && err2 == nil {
-			data[i] = jsonData
-			data[i+1] = jsonMetaES
+			data[i] = jsonMetaES
+			data[i+1] = jsonData
 			i += 2
 
 		} else {
 			log.Print("Failed to encode item ", v.Datetime)
 		}
-		if i == conf.ElasticPushChunkSize*2 {
-			pushDataToElastic(data)
+		if i == conf.ElasticPushChunkSize*2-1 {
+			data[i+1] = []byte("\n")
+			pushDataToElastic(data, conf.GetESConf())
 			i = 0
 		}
 	}
-	pushDataToElastic(data[:i])
+	data[i+1] = []byte("\n")
+	pushDataToElastic(data[:i+1], conf.GetESConf())
 }
