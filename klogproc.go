@@ -31,13 +31,13 @@ type Conf struct {
 	ElasticServer               string                      `json:"elasticServer"`
 	ElasticIndex                string                      `json:"elasticIndex"`
 	ElasticSearchChunkSize      int                         `json:"elasticSearchChunkSize"`
-	Updates                     []elastic.APIFlagUpdateConf `json:"updates"`
+	ElasticPushChunkSize        int                         `json:"elasticPushChunkSize"`
 	ElasticScrollTTL            string                      `json:"elasticScrollTtl"`
 	GeoIPDbPath                 string                      `json:"geoIpDbPath"`
 	LocalTimezone               string                      `json:"localTimezone"`
 	AnonymousUsers              int                         `json:"anonymousUsers"`
-	ElasticPushChunkSize        int                         `json:"elasticPushChunkSize"`
 	ImportPartiallyMatchingLogs bool                        `json:"importPartiallyMatchingLogs"`
+	Updates                     []elastic.APIFlagUpdateConf `json:"updates"`
 }
 
 func validateConf(conf *Conf) {

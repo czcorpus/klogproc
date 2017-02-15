@@ -1,10 +1,16 @@
 {
-    "worklogPath": "/home/tomas/work/go/src/github.com/czcorpus/klogproc/worklog/worklog.txt",
-    "logDir": "/home/tomas/work/data/kontext-logs/klog",
+    "worklogPath": "/home/johndoe/go/src/github.com/czcorpus/klogproc/worklog/worklog.txt",
+	"appType": "kontext",
+    "logDir": "/var/log/kontext-logs",
     "elasticServer": "http://192.168.1.23:9200",
     "elasticIndex": "cnk-logs-test1",
     "elasticSearchChunkSize": 10,
+	"elasticPushChunkSize": 20,
     "elasticScrollTtl": "3m",
+	"geoIpDbPath": "/usr/local/geodata/GeoLite2-City.mmdb",
+	"localTimezone": "+01:00",
+	"anonymousUsers": [1531, 1532],
+    "importPartiallyMatchingLogs": false,
     "updates": [
         {
             "disabled": "false",
