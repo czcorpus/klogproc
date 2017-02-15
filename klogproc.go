@@ -28,16 +28,22 @@ type Conf struct {
 	WorklogPath                 string                      `json:"worklogPath"`
 	AppType                     string                      `json:"appType"`
 	LogDir                      string                      `json:"logDir"`
-	ElasticServer               string                      `json:"elasticServer"`
-	ElasticIndex                string                      `json:"elasticIndex"`
-	ElasticSearchChunkSize      int                         `json:"elasticSearchChunkSize"`
-	ElasticPushChunkSize        int                         `json:"elasticPushChunkSize"`
-	ElasticScrollTTL            string                      `json:"elasticScrollTtl"`
 	GeoIPDbPath                 string                      `json:"geoIpDbPath"`
 	LocalTimezone               string                      `json:"localTimezone"`
 	AnonymousUsers              int                         `json:"anonymousUsers"`
 	ImportPartiallyMatchingLogs bool                        `json:"importPartiallyMatchingLogs"`
 	Updates                     []elastic.APIFlagUpdateConf `json:"updates"`
+	elastic.ElasticSearchConf
+}
+
+func (c *Conf) GetESConf() *elastic.ElasticSearchConf {
+	return &elastic.ElasticSearchConf{
+		ElasticServer:          c.ElasticServer,
+		ElasticIndex:           c.ElasticIndex,
+		ElasticSearchChunkSize: c.ElasticSearchChunkSize,
+		ElasticPushChunkSize:   c.ElasticPushChunkSize,
+		ElasticScrollTTL:       c.ElasticScrollTTL,
+	}
 }
 
 func validateConf(conf *Conf) {

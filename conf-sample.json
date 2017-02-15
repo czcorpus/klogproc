@@ -3,7 +3,7 @@
 	"appType": "kontext",
     "logDir": "/var/log/kontext-logs",
     "elasticServer": "http://192.168.1.23:9200",
-    "elasticIndex": "cnk-logs-test1",
+    "elasticIndex": "cnk-logs",
     "elasticSearchChunkSize": 10,
 	"elasticPushChunkSize": 20,
     "elasticScrollTtl": "3m",
