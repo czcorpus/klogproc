@@ -16,12 +16,12 @@ package main
 
 import (
 	"bytes"
-	"fmt"
+	"log"
+
 	"github.com/czcorpus/klogproc/elastic"
 	"github.com/czcorpus/klogproc/elpush"
 	"github.com/czcorpus/klogproc/logs"
 	"github.com/oschwald/geoip2-golang"
-	"log"
 )
 
 type CNKLogProcessor struct {
@@ -103,7 +103,6 @@ func ProcessLogs(conf *Conf) {
 	i := 0
 	data := make([][]byte, conf.ElasticPushChunkSize*2+1)
 	for v := range chunkChannel {
-		fmt.Println(v.ID)
 		jsonData, err := v.ToJSON()
 		jsonMeta := elpush.CNKRecordMeta{ID: v.ID, Type: v.Type, Index: conf.ElasticIndex}
 		jsonMetaES, err2 := (&elpush.ElasticCNKRecordMeta{Index: jsonMeta}).ToJSON()
@@ -115,7 +114,7 @@ func ProcessLogs(conf *Conf) {
 		} else {
 			log.Print("Failed to encode item ", v.Datetime)
 		}
-		if i == conf.ElasticPushChunkSize*2-1 {
+		if i == conf.ElasticPushChunkSize*2-2 {
 			data[i+1] = []byte("\n")
 			pushDataToElastic(data, conf.GetESConf())
 			i = 0
