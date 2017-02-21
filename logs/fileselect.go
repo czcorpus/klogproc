@@ -154,7 +154,7 @@ func (w *Worklog) GetLastRecord() int64 {
 // Save saves the worklog by writing actual UNIX timestamp
 // to the log file.
 func (w *Worklog) Save() error {
-	f, err := os.OpenFile(w.filePath, os.O_APPEND, 0) // TODO FileMode
+	f, err := os.OpenFile(w.filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to open worklog file for writing: %s", err))
 	}
