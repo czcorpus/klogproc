@@ -120,6 +120,8 @@ func ProcessLogs(conf *Conf) {
 			i = 0
 		}
 	}
-	data[i+1] = []byte("\n")
-	pushDataToElastic(data[:i+1], conf.GetESConf())
+	if i > 0 {
+		data[i+1] = []byte("\n")
+		pushDataToElastic(data[:i+1], conf.GetESConf())
+	}
 }
