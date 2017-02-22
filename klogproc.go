@@ -19,8 +19,10 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 
 	"github.com/czcorpus/klogproc/elastic"
+	"os"
 )
 
 // Conf describes klogproc's configuration
@@ -32,6 +34,7 @@ type Conf struct {
 	LocalTimezone               string                      `json:"localTimezone"`
 	AnonymousUsers              int                         `json:"anonymousUsers"`
 	ImportPartiallyMatchingLogs bool                        `json:"importPartiallyMatchingLogs"`
+	AppLogPath                  string                      `json:"appLogPath"`
 	Updates                     []elastic.APIFlagUpdateConf `json:"updates"`
 	elastic.ElasticSearchConf
 }
@@ -100,6 +103,16 @@ func main() {
 	} else if len(flag.Args()) == 2 {
 		conf := loadConfig(flag.Arg(1))
 		validateConf(conf)
+
+		if conf.AppLogPath != "" {
+			logf, err := os.OpenFile(conf.AppLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				panic(fmt.Sprintf("Failed to initialize log. File: %s", conf.AppLogPath))
+			}
+			defer logf.Close()
+			log.SetOutput(logf)
+		}
+
 		switch flag.Arg(0) {
 		case "setapiflag":
 			updateIsAPIStatus(conf)
