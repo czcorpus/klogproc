@@ -11,6 +11,7 @@
 	"localTimezone": "+01:00",
 	"anonymousUsers": [1531, 1532],
     "importPartiallyMatchingLogs": false,
+    "appLogPath": "/var/log/klogproc/klogproc.log",
     "updates": [
         {
             "disabled": "false",
