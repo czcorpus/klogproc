@@ -40,12 +40,14 @@ type Request struct {
 
 // LogRecord represents a parsed KonText record
 type LogRecord struct {
-	UserID   int               `json:"user_id"`
-	ProcTime float32           `json:"proc_time"`
-	Date     string            `json:"date"`
-	Action   string            `json:"action"`
-	Request  Request           `json:"request"`
-	Params   map[string]string `json:"params"`
+	UserID   int                    `json:"user_id"`
+	ProcTime float32                `json:"proc_time"`
+	Date     string                 `json:"date"`
+	Action   string                 `json:"action"`
+	Request  Request                `json:"request"`
+	Params   map[string]interface{} `json:"params"`
+	PID      int                    `json:"pid"`
+	Settings map[string]interface{} `json:"settings"`
 }
 
 // GetTime returns record's time as a Golang's Time
@@ -106,6 +108,22 @@ func (rec *LogRecord) AgentIsLoggable() bool {
 	return !rec.AgentIsBot() && !rec.AgentIsMonitor()
 }
 
+func (rec *LogRecord) GetStringParam(name string) string {
+	switch v := rec.Params[name].(type) {
+	case string:
+		return v
+	}
+	return ""
+}
+
+func (rec *LogRecord) GetIntParam(name string) int {
+	switch v := rec.Params[name].(type) {
+	case int:
+		return v
+	}
+	return -1
+}
+
 // ------------------------------------------------------------
 
 // LogInterceptor defines an object which is able to
@@ -145,7 +163,7 @@ func importDatetimeString(dateStr string, localTimezone string) string {
 
 // NewParser creates a new instance of the Parser.
 // localTimezone has format: "(-|+)[0-9]{2}:[0-9]{2}"
-func NewParser(path string, geoIPPath string, localTimezone string) *Parser {
+func NewParser(path string, localTimezone string) *Parser {
 	f, err := os.Open(path)
 	if err != nil {
 		panic(err)

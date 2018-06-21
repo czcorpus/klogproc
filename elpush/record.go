@@ -27,8 +27,9 @@ import (
 	"github.com/czcorpus/klogproc/logs"
 )
 
-func importQueryType(recordParams map[string]string) string {
-	switch recordParams["queryselector"] {
+func importQueryType(record *logs.LogRecord) string {
+	val := record.GetStringParam("queryselector")
+	switch val {
 	case "iqueryrow":
 		return "basic"
 	case "lemmarow":
@@ -117,7 +118,7 @@ func New(logRecord *logs.LogRecord, recType string) *CNKRecord {
 		IsQuery:   isEntryQuery(logRecord.Action),
 		Limited:   fullCorpname.limited,
 		ProcTime:  logRecord.ProcTime,
-		QueryType: importQueryType(logRecord.Params),
+		QueryType: importQueryType(logRecord),
 		Type2:     recType,
 		UserAgent: logRecord.Request.HTTPUserAgent,
 		UserID:    logRecord.UserID,
@@ -153,7 +154,7 @@ func importCorpname(record *logs.LogRecord) fullCorpname {
 	var limited bool
 
 	if record.Params["corpname"] != "" {
-		corpname = record.Params["corpname"]
+		corpname = record.GetStringParam("corpname")
 		corpname, _ = url.QueryUnescape(corpname)
 		corpname = strings.Split(corpname, ";")[0]
 		if strings.Index(corpname, "omezeni/") == 0 {
