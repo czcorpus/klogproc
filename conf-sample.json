@@ -2,6 +2,11 @@
     "worklogPath": "/home/johndoe/go/src/github.com/czcorpus/klogproc/worklog/worklog.txt",
 	"appType": "kontext",
     "logDir": "/var/log/kontext-logs",
+    "logRedis": {
+        "address": "localhost",
+        "database": "1",
+        "key": "kontext_log"
+    },
     "elasticServer": "http://192.168.1.23:9200",
     "elasticIndex": "cnk-logs",
     "elasticSearchChunkSize": 10,

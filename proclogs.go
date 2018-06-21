@@ -24,6 +24,8 @@ import (
 	"github.com/oschwald/geoip2-golang"
 )
 
+// CNKLogProcessor imports parsed log records represented
+// as LogRecord instances
 type CNKLogProcessor struct {
 	geoIPDb   *geoip2.Reader
 	chunk     chan *elpush.CNKRecord
@@ -67,17 +69,35 @@ func pushDataToElastic(data [][]byte, esconf *elastic.ElasticSearchConf) {
 	}
 }
 
+func processFileLogs(conf *Conf, minTimestamp int64, processor *CNKLogProcessor) {
+	files := logs.GetFilesInDir(conf.LogDir, minTimestamp, !conf.ImportPartiallyMatchingLogs, conf.LocalTimezone)
+	for _, file := range files {
+		p := logs.NewParser(file, conf.LocalTimezone)
+		p.Parse(minTimestamp, conf.AppType, processor)
+	}
+}
+
+func processRedisLogs(conf *Conf, processor *CNKLogProcessor) {
+	items, err := logs.GetRecordsInRedis(conf.LogRedis.Address, conf.LogRedis.Database, conf.LogRedis.QueueKey)
+	if err != nil {
+		panic(err)
+	}
+	for _, item := range items {
+		processor.ProcItem(conf.AppType, &item)
+	}
+}
+
 // ProcessLogs runs through all the logs found in configuration and matching
 // some basic properties (it is a query, preferably from a human user etc.).
 // The "producer" part of the processing runs in a separate goroutine while
 // the main goroutine consumes values via a channel and after each
 // n-th (conf.ElasticPushChunkSize) item it stores data to the ElasticSearch
 // server.
+// Based on config, the function reads either from a Redis list object
+// or from a directory of files (in such case it keeps a worklog containing
+// last loaded value). In case both locations are configured, Redis has
+// precedence.
 func ProcessLogs(conf *Conf) {
-	worklog := logs.NewWorklog(conf.WorklogPath)
-	defer worklog.Save()
-	minTimestamp := worklog.GetLastRecord()
-
 	geoDb, err := geoip2.Open(conf.GeoIPDbPath)
 	if err != nil {
 		panic(err)
@@ -92,10 +112,13 @@ func ProcessLogs(conf *Conf) {
 			chunkSize: conf.ElasticPushChunkSize,
 		}
 
-		files := logs.GetFilesInDir(conf.LogDir, minTimestamp, !conf.ImportPartiallyMatchingLogs, conf.LocalTimezone)
-		for _, file := range files {
-			p := logs.NewParser(file, conf.GeoIPDbPath, conf.LocalTimezone)
-			p.Parse(minTimestamp, conf.AppType, processor)
+		if conf.UsesRedis() {
+			processRedisLogs(conf, processor)
+
+		} else {
+			worklog := logs.NewWorklog(conf.WorklogPath)
+			defer worklog.Save()
+			processFileLogs(conf, worklog.GetLastRecord(), processor)
 		}
 		close(chunkChannel)
 	}()

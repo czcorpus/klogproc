@@ -21,15 +21,26 @@ import (
 	"io/ioutil"
 	"log"
 
-	"github.com/czcorpus/klogproc/elastic"
 	"os"
+
+	"github.com/czcorpus/klogproc/elastic"
 )
+
+// RedisConf is a structure containing information
+// about Redis database containing logs to be
+// processed.
+type RedisConf struct {
+	Address  string `json:"address"`
+	Database int    `json:"database"`
+	QueueKey string `json:"queueKey"`
+}
 
 // Conf describes klogproc's configuration
 type Conf struct {
 	WorklogPath                 string                      `json:"worklogPath"`
 	AppType                     string                      `json:"appType"`
 	LogDir                      string                      `json:"logDir"`
+	LogRedis                    RedisConf                   `json:"logRedis"`
 	GeoIPDbPath                 string                      `json:"geoIpDbPath"`
 	LocalTimezone               string                      `json:"localTimezone"`
 	AnonymousUsers              int                         `json:"anonymousUsers"`
@@ -39,6 +50,8 @@ type Conf struct {
 	elastic.ElasticSearchConf
 }
 
+// GetESConf returns ElasticSearch configuration part
+// of the config.
 func (c *Conf) GetESConf() *elastic.ElasticSearchConf {
 	return &elastic.ElasticSearchConf{
 		ElasticServer:          c.ElasticServer,
@@ -47,6 +60,14 @@ func (c *Conf) GetESConf() *elastic.ElasticSearchConf {
 		ElasticPushChunkSize:   c.ElasticPushChunkSize,
 		ElasticScrollTTL:       c.ElasticScrollTTL,
 	}
+}
+
+// UsesRedis tests whether the config contains Redis
+// configuration. The function is happy once it finds
+// a non empty address. Other values are not checked here
+// (it is up to the client module to validate that).
+func (c *Conf) UsesRedis() bool {
+	return c.LogRedis.Address != ""
 }
 
 func validateConf(conf *Conf) {
