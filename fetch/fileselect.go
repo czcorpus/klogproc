@@ -12,7 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package logs
+// fileselect functions are used to find proper KonText application log files
+// based on logs processed so far. Please note that in recent KonText and
+// Klogproc versions this is rather a fallback/offline functionality.
+
+package fetch
 
 import (
 	"bufio"
@@ -26,14 +30,17 @@ import (
 	"time"
 )
 
+var (
+	datetimePattern = regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2}\\s[012]\\d:[0-5]\\d:[0-5]\\d)[\\.,]\\d+")
+)
+
 // importTimeFromLine import a datetime information from the beginning
 // of kontext applog. Because KonText does not log a timezone information
 // it must be passed here to produce proper datetime.
 //
 // In case of an error, -1 is returned
 func importTimeFromLine(lineStr string, timezoneStr string) int64 {
-	rg := regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2}\\s[012]\\d:[0-5]\\d:[0-5]\\d)[\\.,]\\d+")
-	srch := rg.FindStringSubmatch(lineStr)
+	srch := datetimePattern.FindStringSubmatch(lineStr)
 	if len(srch) > 0 {
 		if t, err := time.Parse("2006-01-02 15:04:05-07:00", srch[1]+timezoneStr); err == nil {
 			return t.Unix()
@@ -163,6 +170,12 @@ func (w *Worklog) Save() error {
 	defer writer.Flush()
 	_, err = writer.WriteString(fmt.Sprintf("%d\n", time.Now().Unix()))
 	return err
+}
+
+func (w *Worklog) RescueFailedChunks(data [][]byte) error {
+	// TODO we do nothing here but we should move
+	// status pointer before this broken chunk
+	return nil
 }
 
 // NewWorklog creates an instance of Worklog with

@@ -16,11 +16,12 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 
 	"github.com/czcorpus/klogproc/elastic"
-	"github.com/czcorpus/klogproc/elpush"
-	"github.com/czcorpus/klogproc/logs"
+	"github.com/czcorpus/klogproc/fetch"
+	"github.com/czcorpus/klogproc/record"
 	"github.com/oschwald/geoip2-golang"
 )
 
@@ -28,16 +29,16 @@ import (
 // as LogRecord instances
 type CNKLogProcessor struct {
 	geoIPDb   *geoip2.Reader
-	chunk     chan *elpush.CNKRecord
+	chunk     chan *record.CNKRecord
 	chunkSize int
 	currIdx   int
 }
 
 // ProcItem is a callback function called by log parser
-func (clp *CNKLogProcessor) ProcItem(appType string, record *logs.LogRecord) {
-	if record.AgentIsLoggable() {
-		rec := elpush.New(record, appType)
-		ip := record.GetClientIP()
+func (clp *CNKLogProcessor) ProcItem(appType string, logRec *fetch.LogRecord) {
+	if logRec.AgentIsLoggable() {
+		rec := record.New(logRec, appType)
+		ip := logRec.GetClientIP()
 		if ip != nil {
 			city, err := clp.geoIPDb.City(ip)
 			if err != nil {
@@ -57,35 +58,63 @@ func (clp *CNKLogProcessor) ProcItem(appType string, record *logs.LogRecord) {
 	}
 }
 
-func pushDataToElastic(data [][]byte, esconf *elastic.ElasticSearchConf) {
+func pushDataToElastic(data [][]byte, esconf *elastic.ElasticSearchConf) error {
 	esclient := elastic.NewClient(esconf.ElasticServer, esconf.ElasticIndex, esconf.ElasticSearchChunkSize)
 	q := bytes.Join(data, []byte("\n"))
 	_, err := esclient.Do("POST", "/_bulk", q)
 	if err != nil {
-		log.Printf("Failed to push log chunk: %s\n", err)
-
-	} else {
-		log.Printf("Processed chunk of %d items\n", (len(data)-1)/2)
+		return fmt.Errorf("Failed to push log chunk: %s", err)
 	}
+	log.Printf("INFO: Inserted chunk of %d items to ElasticSearch\n", (len(data)-1)/2)
+	return nil
 }
 
 func processFileLogs(conf *Conf, minTimestamp int64, processor *CNKLogProcessor) {
-	files := logs.GetFilesInDir(conf.LogDir, minTimestamp, !conf.ImportPartiallyMatchingLogs, conf.LocalTimezone)
+	files := fetch.GetFilesInDir(conf.LogDir, minTimestamp, !conf.ImportPartiallyMatchingLogs, conf.LocalTimezone)
 	for _, file := range files {
-		p := logs.NewParser(file, conf.LocalTimezone)
+		p := fetch.NewParser(file, conf.LocalTimezone)
 		p.Parse(minTimestamp, conf.AppType, processor)
 	}
 }
 
-func processRedisLogs(conf *Conf, processor *CNKLogProcessor) {
-	items, err := logs.GetRecordsInRedis(conf.LogRedis.Address, conf.LogRedis.Database, conf.LogRedis.QueueKey)
-	if err != nil {
-		panic(err)
-	}
-	for _, item := range items {
-		processor.ProcItem(conf.AppType, &item)
+func processRedisLogs(conf *Conf, queue *fetch.RedisQueue, processor *CNKLogProcessor) {
+	for _, item := range queue.GetItems() {
+		processor.ProcItem(conf.AppType, item)
 	}
 }
+
+// ---------
+
+// ESImportFailHandler represents an object able to handle (valid)
+// log items we failed to insert to ElasticSearch (typically due
+// to inavailability)
+type ESImportFailHandler interface {
+	RescueFailedChunks(chunk [][]byte) error
+}
+
+// retryRescuedItems inserts (sychronously) rescued raw bulk
+// insert items to ElasticSearch. There is no additial rescue here.
+// If something goes wrong we stop (while keeping data in
+// rescue queue) and refuse to continue.
+func retryRescuedItems(queue *fetch.RedisQueue, conf *elastic.ElasticSearchConf) error {
+	iterator := queue.GetRescuedChunksIterator()
+	chunk := iterator.GetNextChunk()
+	for len(chunk) > 0 {
+		err := pushDataToElastic(chunk, conf)
+		if err != nil {
+			return fmt.Errorf("failed to reuse rescued data chunk")
+		}
+		fixed, err := iterator.RemoveVisitedItems()
+		if err != nil {
+			return fmt.Errorf("failed to reuse rescued data chunk")
+		}
+		log.Printf("INFO: Rescued %d bulk insert rows from the previous failed run(s)", fixed)
+		chunk = iterator.GetNextChunk()
+	}
+	return nil
+}
+
+// ----
 
 // ProcessLogs runs through all the logs found in configuration and matching
 // some basic properties (it is a query, preferably from a human user etc.).
@@ -104,7 +133,9 @@ func ProcessLogs(conf *Conf) {
 	}
 	defer geoDb.Close()
 
-	chunkChannel := make(chan *elpush.CNKRecord, conf.ElasticPushChunkSize*2)
+	chunkChannel := make(chan *record.CNKRecord, conf.ElasticPushChunkSize*2)
+	var rescue ESImportFailHandler
+
 	go func() {
 		processor := &CNKLogProcessor{
 			geoIPDb:   geoDb,
@@ -113,11 +144,27 @@ func ProcessLogs(conf *Conf) {
 		}
 
 		if conf.UsesRedis() {
-			processRedisLogs(conf, processor)
+			redisQueue, err := fetch.OpenRedisQueue(
+				conf.LogRedis.Address,
+				conf.LogRedis.Database,
+				conf.LogRedis.QueueKey,
+				conf.LocalTimezone,
+			)
+			if err != nil {
+				panic(err)
+			}
+			rescue = redisQueue
+			err = retryRescuedItems(redisQueue, conf.GetESConf())
+			if err != nil {
+				log.Fatalf("ERROR: %s. Please fix the problem before running the program again",
+					err)
+			}
+			processRedisLogs(conf, redisQueue, processor)
 
 		} else {
-			worklog := logs.NewWorklog(conf.WorklogPath)
+			worklog := fetch.NewWorklog(conf.WorklogPath)
 			defer worklog.Save()
+			rescue = worklog
 			processFileLogs(conf, worklog.GetLastRecord(), processor)
 		}
 		close(chunkChannel)
@@ -125,26 +172,37 @@ func ProcessLogs(conf *Conf) {
 
 	i := 0
 	data := make([][]byte, conf.ElasticPushChunkSize*2+1)
-	for v := range chunkChannel {
-		jsonData, err := v.ToJSON()
-		jsonMeta := elpush.CNKRecordMeta{ID: v.ID, Type: v.Type, Index: conf.ElasticIndex}
-		jsonMetaES, err2 := (&elpush.ElasticCNKRecordMeta{Index: jsonMeta}).ToJSON()
+	failed := make([][]byte, 0, 50)
+	var esErr error
+	for rec := range chunkChannel {
+		jsonData, err := rec.ToJSON()
+		jsonMeta := elastic.CNKRecordMeta{ID: rec.ID, Type: rec.Type, Index: conf.ElasticIndex}
+		jsonMetaES, err2 := (&elastic.ESCNKRecordMeta{Index: jsonMeta}).ToJSON()
+
 		if err == nil && err2 == nil {
 			data[i] = jsonMetaES
 			data[i+1] = jsonData
 			i += 2
 
 		} else {
-			log.Print("Failed to encode item ", v.Datetime)
+			log.Print("ERROR: Failed to encode item ", rec.Datetime)
 		}
-		if i == conf.ElasticPushChunkSize*2-2 {
-			data[i+1] = []byte("\n")
-			pushDataToElastic(data, conf.GetESConf())
+		if i == conf.ElasticPushChunkSize*2 {
+			data[i] = []byte("\n")
+			esErr = pushDataToElastic(data, conf.GetESConf())
+			if esErr != nil {
+				failed = append(failed, data[:i+1]...)
+			}
 			i = 0
 		}
 	}
 	if i > 0 {
-		data[i+1] = []byte("\n")
-		pushDataToElastic(data[:i+1], conf.GetESConf())
+		data[i] = []byte("\n")
+		esErr = pushDataToElastic(data[:i+1], conf.GetESConf())
+		if esErr != nil {
+			log.Printf("ERROR: %s", esErr)
+			failed = append(failed, data[:i+1]...)
+		}
 	}
+	rescue.RescueFailedChunks(failed)
 }

@@ -82,6 +82,27 @@ type APIFlagUpdateConf struct {
 	UserAgent string `json:"userAgent"`
 }
 
+// -----
+
+// CNKRecordMeta contains meta information for a record
+// as required by ElastiSearch bulk insert
+type CNKRecordMeta struct {
+	Index string `json:"_index"`
+	ID    string `json:"_id"`
+	Type  string `json:"_type"`
+}
+
+// ESCNKRecordMeta is just a wrapper for CNKRecordMeta
+// as used when importing data
+type ESCNKRecordMeta struct {
+	Index CNKRecordMeta `json:"index"`
+}
+
+// ToJSON serializes the record to JSON
+func (ecrm *ESCNKRecordMeta) ToJSON() ([]byte, error) {
+	return json.Marshal(ecrm)
+}
+
 // ------------------ record update -------------------
 
 type docUpdObj struct {

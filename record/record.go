@@ -12,22 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package elpush
+package record
 
 import (
 	"crypto/sha1"
 	"encoding/hex"
-	// "fmt"
 	"encoding/json"
-	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
 
-	"github.com/czcorpus/klogproc/logs"
+	"github.com/czcorpus/klogproc/fetch"
 )
 
-func importQueryType(record *logs.LogRecord) string {
+// importQueryType translates KonText/Bonito query type argument
+// into a more understandable form
+func importQueryType(record *fetch.LogRecord) string {
 	val := record.GetStringParam("queryselector")
 	switch val {
 	case "iqueryrow":
@@ -47,6 +47,30 @@ func importQueryType(record *logs.LogRecord) string {
 	}
 }
 
+// importCorpname extracts actual corpus name from
+// URL argument which may contain additional data (e.g. variant prefix)
+func importCorpname(record *fetch.LogRecord) fullCorpname {
+	var corpname string
+	var limited bool
+
+	if record.Params["corpname"] != "" {
+		corpname = record.GetStringParam("corpname")
+		corpname, _ = url.QueryUnescape(corpname)
+		corpname = strings.Split(corpname, ";")[0]
+		if strings.Index(corpname, "omezeni/") == 0 {
+			corpname = corpname[len("omezeni/"):]
+			limited = true
+
+		} else {
+			limited = false
+		}
+		return fullCorpname{corpname, limited}
+	}
+	return fullCorpname{}
+}
+
+// GeoDataRecord represents a full client geographical
+// position information as provided by GeoIP database
 type GeoDataRecord struct {
 	ContinentCode string     `json:"continent_code"`
 	CountryCode2  string     `json:"country_code2"`
@@ -57,20 +81,6 @@ type GeoDataRecord struct {
 	Longitude     float32    `json:"longitude"`
 	Location      [2]float32 `json:"location"`
 	Timezone      string     `json:"timezone"`
-}
-
-type CNKRecordMeta struct {
-	Index string `json:"_index"`
-	ID    string `json:"_id"`
-	Type  string `json:"_type"`
-}
-
-type ElasticCNKRecordMeta struct {
-	Index CNKRecordMeta `json:"index"`
-}
-
-func (ecrm *ElasticCNKRecordMeta) ToJSON() ([]byte, error) {
-	return json.Marshal(ecrm)
 }
 
 type CNKRecord struct {
@@ -95,18 +105,8 @@ func (cnkr *CNKRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(cnkr)
 }
 
-// TODO do we need this?
-type CNKRecordError struct {
-	Message string
-	Cause   error
-}
-
-func (cnkre *CNKRecordError) Error() string {
-	return fmt.Sprintf("CNKRecordError: %s", cnkre.Message)
-}
-
 // New creates a new CNKRecord out of an existing LogRecord
-func New(logRecord *logs.LogRecord, recType string) *CNKRecord {
+func New(logRecord *fetch.LogRecord, recType string) *CNKRecord {
 	fullCorpname := importCorpname(logRecord)
 	r := &CNKRecord{
 		Type:      recType,
@@ -147,24 +147,4 @@ func isEntryQuery(action string) bool {
 		}
 	}
 	return false
-}
-
-func importCorpname(record *logs.LogRecord) fullCorpname {
-	var corpname string
-	var limited bool
-
-	if record.Params["corpname"] != "" {
-		corpname = record.GetStringParam("corpname")
-		corpname, _ = url.QueryUnescape(corpname)
-		corpname = strings.Split(corpname, ";")[0]
-		if strings.Index(corpname, "omezeni/") == 0 {
-			corpname = corpname[len("omezeni/"):]
-			limited = true
-
-		} else {
-			limited = false
-		}
-		return fullCorpname{corpname, limited}
-	}
-	return fullCorpname{}
 }
