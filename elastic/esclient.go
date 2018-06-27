@@ -38,10 +38,10 @@ type ESClientError struct {
 }
 
 func (esc *ESClientError) Error() string {
-	return fmt.Sprintf("%s, reason: %s", esc.Message, esc.ESError.Error.Reason)
+	return fmt.Sprintf("%s: %s", esc.Message, esc.ESError.Error)
 }
 
-func NewESClientError(message string, response []byte, query []byte) *ESClientError {
+func newESClientError(message string, response []byte, query []byte) *ESClientError {
 	var errResult ErrorResultObj
 	json.Unmarshal(response, &errResult)
 	return &ESClientError{message, query, errResult}
@@ -162,13 +162,14 @@ func (c *ESClient) Do(method string, path string, query []byte) ([]byte, error) 
 	if err != nil {
 		return make([]byte, 0), err
 	}
+	req.Header.Add("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	if err != nil {
 		return make([]byte, 0), err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		errBody, _ := ioutil.ReadAll(resp.Body)
-		return errBody, NewESClientError(fmt.Sprintf("Invalid status code: %d", resp.StatusCode), query, errBody)
+		return errBody, newESClientError(fmt.Sprintf("Request failed with code %d", resp.StatusCode), errBody, query)
 	}
 	ans, err := ioutil.ReadAll(resp.Body)
 	if err != nil {

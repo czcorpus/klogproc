@@ -157,14 +157,8 @@ func NewEmptyResult() Result {
 
 // ------------------------- error response -------------------
 
-type ErrorResult struct {
-	RootCause []interface{} `json:"root_cause"`
-	Type      string        `json:"type"`
-	Reason    string        `json:"string"`
-}
-
 type ErrorResultObj struct {
-	Error  ErrorResult `json:"error"`
+	Error  interface{} `json:"error"`
 	Status int         `json:"status"`
 }
 
