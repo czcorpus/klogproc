@@ -12,19 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package logs
+package fetch
 
 import (
-	"bufio"
 	"encoding/json"
-	"fmt"
-	"log"
 	"net"
-	"os"
 	"regexp"
 	"strings"
 	"time"
 )
+
+// ImportJSONLog parses original JSON record with some
+// additional value corrections.
+func ImportJSONLog(jsonLine []byte, localTimezone string) (*LogRecord, error) {
+	var record LogRecord
+	err := json.Unmarshal(jsonLine, &record)
+	if err != nil {
+		return nil, err
+	}
+	dt, err := importDatetimeString(record.Date, localTimezone)
+	if err != nil {
+		return nil, err
+	}
+	record.Date = dt
+	return &record, nil
+}
 
 // ------------------------------------------------------------
 
@@ -34,6 +46,7 @@ type Request struct {
 	HTTPForwardedFor string `json:"HTTP_X_FORWARDED_FOR"`
 	HTTPUserAgent    string `json:"HTTP_USER_AGENT"`
 	HTTPRemoteAddr   string `json:"HTTP_REMOTE_ADDR"`
+	RemoteAddr       string `json:"REMOTE_ADDR"`
 }
 
 // ------------------------------------------------------------
@@ -66,13 +79,16 @@ func (rec *LogRecord) GetTime() time.Time {
 
 // GetClientIP returns a client IP no matter in which
 // part of the record it was found
-// (e.g. HTTP_USER_AGENT vs. HTTP_FORWARDED_FOR)
+// (e.g. REMOTE_ADDR vs. HTTP_REMOTE_ADDR vs. HTTP_FORWARDED_FOR)
 func (rec *LogRecord) GetClientIP() net.IP {
 	if rec.Request.HTTPForwardedFor != "" {
 		return net.ParseIP(rec.Request.HTTPForwardedFor)
 
-	} else if rec.Request.HTTPUserAgent != "" {
+	} else if rec.Request.HTTPRemoteAddr != "" {
 		return net.ParseIP(rec.Request.HTTPRemoteAddr)
+
+	} else if rec.Request.RemoteAddr != "" {
+		return net.ParseIP(rec.Request.RemoteAddr)
 	}
 	return make([]byte, 0)
 }
@@ -89,7 +105,9 @@ func (rec *LogRecord) AgentIsBot() bool {
 		strings.Index(agentStr, "baiduspider") > -1 ||
 		strings.Index(agentStr, "seznambot") > -1 ||
 		strings.Index(agentStr, "bingbot") > -1 ||
-		strings.Index(agentStr, "megaindex.ru") > -1
+		strings.Index(agentStr, "megaindex.ru") > -1 ||
+		strings.Index(agentStr, "duckduckbot") > -1 ||
+		strings.Index(agentStr, "ia_archiver") > -1
 }
 
 // AgentIsMonitor returns true if user agent information
@@ -108,6 +126,8 @@ func (rec *LogRecord) AgentIsLoggable() bool {
 	return !rec.AgentIsBot() && !rec.AgentIsMonitor()
 }
 
+// GetStringParam fetches a string parameter from
+// a special "params" sub-object
 func (rec *LogRecord) GetStringParam(name string) string {
 	switch v := rec.Params[name].(type) {
 	case string:
@@ -116,102 +136,12 @@ func (rec *LogRecord) GetStringParam(name string) string {
 	return ""
 }
 
+// GetIntParam fetches an integer parameter from
+// a special "params" sub-object
 func (rec *LogRecord) GetIntParam(name string) int {
 	switch v := rec.Params[name].(type) {
 	case int:
 		return v
 	}
 	return -1
-}
-
-// ------------------------------------------------------------
-
-// LogInterceptor defines an object which is able to
-// process individual LogRecord instances
-type LogInterceptor interface {
-	ProcItem(appType string, record *LogRecord)
-}
-
-// ------------------------------------------------------------
-
-func parseRawLine(s string) string {
-	reg := regexp.MustCompile("^.+\\sINFO:\\s+(\\{.+)$")
-	srch := reg.FindStringSubmatch(s)
-	if srch != nil {
-		return srch[1]
-	}
-	return ""
-}
-
-func getLineType(s string) string {
-	reg := regexp.MustCompile("^.+\\s([A-Z]+):\\s+.+$")
-	srch := reg.FindStringSubmatch(s)
-	if srch != nil {
-		return srch[1]
-	}
-	return ""
-}
-
-func importDatetimeString(dateStr string, localTimezone string) string {
-	rg := regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2})\\s([012]\\d:[0-5]\\d:[0-5]\\d\\.\\d+)")
-	srch := rg.FindStringSubmatch(dateStr)
-	if len(srch) > 0 {
-		return fmt.Sprintf("%sT%s%s", srch[1], srch[2], localTimezone)
-	}
-	return ""
-}
-
-// NewParser creates a new instance of the Parser.
-// localTimezone has format: "(-|+)[0-9]{2}:[0-9]{2}"
-func NewParser(path string, localTimezone string) *Parser {
-	f, err := os.Open(path)
-	if err != nil {
-		panic(err)
-	}
-	if err != nil {
-		panic(err)
-	}
-	sc := bufio.NewScanner(f)
-	return &Parser{fr: sc, localTimezone: localTimezone}
-}
-
-// Parser parses a single file represented by fr Scanner.
-// Because KonText does not log (at least currently) a timezone info,
-// this information is also required to process the log properly.
-type Parser struct {
-	fr            *bufio.Scanner
-	localTimezone string
-}
-
-func (p *Parser) parseLine(s string) (LogRecord, error) {
-	jsonLine := parseRawLine(s)
-	var record LogRecord
-	var err error
-	if jsonLine != "" {
-		err = json.Unmarshal([]byte(jsonLine), &record)
-		if err == nil {
-			record.Date = importDatetimeString(record.Date, p.localTimezone)
-		}
-
-	} else if tp := getLineType(s); tp == "QUERY" {
-		err = fmt.Errorf("Failed to process QUERY entry: %s", s)
-	}
-	return record, err
-}
-
-// Parse runs the parsing process based on provided minimum accepted record
-// time, record type (which is just passed to ElastiSearch) and a
-// provided LogInterceptor).
-func (p *Parser) Parse(fromTimestamp int64, recType string, proc LogInterceptor) {
-	for p.fr.Scan() {
-		rec, err := p.parseLine(p.fr.Text())
-		if err == nil {
-			if rec.GetTime().Unix() >= fromTimestamp {
-				proc.ProcItem(recType, &rec)
-			}
-
-		} else {
-			log.Printf("Error parsing record: %s", err)
-		}
-	}
 }

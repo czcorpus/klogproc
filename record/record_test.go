@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package elpush
+package record
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/czcorpus/klogproc/logs"
+	"github.com/czcorpus/klogproc/fetch"
 )
 
 // cnkr.Action + cnkr.Corpus + cnkr.Datetime + cnkr.IPAddress + cnkr.Type + cnkr.UserAgent + cnkr.UserID
@@ -58,9 +58,9 @@ func TestCreateID(t *testing.T) {
 }
 
 func TestImportCorpname(t *testing.T) {
-	p := make(map[string]string)
+	p := make(map[string]interface{})
 	p["corpname"] = "omezeni/foobar7;x=10"
-	r := &logs.LogRecord{Params: p}
+	r := &fetch.LogRecord{Params: p}
 	c := importCorpname(r)
 	if c.Corpname != "foobar7" || c.limited != true {
 		t.Error("Failed import corpname: ", c)
