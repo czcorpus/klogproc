@@ -43,6 +43,7 @@ func OpenRedisQueue(address string, database int, queueKey string, localTimezone
 		}),
 		queueKey:       queueKey,
 		failedItemsKey: queueKey + "_failed",
+		localTimezone:  localTimezone,
 	}
 	return client, nil
 }
