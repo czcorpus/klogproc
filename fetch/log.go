@@ -145,3 +145,27 @@ func (rec *LogRecord) GetIntParam(name string) int {
 	}
 	return -1
 }
+
+// GetAlignedCorpora fetches aligned corpora names from arguments
+// found in record's "Params" attribute. It isolates
+// user from miscellaneous idiosyncrasies of KonText/Bonito
+// URL parameter handling (= it's not always that straightforward
+// to detect aligned languages from raw URL).
+func (rec *LogRecord) GetAlignedCorpora() []string {
+	tmp := make(map[string]bool)
+	for k := range rec.Params {
+		if strings.HasPrefix(k, "queryselector_") {
+			tmp[k[len("queryselector_"):]] = true
+		}
+		if strings.HasPrefix(k, "pcq_pos_neg_") {
+			tmp[k[len("pcq_pos_neg_"):]] = true
+		}
+	}
+	ans := make([]string, len(tmp))
+	i := 0
+	for k := range tmp {
+		ans[i] = k
+		i++
+	}
+	return ans
+}
