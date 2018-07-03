@@ -129,7 +129,7 @@ func loadConfig(path string) *Conf {
 	return &conf
 }
 
-func setup(confPath string) *Conf {
+func setup(confPath string) (*Conf, *os.File) {
 	conf := loadConfig(confPath)
 	validateConf(conf)
 
@@ -138,10 +138,10 @@ func setup(confPath string) *Conf {
 		if err != nil {
 			log.Fatalf("Failed to initialize log. File: %s", conf.AppLogPath)
 		}
-		defer logf.Close()
 		log.SetOutput(logf)
+		return conf, logf
 	}
-	return conf
+	return conf, nil
 }
 
 func main() {
@@ -151,19 +151,23 @@ func main() {
 	}
 	flag.Parse()
 	var conf *Conf
+	var log *os.File
 
 	switch flag.Arg(0) {
 	case "help":
 		help(flag.Arg(1))
 	case "setapiflag":
-		conf = loadConfig(flag.Arg(1))
+		conf, log = setup(flag.Arg(1))
 		updateIsAPIStatus(conf)
 	case "proclogs":
-		conf = loadConfig(flag.Arg(1))
+		conf, log = setup(flag.Arg(1))
 		ProcessLogs(conf)
 	default:
 		fmt.Printf("Unknown action [%s]. Try -h for help\n", flag.Arg(0))
 		os.Exit(1)
 	}
 
+	if log != nil {
+		log.Close()
+	}
 }
