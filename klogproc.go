@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"path/filepath"
 
 	"os"
 
@@ -99,50 +100,70 @@ func updateIsAPIStatus(conf *Conf) {
 	}
 }
 
+func help(topic string) {
+	if topic == "" {
+		fmt.Print("Missing action to help with. Select one of the:\n\tcreate-index, extract-ngrams, search-service, search")
+	}
+	fmt.Printf("\n[%s]\n\n", topic)
+	switch topic {
+	case "proclogs":
+		fmt.Println(helpTexts[0])
+	case "setapiflag":
+		fmt.Println(helpTexts[1])
+	default:
+		fmt.Println("- no information available -")
+	}
+	fmt.Println()
+}
+
 func loadConfig(path string) *Conf {
+	if path == "" {
+		log.Fatal("Config path not specified")
+	}
 	rawData, err := ioutil.ReadFile(flag.Arg(1))
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	var conf Conf
 	json.Unmarshal(rawData, &conf)
 	return &conf
 }
 
-func showHelp() {
-	fmt.Println(`
-Available operations: setapiflag, proclogs, help.
-...TODO...`)
+func setup(confPath string) *Conf {
+	conf := loadConfig(confPath)
+	validateConf(conf)
+
+	if conf.AppLogPath != "" {
+		logf, err := os.OpenFile(conf.AppLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("Failed to initialize log. File: %s", conf.AppLogPath)
+		}
+		defer logf.Close()
+		log.SetOutput(logf)
+	}
+	return conf
 }
 
 func main() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending KonText/Bonito logs to ElasticSearch\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\tproclogs, setapiflag, help\n\nOptions:\n", filepath.Base(os.Args[0]))
+		flag.PrintDefaults()
+	}
 	flag.Parse()
+	var conf *Conf
 
-	if len(flag.Args()) == 1 && flag.Arg(0) == "help" {
-		showHelp()
-
-	} else if len(flag.Args()) == 2 {
-		conf := loadConfig(flag.Arg(1))
-		validateConf(conf)
-
-		if conf.AppLogPath != "" {
-			logf, err := os.OpenFile(conf.AppLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				panic(fmt.Sprintf("Failed to initialize log. File: %s", conf.AppLogPath))
-			}
-			defer logf.Close()
-			log.SetOutput(logf)
-		}
-
-		switch flag.Arg(0) {
-		case "setapiflag":
-			updateIsAPIStatus(conf)
-		case "proclogs":
-			ProcessLogs(conf)
-		}
-
-	} else {
-		panic("Invalid arguments. Expected format: klogproc OPERATION CONF")
+	switch flag.Arg(0) {
+	case "help":
+		help(flag.Arg(1))
+	case "setapiflag":
+		conf = loadConfig(flag.Arg(1))
+		updateIsAPIStatus(conf)
+	case "proclogs":
+		conf = loadConfig(flag.Arg(1))
+		ProcessLogs(conf)
+	default:
+		fmt.Printf("Unknown action [%s]. Try -h for help\n", flag.Arg(0))
+		os.Exit(1)
 	}
 
 }
