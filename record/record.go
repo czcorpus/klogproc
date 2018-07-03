@@ -83,24 +83,28 @@ type GeoDataRecord struct {
 	Timezone      string     `json:"timezone"`
 }
 
+// CNKRecord represents an exported application log record ready
+// to be inserted into ElasticSearch index.
 type CNKRecord struct {
-	ID          string        `json:"-"`
-	Type        string        `json:"-"`
-	Action      string        `json:"action"`
-	Corpus      string        `json:"corpus"`
-	Datetime    string        `json:"datetime"`
-	IPAddress   string        `json:"ipAddress"`
-	IsAnonymous bool          `json:"isAnonymous"`
-	IsQuery     bool          `json:"isQuery"`
-	Limited     bool          `json:"limited"`
-	ProcTime    float32       `json:"procTime"`
-	QueryType   string        `json:"queryType"`
-	Type2       string        `json:"type"` // TODO do we need this?
-	UserAgent   string        `json:"userAgent"`
-	UserID      int           `json:"userId"`
-	GeoIP       GeoDataRecord `json:"geoip"`
+	ID             string        `json:"-"`
+	Type           string        `json:"-"`
+	Action         string        `json:"action"`
+	Corpus         string        `json:"corpus"`
+	AlignedCorpora []string      `json:"alignedCorpora"`
+	Datetime       string        `json:"datetime"`
+	IPAddress      string        `json:"ipAddress"`
+	IsAnonymous    bool          `json:"isAnonymous"`
+	IsQuery        bool          `json:"isQuery"`
+	Limited        bool          `json:"limited"`
+	ProcTime       float32       `json:"procTime"`
+	QueryType      string        `json:"queryType"`
+	Type2          string        `json:"type"` // TODO do we need this?
+	UserAgent      string        `json:"userAgent"`
+	UserID         int           `json:"userId"`
+	GeoIP          GeoDataRecord `json:"geoip"`
 }
 
+// ToJSON converts self to JSON string
 func (cnkr *CNKRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(cnkr)
 }
@@ -109,11 +113,12 @@ func (cnkr *CNKRecord) ToJSON() ([]byte, error) {
 func New(logRecord *fetch.LogRecord, recType string) *CNKRecord {
 	fullCorpname := importCorpname(logRecord)
 	r := &CNKRecord{
-		Type:      recType,
-		Action:    logRecord.Action,
-		Corpus:    fullCorpname.Corpname,
-		Datetime:  logRecord.Date,
-		IPAddress: logRecord.GetClientIP().String(),
+		Type:           recType,
+		Action:         logRecord.Action,
+		Corpus:         fullCorpname.Corpname,
+		AlignedCorpora: logRecord.GetAlignedCorpora(),
+		Datetime:       logRecord.Date,
+		IPAddress:      logRecord.GetClientIP().String(),
 		// IsAnonymous - not set here
 		IsQuery:   isEntryQuery(logRecord.Action),
 		Limited:   fullCorpname.limited,
