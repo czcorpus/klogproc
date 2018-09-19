@@ -1,0 +1,6 @@
+{
+  "iclogs": "/path/to/intercorp/logs/file",
+  "synlogs": "/path/to/syn/logs/file",
+  "corpmapFile": "./aligned_corpora_map_out.csv",
+  "subclogFile": "/path/to/kontext/subc/archive.db"
+}
