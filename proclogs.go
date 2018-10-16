@@ -69,7 +69,7 @@ func pushDataToElastic(data [][]byte, esconf *elastic.ElasticSearchConf) error {
 	return nil
 }
 
-func processFileLogs(conf *Conf, minTimestamp int64, processor *CNKLogProcessor) {
+func processFileLogs(conf *Conf, minTimestamp int64, processor fetch.LogInterceptor) {
 	files := fetch.GetFilesInDir(conf.LogDir, minTimestamp, !conf.ImportPartiallyMatchingLogs, conf.LocalTimezone)
 	for _, file := range files {
 		p := fetch.NewParser(file, conf.LocalTimezone)

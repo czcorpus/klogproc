@@ -126,6 +126,9 @@ func loadConfig(path string) *Conf {
 	}
 	var conf Conf
 	json.Unmarshal(rawData, &conf)
+	if conf.LocalTimezone == "" {
+		conf.LocalTimezone = "+02:00" // add Czech timezone by default
+	}
 	return &conf
 }
 
@@ -151,23 +154,26 @@ func main() {
 	}
 	flag.Parse()
 	var conf *Conf
-	var log *os.File
+	var logf *os.File
 
 	switch flag.Arg(0) {
 	case "help":
 		help(flag.Arg(1))
 	case "setapiflag":
-		conf, log = setup(flag.Arg(1))
+		conf, logf = setup(flag.Arg(1))
 		updateIsAPIStatus(conf)
 	case "proclogs":
-		conf, log = setup(flag.Arg(1))
+		conf, logf = setup(flag.Arg(1))
 		ProcessLogs(conf)
+	case "jsonize":
+		conf, logf = setup(flag.Arg(1))
+		JsonizeLogs(conf)
 	default:
 		fmt.Printf("Unknown action [%s]. Try -h for help\n", flag.Arg(0))
 		os.Exit(1)
 	}
 
-	if log != nil {
-		log.Close()
+	if logf != nil {
+		logf.Close()
 	}
 }
