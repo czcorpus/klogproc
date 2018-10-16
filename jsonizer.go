@@ -21,9 +21,10 @@ import (
 	"strings"
 
 	"github.com/czcorpus/klogproc/fetch"
+	"github.com/czcorpus/klogproc/fetch/sfiles"
 )
 
-type NormalizedLogRecord struct {
+type normalizedLogRecord struct {
 	UserID         int                    `json:"user_id"`
 	ProcTime       float32                `json:"proc_time"`
 	Date           string                 `json:"date"`
@@ -34,14 +35,14 @@ type NormalizedLogRecord struct {
 	AlignedCorpora []string               `json:"alignedCorpora"`
 }
 
-type ExportProcessor struct {
+type exportProcessor struct {
 }
 
-func (ep *ExportProcessor) ProcItem(appType string, record *fetch.LogRecord) {
+func (ep *exportProcessor) ProcItem(appType string, record *fetch.LogRecord) {
 	if record.AgentIsLoggable() && record.Action == "first" {
 		corpname, ok := (record.Params["corpname"]).(string)
 		if ok && (strings.HasPrefix(corpname, "syn") || strings.HasPrefix(corpname, "omezeni/syn")) {
-			outRec := NormalizedLogRecord{
+			outRec := normalizedLogRecord{
 				UserID:         record.UserID,
 				ProcTime:       record.ProcTime,
 				Date:           record.Date,
@@ -62,7 +63,9 @@ func (ep *ExportProcessor) ProcItem(appType string, record *fetch.LogRecord) {
 	}
 }
 
-func JsonizeLogs(conf *Conf) {
-	proc := &ExportProcessor{}
-	processFileLogs(conf, 0, proc)
+// jsonizeLogs transforms all the processable (=relevant) logs
+// into a normalized JSON format as stored in ElasticSearch database.
+func jsonizeLogs(conf *Conf) {
+	proc := &exportProcessor{}
+	sfiles.ProcessFileLogs(&conf.LogFiles, conf.AppType, conf.LocalTimezone, 0, proc)
 }

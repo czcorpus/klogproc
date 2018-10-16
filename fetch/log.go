@@ -16,11 +16,27 @@ package fetch
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"regexp"
 	"strings"
 	"time"
 )
+
+// LogItemHandler defines an object which is able to
+// process individual LogRecord instances
+type LogItemHandler interface {
+	ProcItem(appType string, record *LogRecord)
+}
+
+func importDatetimeString(dateStr string, localTimezone string) (string, error) {
+	rg := regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2})(\\s|T)([012]\\d:[0-5]\\d:[0-5]\\d\\.\\d+)")
+	srch := rg.FindStringSubmatch(dateStr)
+	if len(srch) > 0 {
+		return fmt.Sprintf("%sT%s%s", srch[1], srch[3], localTimezone), nil
+	}
+	return "", fmt.Errorf("Failed to import datetime \"%s\"", dateStr)
+}
 
 // ImportJSONLog parses original JSON record with some
 // additional value corrections.

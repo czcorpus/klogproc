@@ -12,14 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package fetch
+package sredis
 
 import (
 	"fmt"
 	"log"
 
+	"github.com/czcorpus/klogproc/fetch"
 	"github.com/go-redis/redis"
 )
+
+// RedisConf is a structure containing information
+// about Redis database containing logs to be
+// processed.
+type RedisConf struct {
+	Address  string `json:"address"`
+	Database int    `json:"database"`
+	QueueKey string `json:"queueKey"`
+}
 
 // RedisQueue provides access to Redis database containing
 // KonText log records.
@@ -54,18 +64,18 @@ func OpenRedisQueue(address string, database int, queueKey string, localTimezone
 // Please note that invalid records are taken from queue too
 // and then thrown away (with logged message containing the
 // original item source).
-func (rc *RedisQueue) GetItems() []*LogRecord {
+func (rc *RedisQueue) GetItems() []*fetch.LogRecord {
 
 	size := int(rc.db.LLen(rc.queueKey).Val())
 	log.Printf("INFO: Found %d records in log queue", size)
-	ans := make([]*LogRecord, 0, size)
+	ans := make([]*fetch.LogRecord, 0, size)
 
 	for i := 0; i < size; i++ {
 		rawItem, err := rc.db.LPop(rc.queueKey).Bytes()
 		if err != nil {
 			log.Printf("WARNING: %s, orig item: %s", err, rawItem)
 		}
-		item, err := ImportJSONLog(rawItem, rc.localTimezone)
+		item, err := fetch.ImportJSONLog(rawItem, rc.localTimezone)
 		if err != nil {
 			log.Printf("WARNING: %s, orig item: %s", err, rawItem)
 
