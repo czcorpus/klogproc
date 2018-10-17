@@ -16,7 +16,7 @@
 // based on logs processed so far. Please note that in recent KonText and
 // Klogproc versions this is rather a fallback/offline functionality.
 
-package fetch
+package sfiles
 
 import (
 	"bufio"
@@ -26,11 +26,19 @@ import (
 	"path"
 	"regexp"
 	"time"
+
+	"github.com/czcorpus/klogproc/fetch"
 )
 
 var (
 	datetimePattern = regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2}\\s[012]\\d:[0-5]\\d:[0-5]\\d)[\\.,]\\d+")
 )
+
+type Conf struct {
+	SrcDir                 string `json:"srcDir"`
+	PartiallyMatchingFiles bool   `json:"partiallyMatchingFiles"`
+	WorklogPath            string `json:"worklogPath"`
+}
 
 // importTimeFromLine import a datetime information from the beginning
 // of kontext applog. Because KonText does not log a timezone information
@@ -86,8 +94,8 @@ func LogFileMatches(filePath string, minTimestamp int64, strictMatch bool, timez
 	return startTime >= minTimestamp, nil
 }
 
-// GetFilesInDir lists all the matching log files
-func GetFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, timezoneStr string) []string {
+// getFilesInDir lists all the matching log files
+func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, timezoneStr string) []string {
 	tmp, err := ioutil.ReadDir(dirPath)
 	var ans []string
 	if err == nil {
@@ -107,4 +115,13 @@ func GetFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, timezon
 		return ans[:i]
 	}
 	return []string{}
+}
+
+func ProcessFileLogs(conf *Conf, appType string, localTimezone string, minTimestamp int64, processor fetch.LogItemHandler) {
+	files := getFilesInDir(conf.SrcDir, minTimestamp, !conf.PartiallyMatchingFiles, localTimezone)
+	log.Printf("Found %d file(s) to process in %s", len(files), conf.SrcDir)
+	for _, file := range files {
+		p := NewParser(file, localTimezone)
+		p.Parse(minTimestamp, appType, processor)
+	}
 }

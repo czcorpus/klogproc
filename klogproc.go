@@ -22,45 +22,25 @@ import (
 	"log"
 	"path/filepath"
 
+	"github.com/czcorpus/klogproc/fetch/sfiles"
+	"github.com/czcorpus/klogproc/fetch/sredis"
+
 	"os"
 
 	"github.com/czcorpus/klogproc/elastic"
 )
 
-// RedisConf is a structure containing information
-// about Redis database containing logs to be
-// processed.
-type RedisConf struct {
-	Address  string `json:"address"`
-	Database int    `json:"database"`
-	QueueKey string `json:"queueKey"`
-}
-
 // Conf describes klogproc's configuration
 type Conf struct {
-	WorklogPath                 string                      `json:"worklogPath"`
-	AppType                     string                      `json:"appType"`
-	LogDir                      string                      `json:"logDir"`
-	LogRedis                    RedisConf                   `json:"logRedis"`
-	GeoIPDbPath                 string                      `json:"geoIpDbPath"`
-	LocalTimezone               string                      `json:"localTimezone"`
-	AnonymousUsers              int                         `json:"anonymousUsers"`
-	ImportPartiallyMatchingLogs bool                        `json:"importPartiallyMatchingLogs"`
-	AppLogPath                  string                      `json:"appLogPath"`
-	Updates                     []elastic.APIFlagUpdateConf `json:"updates"`
-	elastic.ElasticSearchConf
-}
-
-// GetESConf returns ElasticSearch configuration part
-// of the config.
-func (c *Conf) GetESConf() *elastic.ElasticSearchConf {
-	return &elastic.ElasticSearchConf{
-		ElasticServer:          c.ElasticServer,
-		ElasticIndex:           c.ElasticIndex,
-		ElasticSearchChunkSize: c.ElasticSearchChunkSize,
-		ElasticPushChunkSize:   c.ElasticPushChunkSize,
-		ElasticScrollTTL:       c.ElasticScrollTTL,
-	}
+	LogRedis       sredis.RedisConf   `json:"logRedis"`
+	LogFiles       sfiles.Conf        `json:"logFiles"`
+	GeoIPDbPath    string             `json:"geoIpDbPath"`
+	LocalTimezone  string             `json:"localTimezone"`
+	AnonymousUsers int                `json:"anonymousUsers"`
+	LogPath        string             `json:"logPath"`
+	RecUpdate      elastic.DocUpdConf `json:"recordUpdate"`
+	ElasticSearch  elastic.SearchConf `json:"elasticSearch"`
+	AppType        string             `json:"appType"`
 }
 
 // UsesRedis tests whether the config contains Redis
@@ -71,32 +51,47 @@ func (c *Conf) UsesRedis() bool {
 	return c.LogRedis.Address != ""
 }
 
+// TODO fix/update this
 func validateConf(conf *Conf) {
-	if conf.ElasticSearchChunkSize < 1 {
-		panic("elasticSearchChunkSize must be >= 1")
+	if conf.ElasticSearch.SearchChunkSize < 1 {
+		log.Fatal("elasticSearchChunkSize must be >= 1")
 	}
 	if conf.AppType == "" {
-		panic("Application type not set")
+		log.Fatal("Application type not set")
 	}
-	if conf.ElasticScrollTTL == "" {
-		panic("elasticScrollTtl must be a valid ElasticSearch scroll arg value (e.g. '2m', '30s')")
+	if conf.ElasticSearch.ScrollTTL == "" {
+		log.Fatal("elasticScrollTtl must be a valid ElasticSearch scroll arg value (e.g. '2m', '30s')")
 	}
-	if conf.ElasticPushChunkSize == 0 {
-		panic("elasticPushChunkSize is missing")
+	if conf.ElasticSearch.PushChunkSize == 0 {
+		log.Fatal("elasticPushChunkSize is missing")
 	}
 }
 
-func updateIsAPIStatus(conf *Conf) {
-	client := elastic.NewClient(conf.ElasticServer, conf.ElasticIndex, conf.ElasticSearchChunkSize)
-	for _, updConf := range conf.Updates {
-		totalUpdated, err := client.BulkUpdateSetAPIFlag(conf.ElasticIndex, updConf, conf.ElasticScrollTTL)
+func updateRecords(conf *Conf) {
+	client := elastic.NewClient(&conf.ElasticSearch)
+	for _, updConf := range conf.RecUpdate.Filters {
+		totalUpdated, err := client.ManualBulkRecordUpdate(conf.ElasticSearch.Index, updConf,
+			conf.RecUpdate.Update, conf.ElasticSearch.ScrollTTL)
 		if err == nil {
-			fmt.Printf("Updated %d items", totalUpdated)
+			log.Printf("Updated %d items\n", totalUpdated)
 
 		} else {
-			fmt.Println("Update error: ", err)
+			log.Fatal("Update error: ", err)
 		}
+	}
+}
 
+func removeKeyFromRecords(conf *Conf) {
+	client := elastic.NewClient(&conf.ElasticSearch)
+	for _, updConf := range conf.RecUpdate.Filters {
+		totalUpdated, err := client.ManualBulkRecordKeyRemove(conf.ElasticSearch.Index, updConf,
+			conf.RecUpdate.RemoveKey, conf.ElasticSearch.ScrollTTL)
+		if err == nil {
+			log.Printf("Removed key %s from %d items\n", conf.RecUpdate.RemoveKey, totalUpdated)
+
+		} else {
+			log.Fatal("Update error: ", err)
+		}
 	}
 }
 
@@ -108,7 +103,7 @@ func help(topic string) {
 	switch topic {
 	case "proclogs":
 		fmt.Println(helpTexts[0])
-	case "setapiflag":
+	case "docupdate":
 		fmt.Println(helpTexts[1])
 	default:
 		fmt.Println("- no information available -")
@@ -136,10 +131,10 @@ func setup(confPath string) (*Conf, *os.File) {
 	conf := loadConfig(confPath)
 	validateConf(conf)
 
-	if conf.AppLogPath != "" {
-		logf, err := os.OpenFile(conf.AppLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if conf.LogPath != "" {
+		logf, err := os.OpenFile(conf.LogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			log.Fatalf("Failed to initialize log. File: %s", conf.AppLogPath)
+			log.Fatalf("Failed to initialize log. File: %s", conf.LogPath)
 		}
 		log.SetOutput(logf)
 		return conf, logf
@@ -149,7 +144,7 @@ func setup(confPath string) (*Conf, *os.File) {
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending KonText/Bonito logs to ElasticSearch\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\tproclogs, setapiflag, help\n\nOptions:\n", filepath.Base(os.Args[0]))
+		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending KonText/Bonito logs to ElasticSearch\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\tproclogs, docupdate, keyremove, help\n\nOptions:\n", filepath.Base(os.Args[0]))
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -159,15 +154,18 @@ func main() {
 	switch flag.Arg(0) {
 	case "help":
 		help(flag.Arg(1))
-	case "setapiflag":
+	case "docupdate":
 		conf, logf = setup(flag.Arg(1))
-		updateIsAPIStatus(conf)
+		updateRecords(conf)
+	case "keyremove":
+		conf, logf = setup(flag.Arg(1))
+		removeKeyFromRecords(conf)
 	case "proclogs":
 		conf, logf = setup(flag.Arg(1))
-		ProcessLogs(conf)
+		processLogs(conf)
 	case "jsonize":
 		conf, logf = setup(flag.Arg(1))
-		JsonizeLogs(conf)
+		jsonizeLogs(conf)
 	default:
 		fmt.Printf("Unknown action [%s]. Try -h for help\n", flag.Arg(0))
 		os.Exit(1)

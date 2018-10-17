@@ -19,18 +19,36 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
+	"time"
 )
 
-type ElasticSearchConf struct {
-	ElasticServer          string `json:"elasticServer"`
-	ElasticIndex           string `json:"elasticIndex"`
-	ElasticSearchChunkSize int    `json:"elasticSearchChunkSize"`
-	ElasticPushChunkSize   int    `json:"elasticPushChunkSize"`
-	ElasticScrollTTL       string `json:"elasticScrollTtl"`
+// SearchConf defines a configuration
+// required to work with ES client.
+type SearchConf struct {
+	Server          string `json:"server"`
+	Index           string `json:"index"`
+	SearchChunkSize int    `json:"searchChunkSize"`
+	PushChunkSize   int    `json:"pushChunkSize"`
+	ScrollTTL       string `json:"scrollTtl"`
+	ReqTimeoutSecs  int    `json:"reqTimeoutSecs"`
 }
 
+// ErrorResultObj describes an error response from ElasticSearch
+type ErrorResultObj struct {
+	Error  map[string]interface{} `json:"error"`
+	Status int                    `json:"status"`
+}
+
+func (ero ErrorResultObj) String() string {
+	var ans bytes.Buffer
+	for k, v := range ero.Error {
+		ans.WriteString(fmt.Sprintf("{%s -> %s}", k, v))
+	}
+	return ans.String()
+}
+
+// ESClientError is a general response error
 type ESClientError struct {
 	Message string
 	Query   []byte
@@ -38,7 +56,7 @@ type ESClientError struct {
 }
 
 func (esc *ESClientError) Error() string {
-	return fmt.Sprintf("%s: %s", esc.Message, esc.ESError.Error)
+	return fmt.Sprintf("%s: %s", esc.Message, esc.ESError)
 }
 
 func newESClientError(message string, response []byte, query []byte) *ESClientError {
@@ -49,115 +67,32 @@ func newESClientError(message string, response []byte, query []byte) *ESClientEr
 
 // ESClient is a simple ElasticSearch client
 type ESClient struct {
-	server        string
-	index         string
-	srchChunkSize int
+	server         string
+	index          string
+	srchChunkSize  int
+	reqTimeoutSecs int
 }
 
 // NewClient returns an instance of ESClient
-func NewClient(server string, index string, srchChunkSize int) *ESClient {
+func NewClient(conf *SearchConf) *ESClient {
 	c := ESClient{
-		server:        server,
-		index:         index,
-		srchChunkSize: srchChunkSize,
+		server:         conf.Server,
+		index:          conf.Index,
+		srchChunkSize:  conf.SearchChunkSize,
+		reqTimeoutSecs: conf.ReqTimeoutSecs,
 	}
 	return &c
 }
 
-func (c *ESClient) Stringer() string {
+func (c ESClient) String() string {
 	return fmt.Sprintf("ElasticSearchClient[server: %s, index; %s]", c.server, c.index)
-}
-
-func (c *ESClient) BulkUpdateSetAPIFlag(index string, conf APIFlagUpdateConf, scrollTTL string) (int, error) {
-	totalUpdated := 0
-	if !conf.Disabled {
-		items, err := c.SearchForAgents(conf, scrollTTL)
-		if err != nil {
-			return totalUpdated, err
-		}
-		ans, bulkErr := c.bulkUpdateSetAPIFlagScroll(index, items.Hits)
-		totalUpdated += ans
-		if bulkErr != nil {
-			return totalUpdated, bulkErr
-		}
-		if items.ScrollID != "" {
-			for len(items.Hits.Hits) > 0 {
-				items, err = c.FetchScroll(items.ScrollID, scrollTTL)
-				if err != nil {
-					return totalUpdated, err
-				}
-				if len(items.Hits.Hits) > 0 {
-					ans, bulkErr = c.bulkUpdateSetAPIFlagScroll(index, items.Hits)
-					totalUpdated += ans
-					if err != nil {
-						return totalUpdated, err
-					}
-				}
-			}
-		}
-	}
-	return totalUpdated, nil
-}
-
-func (c *ESClient) bulkUpdateSetAPIFlagScroll(index string, hits Hits) (int, error) {
-	jsonLines := make([][]byte, len(hits.Hits)*2+1) // one for final 'new line'
-	stopIdx := 0
-	for _, item := range hits.Hits {
-		jsonMeta, err := CreateDocBulkMetaRecord(index, item.Type, item.ID)
-		if err != nil {
-			log.Panicf("Failed to generate bulk update JSON (meta): %v", err)
-		}
-		jsonData, err := CreateClientAPIFlagUpdQuery()
-		if err != nil {
-			log.Panicf("Failed to generate bulk update JSON (values): %v", err)
-		}
-		jsonLines[stopIdx] = jsonMeta
-		jsonLines[stopIdx+1] = jsonData
-		stopIdx += 2
-	}
-	jsonLines[stopIdx] = make([]byte, 0)
-	stopIdx++
-	_, err := c.Do("POST", "/_bulk", bytes.Join(jsonLines[:stopIdx], []byte("\n")))
-	if err != nil {
-		return 0, err
-	}
-	return ((stopIdx - 1) / 2), nil
-}
-
-// UpdateSetAPIFlag sets a (new) attribute "isApi" to "true" for all
-// the matching documents
-func (c *ESClient) UpdateSetAPIFlag(conf APIFlagUpdateConf) ([]UpdResponse, error) {
-	if !conf.Disabled {
-		items, err := c.SearchForAgents(conf, "")
-		if err != nil {
-			return make([]UpdResponse, 0), err
-		}
-		responses := make([]UpdResponse, len(items.Hits.Hits))
-		for i, item := range items.Hits.Hits {
-			updQuery, err := CreateClientAPIFlagUpdQuery()
-			if err != nil {
-				return responses[:i], err
-			}
-			ans, err2 := c.Do("POST", "/"+c.index+"/"+item.Type+"/"+item.ID+"/_update", updQuery)
-			if err2 != nil {
-				return responses[:i], err2
-			}
-			var respObj UpdResponse
-			if err3 := json.Unmarshal(ans, &respObj); err != nil {
-				return responses[:i], err3
-			}
-			responses[i] = respObj
-		}
-		return responses, err
-	}
-	return make([]UpdResponse, 0), nil
 }
 
 // Do sends a general request to ElasticSearch server where
 // 'query' is expected to be a JSON-encoded argument object
 func (c *ESClient) Do(method string, path string, query []byte) ([]byte, error) {
 	body := bytes.NewBuffer(query)
-	client := http.Client{}
+	client := http.Client{Timeout: time.Second * time.Duration(c.reqTimeoutSecs)}
 	req, err := http.NewRequest(method, c.server+path, body)
 	if err != nil {
 		return make([]byte, 0), err
@@ -169,7 +104,7 @@ func (c *ESClient) Do(method string, path string, query []byte) ([]byte, error) 
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		errBody, _ := ioutil.ReadAll(resp.Body)
-		return errBody, newESClientError(fmt.Sprintf("Request failed with code %d", resp.StatusCode), errBody, query)
+		return errBody, newESClientError(fmt.Sprintf("Request %s failed with code %d", path, resp.StatusCode), errBody, query)
 	}
 	ans, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -178,7 +113,8 @@ func (c *ESClient) Do(method string, path string, query []byte) ([]byte, error) 
 	return ans, nil
 }
 
-func (c *ESClient) Search(query []byte, scroll string) (Result, error) {
+// search is a low level search function
+func (c *ESClient) search(query []byte, scroll string) (Result, error) {
 	path := "/" + c.index + "/_search"
 	if scroll != "" {
 		path += "?scroll=" + scroll
@@ -195,8 +131,10 @@ func (c *ESClient) Search(query []byte, scroll string) (Result, error) {
 	return NewEmptyResult(), err2
 }
 
-func (c *ESClient) FetchScroll(scrollId string, ttl string) (Result, error) {
-	jsonBody, err := json.Marshal(scrollObj{Scroll: ttl, ScrollID: scrollId})
+// FetchScroll fetch additional data from an existing result
+// using a scrollId.
+func (c *ESClient) FetchScroll(scrollID string, ttl string) (Result, error) {
+	jsonBody, err := json.Marshal(scrollObj{Scroll: ttl, ScrollID: scrollID})
 	if err != nil {
 		return NewEmptyResult(), err
 	}
@@ -212,11 +150,15 @@ func (c *ESClient) FetchScroll(scrollId string, ttl string) (Result, error) {
 	return srchResult, nil
 }
 
-func (c *ESClient) SearchForAgents(conf APIFlagUpdateConf, ttl string) (Result, error) {
-	encQuery, err := CreateClientSrchQuery(conf.FromDate, conf.ToDate, conf.IPAddress, conf.UserAgent,
+// SearchRecords searches records matching provided filter.
+// Result fetching uses ElasticSearch scroll mechanism which requires
+// providing TTL value to specify how long the result scroll should be
+// available.
+func (c *ESClient) SearchRecords(filter DocUpdateFilter, ttl string) (Result, error) {
+	encQuery, err := CreateClientSrchQuery(filter.FromDate, filter.ToDate, filter.IPAddress, filter.UserAgent,
 		c.srchChunkSize)
 	if err == nil {
-		return c.Search(encQuery, ttl)
+		return c.search(encQuery, ttl)
 	}
 	return NewEmptyResult(), err
 }

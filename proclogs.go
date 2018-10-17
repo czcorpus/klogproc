@@ -21,6 +21,8 @@ import (
 
 	"github.com/czcorpus/klogproc/elastic"
 	"github.com/czcorpus/klogproc/fetch"
+	"github.com/czcorpus/klogproc/fetch/sfiles"
+	"github.com/czcorpus/klogproc/fetch/sredis"
 	"github.com/czcorpus/klogproc/record"
 	"github.com/oschwald/geoip2-golang"
 )
@@ -58,8 +60,8 @@ func (clp *CNKLogProcessor) ProcItem(appType string, logRec *fetch.LogRecord) {
 	}
 }
 
-func pushDataToElastic(data [][]byte, esconf *elastic.ElasticSearchConf) error {
-	esclient := elastic.NewClient(esconf.ElasticServer, esconf.ElasticIndex, esconf.ElasticSearchChunkSize)
+func pushDataToElastic(data [][]byte, esconf *elastic.SearchConf) error {
+	esclient := elastic.NewClient(esconf)
 	q := bytes.Join(data, []byte("\n"))
 	_, err := esclient.Do("POST", "/_bulk", q)
 	if err != nil {
@@ -69,15 +71,7 @@ func pushDataToElastic(data [][]byte, esconf *elastic.ElasticSearchConf) error {
 	return nil
 }
 
-func processFileLogs(conf *Conf, minTimestamp int64, processor fetch.LogInterceptor) {
-	files := fetch.GetFilesInDir(conf.LogDir, minTimestamp, !conf.ImportPartiallyMatchingLogs, conf.LocalTimezone)
-	for _, file := range files {
-		p := fetch.NewParser(file, conf.LocalTimezone)
-		p.Parse(minTimestamp, conf.AppType, processor)
-	}
-}
-
-func processRedisLogs(conf *Conf, queue *fetch.RedisQueue, processor *CNKLogProcessor) {
+func processRedisLogs(conf *Conf, queue *sredis.RedisQueue, processor *CNKLogProcessor) {
 	for _, item := range queue.GetItems() {
 		processor.ProcItem(conf.AppType, item)
 	}
@@ -96,7 +90,7 @@ type ESImportFailHandler interface {
 // insert items to ElasticSearch. There is no additial rescue here.
 // If something goes wrong we stop (while keeping data in
 // rescue queue) and refuse to continue.
-func retryRescuedItems(queue *fetch.RedisQueue, conf *elastic.ElasticSearchConf) error {
+func retryRescuedItems(queue *sredis.RedisQueue, conf *elastic.SearchConf) error {
 	iterator := queue.GetRescuedChunksIterator()
 	chunk := iterator.GetNextChunk()
 	for len(chunk) > 0 {
@@ -126,25 +120,25 @@ func retryRescuedItems(queue *fetch.RedisQueue, conf *elastic.ElasticSearchConf)
 // or from a directory of files (in such case it keeps a worklog containing
 // last loaded value). In case both locations are configured, Redis has
 // precedence.
-func ProcessLogs(conf *Conf) {
+func processLogs(conf *Conf) {
 	geoDb, err := geoip2.Open(conf.GeoIPDbPath)
 	if err != nil {
 		panic(err)
 	}
 	defer geoDb.Close()
 
-	chunkChannel := make(chan *record.CNKRecord, conf.ElasticPushChunkSize*2)
+	chunkChannel := make(chan *record.CNKRecord, conf.ElasticSearch.PushChunkSize*2)
 	var rescue ESImportFailHandler
 
 	go func() {
 		processor := &CNKLogProcessor{
 			geoIPDb:   geoDb,
 			chunk:     chunkChannel,
-			chunkSize: conf.ElasticPushChunkSize,
+			chunkSize: conf.ElasticSearch.PushChunkSize,
 		}
 
 		if conf.UsesRedis() {
-			redisQueue, err := fetch.OpenRedisQueue(
+			redisQueue, err := sredis.OpenRedisQueue(
 				conf.LogRedis.Address,
 				conf.LogRedis.Database,
 				conf.LogRedis.QueueKey,
@@ -154,7 +148,7 @@ func ProcessLogs(conf *Conf) {
 				panic(err)
 			}
 			rescue = redisQueue
-			err = retryRescuedItems(redisQueue, conf.GetESConf())
+			err = retryRescuedItems(redisQueue, &conf.ElasticSearch)
 			if err != nil {
 				log.Fatalf("ERROR: %s. Please fix the problem before running the program again",
 					err)
@@ -162,21 +156,26 @@ func ProcessLogs(conf *Conf) {
 			processRedisLogs(conf, redisQueue, processor)
 
 		} else {
-			worklog := fetch.NewWorklog(conf.WorklogPath)
+			worklog := sfiles.NewWorklog(conf.LogFiles.WorklogPath)
 			defer worklog.Save()
 			rescue = worklog
-			processFileLogs(conf, worklog.GetLastRecord(), processor)
+			sfiles.ProcessFileLogs(&conf.LogFiles, conf.AppType, conf.LocalTimezone,
+				worklog.GetLastRecord(), processor)
 		}
 		close(chunkChannel)
 	}()
 
 	i := 0
-	data := make([][]byte, conf.ElasticPushChunkSize*2+1)
+	data := make([][]byte, conf.ElasticSearch.PushChunkSize*2+1)
 	failed := make([][]byte, 0, 50)
 	var esErr error
 	for rec := range chunkChannel {
 		jsonData, err := rec.ToJSON()
-		jsonMeta := elastic.CNKRecordMeta{ID: rec.ID, Type: rec.Type, Index: conf.ElasticIndex}
+		jsonMeta := elastic.CNKRecordMeta{
+			ID:    rec.ID,
+			Type:  rec.Type,
+			Index: conf.ElasticSearch.Index,
+		}
 		jsonMetaES, err2 := (&elastic.ESCNKRecordMeta{Index: jsonMeta}).ToJSON()
 
 		if err == nil && err2 == nil {
@@ -187,9 +186,9 @@ func ProcessLogs(conf *Conf) {
 		} else {
 			log.Print("ERROR: Failed to encode item ", rec.Datetime)
 		}
-		if i == conf.ElasticPushChunkSize*2 {
+		if i == conf.ElasticSearch.PushChunkSize*2 {
 			data[i] = []byte("\n")
-			esErr = pushDataToElastic(data, conf.GetESConf())
+			esErr = pushDataToElastic(data, &conf.ElasticSearch)
 			if esErr != nil {
 				failed = append(failed, data[:i+1]...)
 			}
@@ -198,7 +197,7 @@ func ProcessLogs(conf *Conf) {
 	}
 	if i > 0 {
 		data[i] = []byte("\n")
-		esErr = pushDataToElastic(data[:i+1], conf.GetESConf())
+		esErr = pushDataToElastic(data[:i+1], &conf.ElasticSearch)
 		if esErr != nil {
 			log.Printf("ERROR: %s", esErr)
 			failed = append(failed, data[:i+1]...)

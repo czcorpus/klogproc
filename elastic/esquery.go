@@ -14,7 +14,10 @@
 
 package elastic
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // ESQuery represents a structured type encoding an ElasticSearch
 // query. Typically, it is a nested structure.
@@ -73,17 +76,6 @@ func (sq *srchQuery) ToJSONQuery() ([]byte, error) {
 
 // ---------------------------------------------------
 
-// APIFlagUpdateConf specifies parameters of "isApi" flag operation
-type APIFlagUpdateConf struct {
-	Disabled  bool   `json:"disabled"`
-	FromDate  string `json:"fromDate"`
-	ToDate    string `json:"toDate"`
-	IPAddress string `json:"ipAddress"`
-	UserAgent string `json:"userAgent"`
-}
-
-// -----
-
 // CNKRecordMeta contains meta information for a record
 // as required by ElastiSearch bulk insert
 type CNKRecordMeta struct {
@@ -101,40 +93,6 @@ type ESCNKRecordMeta struct {
 // ToJSON serializes the record to JSON
 func (ecrm *ESCNKRecordMeta) ToJSON() ([]byte, error) {
 	return json.Marshal(ecrm)
-}
-
-// ------------------ record update -------------------
-
-type docUpdObj struct {
-	Doc docRecord `json:"doc"`
-}
-
-func (duo *docUpdObj) ToJSONQuery() ([]byte, error) {
-	return json.Marshal(duo)
-}
-
-type docRecord struct {
-	IsAPI bool `json:"isAPI"`
-}
-
-type docBulkUpdateMetaObj struct {
-	Update docBulkMetaRecord `json:"update"`
-}
-
-type docBulkMetaRecord struct {
-	// "/"+c.index+"/"+item.Type+"/"+item.ID+"/_update", updQuery)
-	Index string `json:"_index"`
-	Type  string `json:"_type"`
-	ID    string `json:"_id"`
-}
-
-type UpdResponse struct {
-	Index   string      `json:"_index"`
-	Type    string      `json:"_type"`
-	ID      string      `json:"_id"`
-	Version int         `json:"_version"`
-	Result  string      `json:"result"`
-	Shards  interface{} `json:"_shards"` // we don't care much about this (yet)
 }
 
 // ----------------- scroll -------------------------
@@ -176,13 +134,6 @@ func NewEmptyResult() Result {
 	return Result{Hits: Hits{Total: 0}}
 }
 
-// ------------------------- error response -------------------
-
-type ErrorResultObj struct {
-	Error  interface{} `json:"error"`
-	Status int         `json:"status"`
-}
-
 // CreateClientSrchQuery generates a JSON-encoded query for ElastiSearch to
 // find documents matching specified datetime range, optional IP
 // address and optional userAgent substring/pattern
@@ -202,13 +153,12 @@ func CreateClientSrchQuery(fromDate string, toDate string, ipAddress string, use
 	return q.ToJSONQuery()
 }
 
-func CreateClientAPIFlagUpdQuery() ([]byte, error) {
-	d := docUpdObj{Doc: docRecord{IsAPI: true}}
+func createLogRecUpdQuery(upd DocUpdRecord) ([]byte, error) {
+	d := docUpdObj{Doc: upd}
 	return d.ToJSONQuery()
 }
 
-func CreateDocBulkMetaRecord(index string, objType string, id string) ([]byte, error) {
-	d := docBulkMetaRecord{Index: index, Type: objType, ID: id}
-	obj := docBulkUpdateMetaObj{Update: d}
-	return json.Marshal(obj)
+func createLogRecKeyRemoveQuery(key string) ([]byte, error) {
+	d := docKeyRemoveObj{Script: fmt.Sprintf("ctx._source.remove('%s')", key)}
+	return d.ToJSONQuery()
 }

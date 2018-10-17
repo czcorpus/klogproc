@@ -35,5 +35,5 @@ log files or a Redis list (preferred). A proper JSON configuration file must be 
     "anonymousUsers": [4230]
 }
 `,
-	`Set a special "API flag" to a list of defined existing records. NOTE: This is experimental.`,
+	`Update each matching (defined by filter in "updates") record using a provided object (defined in "updateData"). NOTE: This is experimental.`,
 }
