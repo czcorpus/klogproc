@@ -37,9 +37,26 @@ type DocUpdRecord map[string]interface{}
 // records to be updated and also an update object
 // used to merge with selected records.
 type DocUpdConf struct {
-	Filters   []DocUpdateFilter `json:"filters"`
-	Update    DocUpdRecord      `json:"update"`
-	RemoveKey string            `json:"removeKey"`
+
+	// Filters specifies which items should we look for.
+	// Items in the list are taken as logical conjunction
+	// (i.e. rule[0] && rule[1] && ... && rule[N])
+	Filters []DocUpdateFilter `json:"filters"`
+
+	// Update is a (sub)record we will use to write into
+	// matching records.
+	Update DocUpdRecord `json:"update"`
+
+	// RemoveKey specifies a key we want to remove from
+	// matching records. Functionally this value is
+	// mutually exclusive with 'Update' (i.e. only one
+	// of these operations can be defined at once).
+	RemoveKey string `json:"removeKey"`
+
+	// SearchChunkSize specifies how many items at once should
+	// klogproc search and load for a specified update. For a slow
+	// environment, keep the value reasonably small.
+	SearchChunkSize int `json:"searchChunkSize"`
 }
 
 type docUpdObj struct {
@@ -109,10 +126,10 @@ func createDocBulkMetaRecord(index string, objType string, id string) ([]byte, e
 	return json.Marshal(obj)
 }
 
-func (c *ESClient) manualBulkRecordOp(index string, filters DocUpdateFilter, rawOp []byte, scrollTTL string) (int, error) {
+func (c *ESClient) manualBulkRecordOp(index string, filters DocUpdateFilter, rawOp []byte, scrollTTL string, srchChunkSize int) (int, error) {
 	totalUpdated := 0
 	if !filters.Disabled {
-		items, err := c.SearchRecords(filters, scrollTTL)
+		items, err := c.SearchRecords(filters, scrollTTL, srchChunkSize)
 		if err != nil {
 			return totalUpdated, err
 
@@ -144,21 +161,21 @@ func (c *ESClient) manualBulkRecordOp(index string, filters DocUpdateFilter, raw
 }
 
 // ManualBulkRecordUpdate updates matching records with provided object
-func (c *ESClient) ManualBulkRecordUpdate(index string, filters DocUpdateFilter, upd DocUpdRecord, scrollTTL string) (int, error) {
+func (c *ESClient) ManualBulkRecordUpdate(index string, filters DocUpdateFilter, upd DocUpdRecord, scrollTTL string, srchChunkSize int) (int, error) {
 
 	jsonData, err := createLogRecUpdQuery(upd)
 	if err != nil {
 		log.Fatalf("Failed to generate bulk update JSON (values): %s", err)
 	}
-	return c.manualBulkRecordOp(index, filters, jsonData, scrollTTL)
+	return c.manualBulkRecordOp(index, filters, jsonData, scrollTTL, srchChunkSize)
 }
 
 // ManualBulkRecordKeyRemove removes a specified key from matching records.
-func (c *ESClient) ManualBulkRecordKeyRemove(index string, filters DocUpdateFilter, key string, scrollTTL string) (int, error) {
+func (c *ESClient) ManualBulkRecordKeyRemove(index string, filters DocUpdateFilter, key string, scrollTTL string, srchChunkSize int) (int, error) {
 
 	jsonData, err := createLogRecKeyRemoveQuery(key)
 	if err != nil {
 		log.Fatalf("Failed to generate bulk update JSON (values): %s", err)
 	}
-	return c.manualBulkRecordOp(index, filters, jsonData, scrollTTL)
+	return c.manualBulkRecordOp(index, filters, jsonData, scrollTTL, srchChunkSize)
 }

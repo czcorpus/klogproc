@@ -53,9 +53,6 @@ func (c *Conf) UsesRedis() bool {
 
 // TODO fix/update this
 func validateConf(conf *Conf) {
-	if conf.ElasticSearch.SearchChunkSize < 1 {
-		log.Fatal("elasticSearchChunkSize must be >= 1")
-	}
 	if conf.AppType == "" {
 		log.Fatal("Application type not set")
 	}
@@ -71,7 +68,7 @@ func updateRecords(conf *Conf) {
 	client := elastic.NewClient(&conf.ElasticSearch)
 	for _, updConf := range conf.RecUpdate.Filters {
 		totalUpdated, err := client.ManualBulkRecordUpdate(conf.ElasticSearch.Index, updConf,
-			conf.RecUpdate.Update, conf.ElasticSearch.ScrollTTL)
+			conf.RecUpdate.Update, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize)
 		if err == nil {
 			log.Printf("Updated %d items\n", totalUpdated)
 
@@ -85,7 +82,7 @@ func removeKeyFromRecords(conf *Conf) {
 	client := elastic.NewClient(&conf.ElasticSearch)
 	for _, updConf := range conf.RecUpdate.Filters {
 		totalUpdated, err := client.ManualBulkRecordKeyRemove(conf.ElasticSearch.Index, updConf,
-			conf.RecUpdate.RemoveKey, conf.ElasticSearch.ScrollTTL)
+			conf.RecUpdate.RemoveKey, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize)
 		if err == nil {
 			log.Printf("Removed key %s from %d items\n", conf.RecUpdate.RemoveKey, totalUpdated)
 

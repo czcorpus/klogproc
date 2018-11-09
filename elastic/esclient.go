@@ -26,12 +26,11 @@ import (
 // SearchConf defines a configuration
 // required to work with ES client.
 type SearchConf struct {
-	Server          string `json:"server"`
-	Index           string `json:"index"`
-	SearchChunkSize int    `json:"searchChunkSize"`
-	PushChunkSize   int    `json:"pushChunkSize"`
-	ScrollTTL       string `json:"scrollTtl"`
-	ReqTimeoutSecs  int    `json:"reqTimeoutSecs"`
+	Server         string `json:"server"`
+	Index          string `json:"index"`
+	PushChunkSize  int    `json:"pushChunkSize"`
+	ScrollTTL      string `json:"scrollTtl"`
+	ReqTimeoutSecs int    `json:"reqTimeoutSecs"`
 }
 
 // ErrorResultObj describes an error response from ElasticSearch
@@ -69,7 +68,6 @@ func newESClientError(message string, response []byte, query []byte) *ESClientEr
 type ESClient struct {
 	server         string
 	index          string
-	srchChunkSize  int
 	reqTimeoutSecs int
 }
 
@@ -78,7 +76,6 @@ func NewClient(conf *SearchConf) *ESClient {
 	c := ESClient{
 		server:         conf.Server,
 		index:          conf.Index,
-		srchChunkSize:  conf.SearchChunkSize,
 		reqTimeoutSecs: conf.ReqTimeoutSecs,
 	}
 	return &c
@@ -154,9 +151,9 @@ func (c *ESClient) FetchScroll(scrollID string, ttl string) (Result, error) {
 // Result fetching uses ElasticSearch scroll mechanism which requires
 // providing TTL value to specify how long the result scroll should be
 // available.
-func (c *ESClient) SearchRecords(filter DocUpdateFilter, ttl string) (Result, error) {
+func (c *ESClient) SearchRecords(filter DocUpdateFilter, ttl string, chunkSize int) (Result, error) {
 	encQuery, err := CreateClientSrchQuery(filter.FromDate, filter.ToDate, filter.IPAddress, filter.UserAgent,
-		c.srchChunkSize)
+		chunkSize)
 	if err == nil {
 		return c.search(encQuery, ttl)
 	}
