@@ -28,7 +28,7 @@ Expected format:
  "params": {
     "queryselector": "...",
     "corpname": "...",
-    /* possibly other values */
+    "/*... possibly other items ... */": "..."
  },
  "user": "...",
  "date": "..."
@@ -39,8 +39,6 @@ Expected format:
 
 * KonText - out of the box (just enable *ucnk_dispatch_hook* plug-in)
 * SkE - the application must import a special Python module which is part of this project
-
-
 
 ## Installation
 
