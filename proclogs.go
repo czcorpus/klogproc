@@ -30,10 +30,11 @@ import (
 // CNKLogProcessor imports parsed log records represented
 // as LogRecord instances
 type CNKLogProcessor struct {
-	geoIPDb   *geoip2.Reader
-	chunk     chan *record.CNKRecord
-	chunkSize int
-	currIdx   int
+	geoIPDb        *geoip2.Reader
+	chunk          chan *record.CNKRecord
+	chunkSize      int
+	currIdx        int
+	numNonLoggable int
 }
 
 // ProcItem is a callback function called by log parser
@@ -57,6 +58,9 @@ func (clp *CNKLogProcessor) ProcItem(appType string, logRec *fetch.LogRecord) {
 			}
 		}
 		clp.chunk <- rec
+
+	} else {
+		clp.numNonLoggable++
 	}
 }
 
@@ -163,6 +167,7 @@ func processLogs(conf *Conf) {
 				worklog.GetLastRecord(), processor)
 		}
 		close(chunkChannel)
+		log.Printf("INFO: Ignored %d non-loggable items (bots etc.)", processor.numNonLoggable)
 	}()
 
 	i := 0
