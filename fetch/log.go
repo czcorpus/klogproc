@@ -23,6 +23,10 @@ import (
 	"time"
 )
 
+var (
+	datetimeRegexp = regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2})(\\s|T)([012]\\d:[0-5]\\d:[0-5]\\d\\.\\d+)")
+)
+
 // LogItemHandler defines an object which is able to
 // process individual LogRecord instances
 type LogItemHandler interface {
@@ -30,8 +34,7 @@ type LogItemHandler interface {
 }
 
 func importDatetimeString(dateStr string, localTimezone string) (string, error) {
-	rg := regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2})(\\s|T)([012]\\d:[0-5]\\d:[0-5]\\d\\.\\d+)")
-	srch := rg.FindStringSubmatch(dateStr)
+	srch := datetimeRegexp.FindStringSubmatch(dateStr)
 	if len(srch) > 0 {
 		return fmt.Sprintf("%sT%s%s", srch[1], srch[3], localTimezone), nil
 	}
