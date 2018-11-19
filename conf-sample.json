@@ -7,7 +7,7 @@
     },
     "logFiles": {
         "worklogPath": "/home/johndoe/go/src/github.com/czcorpus/klogproc/worklog/worklog.txt",
-        "logDir": "/var/log/kontext-logs",
+        "srcDir": "/var/log/kontext-logs",
         "partiallyMatchingFiles": false
     },
     "elasticSearch": {
