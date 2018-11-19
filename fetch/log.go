@@ -114,16 +114,29 @@ func (rec *LogRecord) GetClientIP() net.IP {
 // hardcoded and quite simple.
 func (rec *LogRecord) AgentIsBot() bool {
 	agentStr := strings.ToLower(rec.Request.HTTPUserAgent)
-	return strings.Index(agentStr, "googlebot") > -1 ||
-		strings.Index(agentStr, "ahrefsbot") > -1 ||
-		strings.Index(agentStr, "yandexbot") > -1 ||
-		strings.Index(agentStr, "yahoo") > -1 && strings.Index(agentStr, "slurp") > -1 ||
+	// TODO move this to some external file
+	return strings.Index(agentStr, "ahrefsbot") > -1 ||
+		strings.Index(agentStr, "applebot") > -1 ||
 		strings.Index(agentStr, "baiduspider") > -1 ||
-		strings.Index(agentStr, "seznambot") > -1 ||
 		strings.Index(agentStr, "bingbot") > -1 ||
-		strings.Index(agentStr, "megaindex.ru") > -1 ||
+		strings.Index(agentStr, "blexbot") > -1 ||
+		strings.Index(agentStr, "dotbot") > -1 ||
 		strings.Index(agentStr, "duckduckbot") > -1 ||
-		strings.Index(agentStr, "ia_archiver") > -1
+		strings.Index(agentStr, "exabot") > -1 ||
+		strings.Index(agentStr, "googlebot") > -1 ||
+		strings.Index(agentStr, "ia_archiver") > -1 ||
+		strings.Index(agentStr, "mail.ru_bot") > -1 ||
+		strings.Index(agentStr, "mauibot") > -1 ||
+		strings.Index(agentStr, "mediatoolkitbot") > -1 ||
+		strings.Index(agentStr, "megaindex.ru") > -1 ||
+		strings.Index(agentStr, "mj12bot") > -1 ||
+		strings.Index(agentStr, "semanticscholarbot") > -1 ||
+		strings.Index(agentStr, "semrushbot") > -1 ||
+		strings.Index(agentStr, "seokicks-robot") > -1 ||
+		strings.Index(agentStr, "seznambot") > -1 ||
+		strings.Index(agentStr, "yacybot") > -1 ||
+		strings.Index(agentStr, "yahoo") > -1 && strings.Index(agentStr, "slurp") > -1 ||
+		strings.Index(agentStr, "yandexbot") > -1
 }
 
 // AgentIsMonitor returns true if user agent information
