@@ -44,15 +44,16 @@ type Conf struct {
 // of kontext applog. Because KonText does not log a timezone information
 // it must be passed here to produce proper datetime.
 //
-// In case of an error, -1 is returned
-func importTimeFromLine(lineStr string, timezoneStr string) int64 {
+// In case of an error, -1 is returned along with the error
+func importTimeFromLine(lineStr string, timezoneStr string) (int64, error) {
 	srch := datetimePattern.FindStringSubmatch(lineStr)
+	var err error
 	if len(srch) > 0 {
 		if t, err := time.Parse("2006-01-02 15:04:05-07:00", srch[1]+timezoneStr); err == nil {
-			return t.Unix()
+			return t.Unix(), nil
 		}
 	}
-	return -1
+	return -1, err
 }
 
 // getFileMtime returns file's UNIX mtime (in secods).
@@ -85,7 +86,10 @@ func LogFileMatches(filePath string, minTimestamp int64, strictMatch bool, timez
 	rd := bufio.NewScanner(f)
 	rd.Scan()
 	line := rd.Text()
-	startTime := importTimeFromLine(line, timezoneStr)
+	startTime, err := importTimeFromLine(line, timezoneStr)
+	if err != nil {
+		return false, err
+	}
 
 	if startTime < minTimestamp && !strictMatch {
 		startTime = getFileMtime(filePath)

@@ -15,12 +15,21 @@
 package sfiles
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 )
 
 func TestGetFilesInDir(t *testing.T) {
-	limit := int64(1485887057)                                        // this should cause the function to return only two latest log files
-	files := GetFilesInDir("../testdata/logs", limit, true, "+01:00") // TODO we can test realiably only strict mode
+	rootDir, err := os.Getwd()
+	if err != nil {
+		t.Fail()
+	}
+
+	// this should cause the function to return only two latest log files
+	limit := int64(1485887057)
+	// TODO we can test realiably only strict mode
+	files := getFilesInDir(filepath.Join(rootDir, "..", "..", "testdata", "logs"), limit, true, "+01:00")
 	if len(files) != 2 {
 		t.Errorf("Invalid number of files detected - expected 2, found %d ", len(files))
 	}
