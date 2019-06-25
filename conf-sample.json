@@ -6,7 +6,7 @@
         "key": "kontext_log"
     },
     "logFiles": {
-        "worklogPath": "/home/johndoe/go/src/github.com/czcorpus/klogproc/worklog/worklog.txt",
+        "worklogPath": "/var/log/klogproc/worklog/worklog.txt",
         "srcDir": "/var/log/kontext-logs",
         "partiallyMatchingFiles": false
     },
@@ -15,6 +15,13 @@
         "index": "cnk-logs",
 	    "pushChunkSize": 20,
         "scrollTtl": "3m"
+    },
+    "influxDb": {
+        "server": "http://192.168.1.24:8086",
+        "pushChunkSize": 500,
+        "database": "klogproc",
+        "measurement": "procTime",
+        "retentionPolicy": "midterm"
     },
 	"geoIpDbPath": "/usr/local/geodata/GeoLite2-City.mmdb",
 	"localTimezone": "+01:00",

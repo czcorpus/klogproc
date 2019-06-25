@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/czcorpus/klogproc/fetch"
 )
@@ -86,12 +87,13 @@ type GeoDataRecord struct {
 // CNKRecord represents an exported application log record ready
 // to be inserted into ElasticSearch index.
 type CNKRecord struct {
-	ID             string        `json:"-"`
-	Type           string        `json:"-"`
-	Action         string        `json:"action"`
-	Corpus         string        `json:"corpus"`
-	AlignedCorpora []string      `json:"alignedCorpora"`
-	Datetime       string        `json:"datetime"`
+	ID             string   `json:"-"`
+	Type           string   `json:"-"`
+	Action         string   `json:"action"`
+	Corpus         string   `json:"corpus"`
+	AlignedCorpora []string `json:"alignedCorpora"`
+	Datetime       string   `json:"datetime"`
+	datetime       time.Time
 	IPAddress      string        `json:"ipAddress"`
 	IsAnonymous    bool          `json:"isAnonymous"`
 	IsQuery        bool          `json:"isQuery"`
@@ -109,6 +111,12 @@ func (cnkr *CNKRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(cnkr)
 }
 
+// GetTime returns Go Time instance representing
+// date and time when the record was created.
+func (cnkr *CNKRecord) GetTime() time.Time {
+	return cnkr.datetime
+}
+
 // New creates a new CNKRecord out of an existing LogRecord
 func New(logRecord *fetch.LogRecord, recType string) *CNKRecord {
 	fullCorpname := importCorpname(logRecord)
@@ -118,6 +126,7 @@ func New(logRecord *fetch.LogRecord, recType string) *CNKRecord {
 		Corpus:         fullCorpname.Corpname,
 		AlignedCorpora: logRecord.GetAlignedCorpora(),
 		Datetime:       logRecord.Date,
+		datetime:       logRecord.GetTime(),
 		IPAddress:      logRecord.GetClientIP().String(),
 		// IsAnonymous - not set here
 		IsQuery:   isEntryQuery(logRecord.Action),
