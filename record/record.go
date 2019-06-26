@@ -94,16 +94,17 @@ type CNKRecord struct {
 	AlignedCorpora []string `json:"alignedCorpora"`
 	Datetime       string   `json:"datetime"`
 	datetime       time.Time
-	IPAddress      string        `json:"ipAddress"`
-	IsAnonymous    bool          `json:"isAnonymous"`
-	IsQuery        bool          `json:"isQuery"`
-	Limited        bool          `json:"limited"`
-	ProcTime       float32       `json:"procTime"`
-	QueryType      string        `json:"queryType"`
-	Type2          string        `json:"type"` // TODO do we need this?
-	UserAgent      string        `json:"userAgent"`
-	UserID         int           `json:"userId"`
-	GeoIP          GeoDataRecord `json:"geoip"`
+	IPAddress      string            `json:"ipAddress"`
+	IsAnonymous    bool              `json:"isAnonymous"`
+	IsQuery        bool              `json:"isQuery"`
+	Limited        bool              `json:"limited"`
+	ProcTime       float32           `json:"procTime"`
+	QueryType      string            `json:"queryType"`
+	Type2          string            `json:"type"` // TODO do we need this?
+	UserAgent      string            `json:"userAgent"`
+	UserID         int               `json:"userId"`
+	GeoIP          GeoDataRecord     `json:"geoip"`
+	Error          fetch.ErrorRecord `json:"error"`
 }
 
 // ToJSON converts self to JSON string
@@ -136,6 +137,7 @@ func New(logRecord *fetch.LogRecord, recType string) *CNKRecord {
 		Type2:     recType,
 		UserAgent: logRecord.Request.HTTPUserAgent,
 		UserID:    logRecord.UserID,
+		Error:     logRecord.Error,
 	}
 	r.ID = createID(r)
 	return r

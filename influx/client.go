@@ -70,9 +70,12 @@ func (c *RecordWriter) AddRecord(rec *record.CNKRecord) error {
 	tags := make(map[string]string)
 	values := make(map[string]interface{})
 	values["procTime"] = rec.ProcTime
+	values["error"] = rec.Error.Name
+	values["errorAnchor"] = rec.Error.Anchor
 	tags["corpname"] = rec.Corpus
 	tags["queryType"] = rec.QueryType
 	tags["action"] = rec.Action
+
 	point, err := client.NewPoint(c.measurement, tags, values, rec.GetTime())
 	if err != nil {
 		log.Printf("ERROR: Failed to add record to influxdb: %s", err)
