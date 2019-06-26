@@ -28,6 +28,7 @@ import (
 	"os"
 
 	"github.com/czcorpus/klogproc/elastic"
+	"github.com/czcorpus/klogproc/influx"
 )
 
 // Conf describes klogproc's configuration
@@ -40,6 +41,7 @@ type Conf struct {
 	LogPath        string             `json:"logPath"`
 	RecUpdate      elastic.DocUpdConf `json:"recordUpdate"`
 	ElasticSearch  elastic.SearchConf `json:"elasticSearch"`
+	InfluxDB       influx.Conf        `json:"influxDb"`
 	AppType        string             `json:"appType"`
 }
 
@@ -51,16 +53,30 @@ func (c *Conf) UsesRedis() bool {
 	return c.LogRedis.Address != ""
 }
 
+// HasInfluxOut tests whether an InfluxDB
+// output is confgured
+func (c *Conf) HasInfluxOut() bool {
+	return c.InfluxDB.Server != ""
+}
+
+// HasElasticOut tests whether an ElasticSearch
+// output is confgured
+func (c *Conf) HasElasticOut() bool {
+	return c.ElasticSearch.Server != ""
+}
+
 // TODO fix/update this
 func validateConf(conf *Conf) {
 	if conf.AppType == "" {
 		log.Fatal("Application type not set")
 	}
-	if conf.ElasticSearch.ScrollTTL == "" {
-		log.Fatal("elasticScrollTtl must be a valid ElasticSearch scroll arg value (e.g. '2m', '30s')")
-	}
-	if conf.ElasticSearch.PushChunkSize == 0 {
-		log.Fatal("elasticPushChunkSize is missing")
+	if conf.HasElasticOut() {
+		if conf.ElasticSearch.ScrollTTL == "" {
+			log.Fatal("elasticScrollTtl must be a valid ElasticSearch scroll arg value (e.g. '2m', '30s')")
+		}
+		if conf.ElasticSearch.PushChunkSize == 0 {
+			log.Fatal("elasticPushChunkSize is missing")
+		}
 	}
 }
 

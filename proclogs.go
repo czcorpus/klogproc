@@ -18,11 +18,13 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/czcorpus/klogproc/elastic"
 	"github.com/czcorpus/klogproc/fetch"
 	"github.com/czcorpus/klogproc/fetch/sfiles"
 	"github.com/czcorpus/klogproc/fetch/sredis"
+	"github.com/czcorpus/klogproc/influx"
 	"github.com/czcorpus/klogproc/record"
 	"github.com/oschwald/geoip2-golang"
 )
@@ -31,7 +33,8 @@ import (
 // as LogRecord instances
 type CNKLogProcessor struct {
 	geoIPDb        *geoip2.Reader
-	chunk          chan *record.CNKRecord
+	chunkES        chan *record.CNKRecord
+	chunkInflux    chan *record.CNKRecord
 	chunkSize      int
 	currIdx        int
 	numNonLoggable int
@@ -57,7 +60,8 @@ func (clp *CNKLogProcessor) ProcItem(appType string, logRec *fetch.LogRecord) {
 				rec.GeoIP.Timezone = city.Location.TimeZone
 			}
 		}
-		clp.chunk <- rec
+		clp.chunkES <- rec
+		clp.chunkInflux <- rec
 
 	} else {
 		clp.numNonLoggable++
@@ -131,14 +135,16 @@ func processLogs(conf *Conf) {
 	}
 	defer geoDb.Close()
 
-	chunkChannel := make(chan *record.CNKRecord, conf.ElasticSearch.PushChunkSize*2)
+	chunkChannelES := make(chan *record.CNKRecord, conf.ElasticSearch.PushChunkSize*2)
+	chunkChannelInflux := make(chan *record.CNKRecord, conf.InfluxDB.PushChunkSize)
 	var rescue ESImportFailHandler
 
 	go func() {
 		processor := &CNKLogProcessor{
-			geoIPDb:   geoDb,
-			chunk:     chunkChannel,
-			chunkSize: conf.ElasticSearch.PushChunkSize,
+			geoIPDb:     geoDb,
+			chunkES:     chunkChannelES,
+			chunkInflux: chunkChannelInflux,
+			chunkSize:   conf.ElasticSearch.PushChunkSize,
 		}
 
 		if conf.UsesRedis() {
@@ -166,47 +172,86 @@ func processLogs(conf *Conf) {
 			sfiles.ProcessFileLogs(&conf.LogFiles, conf.AppType, conf.LocalTimezone,
 				worklog.GetLastRecord(), processor)
 		}
-		close(chunkChannel)
+		close(chunkChannelES)
+		close(chunkChannelInflux)
 		log.Printf("INFO: Ignored %d non-loggable items (bots etc.)", processor.numNonLoggable)
 	}()
 
-	i := 0
-	data := make([][]byte, conf.ElasticSearch.PushChunkSize*2+1)
-	failed := make([][]byte, 0, 50)
-	var esErr error
-	for rec := range chunkChannel {
-		jsonData, err := rec.ToJSON()
-		jsonMeta := elastic.CNKRecordMeta{
-			ID:    rec.ID,
-			Type:  rec.Type,
-			Index: conf.ElasticSearch.Index,
-		}
-		jsonMetaES, err2 := (&elastic.ESCNKRecordMeta{Index: jsonMeta}).ToJSON()
+	var wg sync.WaitGroup
+	wg.Add(2)
 
-		if err == nil && err2 == nil {
-			data[i] = jsonMetaES
-			data[i+1] = jsonData
-			i += 2
+	// Elasticsearch bulk writes
+	go func() {
+		defer wg.Done()
+		if conf.HasElasticOut() {
+			i := 0
+			data := make([][]byte, conf.ElasticSearch.PushChunkSize*2+1)
+			failed := make([][]byte, 0, 50)
+			var esErr error
+			for rec := range chunkChannelES {
+				jsonData, err := rec.ToJSON()
+				jsonMeta := elastic.CNKRecordMeta{
+					ID:    rec.ID,
+					Type:  rec.Type,
+					Index: conf.ElasticSearch.Index,
+				}
+				jsonMetaES, err2 := (&elastic.ESCNKRecordMeta{Index: jsonMeta}).ToJSON()
+
+				if err == nil && err2 == nil {
+					data[i] = jsonMetaES
+					data[i+1] = jsonData
+					i += 2
+
+				} else {
+					log.Print("ERROR: Failed to encode item ", rec.Datetime)
+				}
+				if i == conf.ElasticSearch.PushChunkSize*2 {
+					data[i] = []byte("\n")
+					esErr = pushDataToElastic(data, &conf.ElasticSearch)
+					if esErr != nil {
+						failed = append(failed, data[:i+1]...)
+					}
+					i = 0
+				}
+			}
+			if i > 0 {
+				data[i] = []byte("\n")
+				esErr = pushDataToElastic(data[:i+1], &conf.ElasticSearch)
+				if esErr != nil {
+					log.Printf("ERROR: %s", esErr)
+					failed = append(failed, data[:i+1]...)
+				}
+			}
+			rescue.RescueFailedChunks(failed)
 
 		} else {
-			log.Print("ERROR: Failed to encode item ", rec.Datetime)
-		}
-		if i == conf.ElasticSearch.PushChunkSize*2 {
-			data[i] = []byte("\n")
-			esErr = pushDataToElastic(data, &conf.ElasticSearch)
-			if esErr != nil {
-				failed = append(failed, data[:i+1]...)
+			for range chunkChannelES {
 			}
-			i = 0
 		}
-	}
-	if i > 0 {
-		data[i] = []byte("\n")
-		esErr = pushDataToElastic(data[:i+1], &conf.ElasticSearch)
-		if esErr != nil {
-			log.Printf("ERROR: %s", esErr)
-			failed = append(failed, data[:i+1]...)
+	}()
+
+	// InfluxDB batch writes
+	go func() {
+		defer wg.Done()
+		if conf.HasInfluxOut() {
+			var err error
+			client, err := influx.NewRecordWriter(&conf.InfluxDB)
+			if err != nil {
+				log.Printf("ERROR: %s", err)
+			}
+			for rec := range chunkChannelInflux {
+				client.AddRecord(rec)
+			}
+			err = client.Finish()
+			if err != nil {
+				log.Printf("ERROR: %s", err)
+			}
+
+		} else {
+			for range chunkChannelInflux {
+			}
 		}
-	}
-	rescue.RescueFailedChunks(failed)
+	}()
+
+	wg.Wait()
 }
