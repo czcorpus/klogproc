@@ -31,7 +31,8 @@ Expected format:
     "/*... possibly other items ... */": "..."
  },
  "user": "...",
- "date": "..."
+ "date": "...",
+ "error": {"name": "PythonClassName", "anchor": "an ID stored within text error log"}
 }
 ```
 
