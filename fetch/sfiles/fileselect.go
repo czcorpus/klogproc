@@ -27,7 +27,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/czcorpus/klogproc/fetch"
+	"github.com/czcorpus/klogproc/transform/kontext"
 )
 
 var (
@@ -121,7 +121,7 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, timezon
 	return []string{}
 }
 
-func ProcessFileLogs(conf *Conf, appType string, localTimezone string, minTimestamp int64, processor fetch.LogItemHandler) {
+func ProcessFileLogs(conf *Conf, appType string, localTimezone string, minTimestamp int64, processor kontext.LogItemHandler) {
 	files := getFilesInDir(conf.SrcDir, minTimestamp, !conf.PartiallyMatchingFiles, localTimezone)
 	log.Printf("Found %d file(s) to process in %s", len(files), conf.SrcDir)
 	for _, file := range files {

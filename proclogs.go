@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/czcorpus/klogproc/elastic"
-	"github.com/czcorpus/klogproc/fetch"
 	"github.com/czcorpus/klogproc/fetch/sfiles"
 	"github.com/czcorpus/klogproc/fetch/sredis"
 	"github.com/czcorpus/klogproc/influx"
@@ -41,7 +40,7 @@ type CNKLogProcessor struct {
 }
 
 // ProcItem is a callback function called by log parser
-func (clp *CNKLogProcessor) ProcItem(appType string, logRec *fetch.LogRecord) {
+func (clp *CNKLogProcessor) ProcItem(appType string, logRec *kontext.LogRecord) {
 	if logRec.AgentIsLoggable() {
 		rec := kontext.New(logRec, appType)
 		ip := logRec.GetClientIP()

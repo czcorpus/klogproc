@@ -27,7 +27,7 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/czcorpus/klogproc/fetch"
+	"github.com/czcorpus/klogproc/transform/kontext"
 )
 
 type minorError struct {
@@ -90,10 +90,10 @@ type Parser struct {
 
 // parseLine parses a query log line - i.e. it expects
 // that the line contains user interaction log
-func (p *Parser) parseLine(s string, lineNum int) (*fetch.LogRecord, error) {
+func (p *Parser) parseLine(s string, lineNum int) (*kontext.LogRecord, error) {
 	jsonLine := parseRawLine(s)
 	if jsonLine != "" {
-		return fetch.ImportJSONLog([]byte(jsonLine), p.localTimezone)
+		return kontext.ImportJSONLog([]byte(jsonLine), p.localTimezone)
 
 	} else if tp := getLineType(s); tp == "QUERY" {
 		return nil, fmt.Errorf("Failed to process QUERY entry: %s", s)
@@ -106,7 +106,7 @@ func (p *Parser) parseLine(s string, lineNum int) (*fetch.LogRecord, error) {
 // Parse runs the parsing process based on provided minimum accepted record
 // time, record type (which is just passed to ElastiSearch) and a
 // provided LogInterceptor).
-func (p *Parser) Parse(fromTimestamp int64, recType string, proc fetch.LogItemHandler) {
+func (p *Parser) Parse(fromTimestamp int64, recType string, proc kontext.LogItemHandler) {
 	for i := 0; p.fr.Scan(); i++ {
 		rec, err := p.parseLine(p.fr.Text(), i)
 		if err == nil {

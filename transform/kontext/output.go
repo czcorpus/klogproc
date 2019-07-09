@@ -22,13 +22,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/czcorpus/klogproc/fetch"
 )
 
 // importQueryType translates KonText/Bonito query type argument
 // into a more understandable form
-func importQueryType(record *fetch.LogRecord) string {
+func importQueryType(record *LogRecord) string {
 	val := record.GetStringParam("queryselector")
 	switch val {
 	case "iqueryrow":
@@ -50,7 +48,7 @@ func importQueryType(record *fetch.LogRecord) string {
 
 // importCorpname extracts actual corpus name from
 // URL argument which may contain additional data (e.g. variant prefix)
-func importCorpname(record *fetch.LogRecord) fullCorpname {
+func importCorpname(record *LogRecord) fullCorpname {
 	var corpname string
 	var limited bool
 
@@ -94,17 +92,17 @@ type OutputRecord struct {
 	AlignedCorpora []string `json:"alignedCorpora"`
 	Datetime       string   `json:"datetime"`
 	datetime       time.Time
-	IPAddress      string            `json:"ipAddress"`
-	IsAnonymous    bool              `json:"isAnonymous"`
-	IsQuery        bool              `json:"isQuery"`
-	Limited        bool              `json:"limited"`
-	ProcTime       float32           `json:"procTime"`
-	QueryType      string            `json:"queryType"`
-	Type2          string            `json:"type"` // TODO do we need this?
-	UserAgent      string            `json:"userAgent"`
-	UserID         int               `json:"userId"`
-	GeoIP          GeoDataRecord     `json:"geoip"`
-	Error          fetch.ErrorRecord `json:"error"`
+	IPAddress      string        `json:"ipAddress"`
+	IsAnonymous    bool          `json:"isAnonymous"`
+	IsQuery        bool          `json:"isQuery"`
+	Limited        bool          `json:"limited"`
+	ProcTime       float32       `json:"procTime"`
+	QueryType      string        `json:"queryType"`
+	Type2          string        `json:"type"` // TODO do we need this?
+	UserAgent      string        `json:"userAgent"`
+	UserID         int           `json:"userId"`
+	GeoIP          GeoDataRecord `json:"geoip"`
+	Error          ErrorRecord   `json:"error"`
 }
 
 // ToJSON converts self to JSON string
@@ -119,7 +117,7 @@ func (cnkr *OutputRecord) GetTime() time.Time {
 }
 
 // New creates a new OutputRecord out of an existing LogRecord
-func New(logRecord *fetch.LogRecord, recType string) *OutputRecord {
+func New(logRecord *LogRecord, recType string) *OutputRecord {
 	fullCorpname := importCorpname(logRecord)
 	r := &OutputRecord{
 		Type:           recType,
