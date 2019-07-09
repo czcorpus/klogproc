@@ -26,7 +26,7 @@ import (
 
 // importQueryType translates KonText/Bonito query type argument
 // into a more understandable form
-func importQueryType(record *LogRecord) string {
+func importQueryType(record *InputRecord) string {
 	val := record.GetStringParam("queryselector")
 	switch val {
 	case "iqueryrow":
@@ -48,7 +48,7 @@ func importQueryType(record *LogRecord) string {
 
 // importCorpname extracts actual corpus name from
 // URL argument which may contain additional data (e.g. variant prefix)
-func importCorpname(record *LogRecord) fullCorpname {
+func importCorpname(record *InputRecord) fullCorpname {
 	var corpname string
 	var limited bool
 
@@ -116,8 +116,8 @@ func (cnkr *OutputRecord) GetTime() time.Time {
 	return cnkr.datetime
 }
 
-// New creates a new OutputRecord out of an existing LogRecord
-func New(logRecord *LogRecord, recType string) *OutputRecord {
+// New creates a new OutputRecord out of an existing InputRecord
+func New(logRecord *InputRecord, recType string) *OutputRecord {
 	fullCorpname := importCorpname(logRecord)
 	r := &OutputRecord{
 		Type:           recType,

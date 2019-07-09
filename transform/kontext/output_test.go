@@ -60,7 +60,7 @@ func TestCreateID(t *testing.T) {
 func TestImportCorpname(t *testing.T) {
 	p := make(map[string]interface{})
 	p["corpname"] = "omezeni/foobar7;x=10"
-	r := &kontext.LogRecord{Params: p}
+	r := &kontext.InputRecord{Params: p}
 	c := importCorpname(r)
 	if c.Corpname != "foobar7" || c.limited != true {
 		t.Error("Failed import corpname: ", c)

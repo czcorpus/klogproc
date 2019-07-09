@@ -29,7 +29,7 @@ import (
 )
 
 // CNKLogProcessor imports parsed log records represented
-// as LogRecord instances
+// as InputRecord instances
 type CNKLogProcessor struct {
 	geoIPDb        *geoip2.Reader
 	chunkES        chan *kontext.OutputRecord
@@ -40,7 +40,7 @@ type CNKLogProcessor struct {
 }
 
 // ProcItem is a callback function called by log parser
-func (clp *CNKLogProcessor) ProcItem(appType string, logRec *kontext.LogRecord) {
+func (clp *CNKLogProcessor) ProcItem(appType string, logRec *kontext.InputRecord) {
 	if logRec.AgentIsLoggable() {
 		rec := kontext.New(logRec, appType)
 		ip := logRec.GetClientIP()
