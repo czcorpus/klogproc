@@ -25,7 +25,7 @@ import (
 	"github.com/czcorpus/klogproc/fetch/sfiles"
 	"github.com/czcorpus/klogproc/fetch/sredis"
 	"github.com/czcorpus/klogproc/influx"
-	"github.com/czcorpus/klogproc/record"
+	"github.com/czcorpus/klogproc/transform/kontext"
 	"github.com/oschwald/geoip2-golang"
 )
 
@@ -33,8 +33,8 @@ import (
 // as LogRecord instances
 type CNKLogProcessor struct {
 	geoIPDb        *geoip2.Reader
-	chunkES        chan *record.CNKRecord
-	chunkInflux    chan *record.CNKRecord
+	chunkES        chan *kontext.CNKRecord
+	chunkInflux    chan *kontext.CNKRecord
 	chunkSize      int
 	currIdx        int
 	numNonLoggable int
@@ -43,7 +43,7 @@ type CNKLogProcessor struct {
 // ProcItem is a callback function called by log parser
 func (clp *CNKLogProcessor) ProcItem(appType string, logRec *fetch.LogRecord) {
 	if logRec.AgentIsLoggable() {
-		rec := record.New(logRec, appType)
+		rec := kontext.New(logRec, appType)
 		ip := logRec.GetClientIP()
 		if ip != nil {
 			city, err := clp.geoIPDb.City(ip)
@@ -135,8 +135,8 @@ func processLogs(conf *Conf) {
 	}
 	defer geoDb.Close()
 
-	chunkChannelES := make(chan *record.CNKRecord, conf.ElasticSearch.PushChunkSize*2)
-	chunkChannelInflux := make(chan *record.CNKRecord, conf.InfluxDB.PushChunkSize)
+	chunkChannelES := make(chan *kontext.CNKRecord, conf.ElasticSearch.PushChunkSize*2)
+	chunkChannelInflux := make(chan *kontext.CNKRecord, conf.InfluxDB.PushChunkSize)
 	var rescue ESImportFailHandler
 
 	go func() {

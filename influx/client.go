@@ -19,7 +19,7 @@ package influx
 import (
 	"log"
 
-	"github.com/czcorpus/klogproc/record"
+	"github.com/czcorpus/klogproc/transform/kontext"
 	client "github.com/influxdata/influxdb1-client/v2"
 )
 
@@ -65,7 +65,7 @@ type RecordWriter struct {
 // it also stores the record to a configured database and
 // measurement. Please note that without calling Finish() at
 // the end of an operation, stale records may remain.
-func (c *RecordWriter) AddRecord(rec *record.CNKRecord) error {
+func (c *RecordWriter) AddRecord(rec *kontext.CNKRecord) error {
 	//fmt.Println("ADD REC >>> ", rec)
 	tags := make(map[string]string)
 	values := make(map[string]interface{})
