@@ -27,6 +27,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/czcorpus/klogproc/transform"
 	"github.com/czcorpus/klogproc/transform/kontext"
 )
 
@@ -121,11 +122,15 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, timezon
 	return []string{}
 }
 
-func ProcessFileLogs(conf *Conf, appType string, localTimezone string, minTimestamp int64, processor kontext.LogItemHandler) {
-	files := getFilesInDir(conf.SrcDir, minTimestamp, !conf.PartiallyMatchingFiles, localTimezone)
-	log.Printf("Found %d file(s) to process in %s", len(files), conf.SrcDir)
-	for _, file := range files {
-		p := NewParser(file, localTimezone)
-		p.Parse(minTimestamp, appType, processor)
+type LogFileProcessor = func(conf *Conf, appType string, localTimezone string, minTimestamp int64)
+
+func CreateLogFileProcessor(processor transform.LogTransformer, destChans ...chan *kontext.OutputRecord) LogFileProcessor {
+	return func(conf *Conf, appType string, localTimezone string, minTimestamp int64) {
+		files := getFilesInDir(conf.SrcDir, minTimestamp, !conf.PartiallyMatchingFiles, localTimezone)
+		log.Printf("Found %d file(s) to process in %s", len(files), conf.SrcDir)
+		for _, file := range files {
+			p := newParser(file, localTimezone)
+			p.Parse(minTimestamp, appType, processor, destChans...)
+		}
 	}
 }

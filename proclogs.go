@@ -32,15 +32,14 @@ import (
 // as InputRecord instances
 type CNKLogProcessor struct {
 	geoIPDb        *geoip2.Reader
-	chunkES        chan *kontext.OutputRecord
-	chunkInflux    chan *kontext.OutputRecord
 	chunkSize      int
 	currIdx        int
 	numNonLoggable int
 }
 
-// ProcItem is a callback function called by log parser
-func (clp *CNKLogProcessor) ProcItem(appType string, logRec *kontext.InputRecord) {
+// ProcItem transforms input log record into an output format.
+// In case an unsupported record is encountered, nil is returned.
+func (clp *CNKLogProcessor) ProcItem(appType string, logRec *kontext.InputRecord) *kontext.OutputRecord {
 	if logRec.AgentIsLoggable() {
 		rec := kontext.New(logRec, appType)
 		ip := logRec.GetClientIP()
@@ -59,11 +58,11 @@ func (clp *CNKLogProcessor) ProcItem(appType string, logRec *kontext.InputRecord
 				rec.GeoIP.Timezone = city.Location.TimeZone
 			}
 		}
-		clp.chunkES <- rec
-		clp.chunkInflux <- rec
+		return rec
 
 	} else {
 		clp.numNonLoggable++
+		return nil
 	}
 }
 
@@ -78,9 +77,14 @@ func pushDataToElastic(data [][]byte, esconf *elastic.SearchConf) error {
 	return nil
 }
 
-func processRedisLogs(conf *Conf, queue *sredis.RedisQueue, processor *CNKLogProcessor) {
+func processRedisLogs(conf *Conf, queue *sredis.RedisQueue, processor *CNKLogProcessor, destChans ...chan *kontext.OutputRecord) {
 	for _, item := range queue.GetItems() {
-		processor.ProcItem(conf.AppType, item)
+		rec := processor.ProcItem(conf.AppType, item)
+		if rec != nil {
+			for _, ch := range destChans {
+				ch <- rec
+			}
+		}
 	}
 }
 
@@ -139,11 +143,9 @@ func processLogs(conf *Conf) {
 	var rescue ESImportFailHandler
 
 	go func() {
-		processor := &CNKLogProcessor{
-			geoIPDb:     geoDb,
-			chunkES:     chunkChannelES,
-			chunkInflux: chunkChannelInflux,
-			chunkSize:   conf.ElasticSearch.PushChunkSize,
+		transformer := &CNKLogProcessor{
+			geoIPDb:   geoDb,
+			chunkSize: conf.ElasticSearch.PushChunkSize,
 		}
 
 		if conf.UsesRedis() {
@@ -162,18 +164,19 @@ func processLogs(conf *Conf) {
 				log.Fatalf("ERROR: %s. Please fix the problem before running the program again",
 					err)
 			}
-			processRedisLogs(conf, redisQueue, processor)
+			processRedisLogs(conf, redisQueue, transformer, chunkChannelES, chunkChannelInflux)
 
 		} else {
 			worklog := sfiles.NewWorklog(conf.LogFiles.WorklogPath)
+			log.Printf("INFO: using worklog %s", conf.LogFiles.WorklogPath)
 			defer worklog.Save()
 			rescue = worklog
-			sfiles.ProcessFileLogs(&conf.LogFiles, conf.AppType, conf.LocalTimezone,
-				worklog.GetLastRecord(), processor)
+			proc := sfiles.CreateLogFileProcessor(transformer, chunkChannelES, chunkChannelInflux)
+			proc(&conf.LogFiles, conf.AppType, conf.LocalTimezone, worklog.GetLastRecord())
 		}
 		close(chunkChannelES)
 		close(chunkChannelInflux)
-		log.Printf("INFO: Ignored %d non-loggable items (bots etc.)", processor.numNonLoggable)
+		log.Printf("INFO: Ignored %d non-loggable items (bots etc.)", transformer.numNonLoggable)
 	}()
 
 	var wg sync.WaitGroup

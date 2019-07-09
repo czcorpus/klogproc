@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/czcorpus/klogproc/transform"
 	"github.com/czcorpus/klogproc/transform/kontext"
 )
 
@@ -61,9 +62,9 @@ func getLineType(s string) string {
 	return ""
 }
 
-// NewParser creates a new instance of the Parser.
+// newParser creates a new instance of the Parser.
 // localTimezone has format: "(-|+)[0-9]{2}:[0-9]{2}"
-func NewParser(path string, localTimezone string) *Parser {
+func newParser(path string, localTimezone string) *Parser {
 	f, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -106,12 +107,17 @@ func (p *Parser) parseLine(s string, lineNum int) (*kontext.InputRecord, error) 
 // Parse runs the parsing process based on provided minimum accepted record
 // time, record type (which is just passed to ElastiSearch) and a
 // provided LogInterceptor).
-func (p *Parser) Parse(fromTimestamp int64, recType string, proc kontext.LogItemHandler) {
+func (p *Parser) Parse(fromTimestamp int64, recType string, proc transform.LogTransformer, outputs ...chan *kontext.OutputRecord) {
 	for i := 0; p.fr.Scan(); i++ {
 		rec, err := p.parseLine(p.fr.Text(), i)
 		if err == nil {
 			if rec.GetTime().Unix() >= fromTimestamp {
-				proc.ProcItem(recType, rec)
+				outRec := proc.ProcItem(recType, rec)
+				if outRec != nil {
+					for _, output := range outputs {
+						output <- outRec
+					}
+				}
 			}
 
 		} else {
