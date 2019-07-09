@@ -22,8 +22,8 @@ import (
 )
 
 // cnkr.Action + cnkr.Corpus + cnkr.Datetime + cnkr.IPAddress + cnkr.Type + cnkr.UserAgent + cnkr.UserID
-func createRecord() *CNKRecord {
-	return &CNKRecord{
+func createRecord() *OutputRecord {
+	return &OutputRecord{
 		ID:          "abcdef",
 		Type:        "kontext",
 		Action:      "view",

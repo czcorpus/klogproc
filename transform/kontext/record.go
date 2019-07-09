@@ -84,9 +84,9 @@ type GeoDataRecord struct {
 	Timezone      string     `json:"timezone"`
 }
 
-// CNKRecord represents an exported application log record ready
+// OutputRecord represents an exported application log record ready
 // to be inserted into ElasticSearch index.
-type CNKRecord struct {
+type OutputRecord struct {
 	ID             string   `json:"-"`
 	Type           string   `json:"-"`
 	Action         string   `json:"action"`
@@ -108,20 +108,20 @@ type CNKRecord struct {
 }
 
 // ToJSON converts self to JSON string
-func (cnkr *CNKRecord) ToJSON() ([]byte, error) {
+func (cnkr *OutputRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(cnkr)
 }
 
 // GetTime returns Go Time instance representing
 // date and time when the record was created.
-func (cnkr *CNKRecord) GetTime() time.Time {
+func (cnkr *OutputRecord) GetTime() time.Time {
 	return cnkr.datetime
 }
 
-// New creates a new CNKRecord out of an existing LogRecord
-func New(logRecord *fetch.LogRecord, recType string) *CNKRecord {
+// New creates a new OutputRecord out of an existing LogRecord
+func New(logRecord *fetch.LogRecord, recType string) *OutputRecord {
 	fullCorpname := importCorpname(logRecord)
-	r := &CNKRecord{
+	r := &OutputRecord{
 		Type:           recType,
 		Action:         logRecord.Action,
 		Corpus:         fullCorpname.Corpname,
@@ -148,7 +148,7 @@ type fullCorpname struct {
 	limited  bool
 }
 
-func createID(cnkr *CNKRecord) string {
+func createID(cnkr *OutputRecord) string {
 	str := cnkr.Action + cnkr.Corpus + cnkr.Datetime + cnkr.IPAddress +
 		cnkr.Type + cnkr.UserAgent + strconv.Itoa(cnkr.UserID)
 	sum := sha1.Sum([]byte(str))

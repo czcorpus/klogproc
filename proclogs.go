@@ -33,8 +33,8 @@ import (
 // as LogRecord instances
 type CNKLogProcessor struct {
 	geoIPDb        *geoip2.Reader
-	chunkES        chan *kontext.CNKRecord
-	chunkInflux    chan *kontext.CNKRecord
+	chunkES        chan *kontext.OutputRecord
+	chunkInflux    chan *kontext.OutputRecord
 	chunkSize      int
 	currIdx        int
 	numNonLoggable int
@@ -135,8 +135,8 @@ func processLogs(conf *Conf) {
 	}
 	defer geoDb.Close()
 
-	chunkChannelES := make(chan *kontext.CNKRecord, conf.ElasticSearch.PushChunkSize*2)
-	chunkChannelInflux := make(chan *kontext.CNKRecord, conf.InfluxDB.PushChunkSize)
+	chunkChannelES := make(chan *kontext.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
+	chunkChannelInflux := make(chan *kontext.OutputRecord, conf.InfluxDB.PushChunkSize)
 	var rescue ESImportFailHandler
 
 	go func() {
