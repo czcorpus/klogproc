@@ -15,6 +15,7 @@
 package main
 
 var helpTexts = []string{
+    // batch
 	`Parse data provided either as a directory containing one or more application
 log files or a Redis list (preferred). A proper JSON configuration file must be specified
 
@@ -35,5 +36,8 @@ log files or a Redis list (preferred). A proper JSON configuration file must be 
     "anonymousUsers": [4230]
 }
 `,
+    // tail
+    `Tail file logs ... TODO`,
+    // docupdate
 	`Update each matching (defined by filter in "updates") record using a provided object (defined in "updateData"). NOTE: This is experimental.`,
 }

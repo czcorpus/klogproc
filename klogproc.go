@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"log"
 	"path/filepath"
+	"strings"
 
 	"github.com/czcorpus/klogproc/fetch/sfiles"
 	"github.com/czcorpus/klogproc/fetch/sredis"
@@ -29,6 +30,14 @@ import (
 
 	"github.com/czcorpus/klogproc/elastic"
 	"github.com/czcorpus/klogproc/influx"
+)
+
+const (
+	actionBatch = "batch"
+	actionTail = "tail"
+	actionKeyremove = "keyremove"
+	actionDocupdate = "docupdate"
+	actionHelp  = "help"
 )
 
 // Conf describes klogproc's configuration
@@ -114,10 +123,12 @@ func help(topic string) {
 	}
 	fmt.Printf("\n[%s]\n\n", topic)
 	switch topic {
-	case "proclogs":
+	case actionBatch:
 		fmt.Println(helpTexts[0])
-	case "docupdate":
+	case actionTail:
 		fmt.Println(helpTexts[1])
+	case actionDocupdate:
+		fmt.Println(helpTexts[2])
 	default:
 		fmt.Println("- no information available -")
 	}
@@ -157,7 +168,8 @@ func setup(confPath string) (*Conf, *os.File) {
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending KonText/Bonito logs to ElasticSearch\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\tproclogs, docupdate, keyremove, help\n\nOptions:\n", filepath.Base(os.Args[0]))
+		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending KonText/Bonito logs to ElasticSearch\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\t%s\n\nOptions:\n",
+			filepath.Base(os.Args[0]), strings.Join([]string{actionBatch, actionTail, actionDocupdate, actionKeyremove, actionHelp}, ", "))
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -165,20 +177,20 @@ func main() {
 	var logf *os.File
 
 	switch flag.Arg(0) {
-	case "help":
+	case actionHelp:
 		help(flag.Arg(1))
-	case "docupdate":
+	case actionDocupdate:
 		conf, logf = setup(flag.Arg(1))
 		updateRecords(conf)
-	case "keyremove":
+	case actionKeyremove:
 		conf, logf = setup(flag.Arg(1))
 		removeKeyFromRecords(conf)
-	case "proclogs":
+	case actionBatch:
 		conf, logf = setup(flag.Arg(1))
 		processLogs(conf)
-	case "jsonize":
+	case actionTail:
 		conf, logf = setup(flag.Arg(1))
-		jsonizeLogs(conf)
+		fmt.Println("tail --- TODO")
 	default:
 		fmt.Printf("Unknown action [%s]. Try -h for help\n", flag.Arg(0))
 		os.Exit(1)
