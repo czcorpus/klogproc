@@ -21,50 +21,16 @@ package sfiles
 
 import (
 	"bufio"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
 
 	"github.com/czcorpus/klogproc/transform"
-	"github.com/czcorpus/klogproc/transform/kontext"
 )
-
-type minorError struct {
-	LineNumber int
-	Message    string
-}
-
-func (m minorError) Error() string {
-	return fmt.Sprintf("line %d: %s", m.LineNumber, m.Message)
-}
-
-func newMinorError(lineNumber int, message string) minorError {
-	return minorError{LineNumber: lineNumber, Message: message}
-}
-
-func parseRawLine(s string) string {
-	reg := regexp.MustCompile("^.+\\sINFO:\\s+(\\{.+)$")
-	srch := reg.FindStringSubmatch(s)
-	if srch != nil {
-		return srch[1]
-	}
-	return ""
-}
-
-func getLineType(s string) string {
-	reg := regexp.MustCompile("^.+\\s([A-Z]+):\\s+.+$")
-	srch := reg.FindStringSubmatch(s)
-	if srch != nil {
-		return srch[1]
-	}
-	return ""
-}
 
 // newParser creates a new instance of the Parser.
 // localTimezone has format: "(-|+)[0-9]{2}:[0-9]{2}"
-func newParser(path string, localTimezone string) *Parser {
+func newParser(path string, localTimezone string, appType string) *Parser {
 	f, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -73,11 +39,23 @@ func newParser(path string, localTimezone string) *Parser {
 		panic(err)
 	}
 	sc := bufio.NewScanner(f)
+	lineParser, err := newLineParser(appType)
+	if err != nil {
+		panic(err) // TODO
+	}
 	return &Parser{
+		recType:       appType,
 		fr:            sc,
 		localTimezone: localTimezone,
 		fileName:      filepath.Base(f.Name()),
+		lineParser:    lineParser,
 	}
+}
+
+// LineParser represents an object able to parse an individual
+// line from a specific application log.
+type LineParser interface {
+	ParseLine(s string, lineNum int, localTimezone string) (transform.InputRecord, error)
 }
 
 // Parser parses a single file represented by fr Scanner.
@@ -87,32 +65,19 @@ type Parser struct {
 	fr            *bufio.Scanner
 	fileName      string
 	localTimezone string
-}
-
-// parseLine parses a query log line - i.e. it expects
-// that the line contains user interaction log
-func (p *Parser) parseLine(s string, lineNum int) (transform.InputRecord, error) {
-	jsonLine := parseRawLine(s)
-	if jsonLine != "" {
-		return kontext.ImportJSONLog([]byte(jsonLine), p.localTimezone)
-
-	} else if tp := getLineType(s); tp == "QUERY" {
-		return nil, fmt.Errorf("Failed to process QUERY entry: %s", s)
-
-	} else {
-		return nil, newMinorError(lineNum, fmt.Sprintf("ignored non-query entry"))
-	}
+	lineParser    LineParser
+	recType       string
 }
 
 // Parse runs the parsing process based on provided minimum accepted record
 // time, record type (which is just passed to ElastiSearch) and a
 // provided LogInterceptor).
-func (p *Parser) Parse(fromTimestamp int64, recType string, proc transform.LogTransformer, outputs ...chan *kontext.OutputRecord) {
+func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, outputs ...chan transform.OutputRecord) {
 	for i := 0; p.fr.Scan(); i++ {
-		rec, err := p.parseLine(p.fr.Text(), i)
+		rec, err := p.lineParser.ParseLine(p.fr.Text(), i, p.localTimezone)
 		if err == nil {
 			if rec.GetTime().Unix() >= fromTimestamp {
-				outRec := proc.ProcItem(recType, rec)
+				outRec := proc.ProcItem(p.recType, rec)
 				if outRec != nil {
 					for _, output := range outputs {
 						output <- outRec
@@ -122,7 +87,7 @@ func (p *Parser) Parse(fromTimestamp int64, recType string, proc transform.LogTr
 
 		} else {
 			switch err.(type) {
-			case minorError:
+			case transform.MinorParsingError:
 				log.Printf("INFO: file %s, %s", p.fileName, err)
 			default:
 				log.Print("ERROR: ", err)

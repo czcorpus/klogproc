@@ -25,24 +25,25 @@ import (
 	"github.com/czcorpus/klogproc/fetch/sredis"
 	"github.com/czcorpus/klogproc/influx"
 	"github.com/czcorpus/klogproc/transform"
-	"github.com/czcorpus/klogproc/transform/kontext"
 	"github.com/oschwald/geoip2-golang"
 )
 
 // CNKLogProcessor imports parsed log records represented
 // as InputRecord instances
 type CNKLogProcessor struct {
+	appType        string
 	geoIPDb        *geoip2.Reader
 	chunkSize      int
 	currIdx        int
 	numNonLoggable int
+	logTransformer transform.LogItemTransformer
 }
 
 // ProcItem transforms input log record into an output format.
 // In case an unsupported record is encountered, nil is returned.
-func (clp *CNKLogProcessor) ProcItem(appType string, logRec transform.InputRecord) *kontext.OutputRecord {
+func (clp *CNKLogProcessor) ProcItem(appType string, logRec transform.InputRecord) transform.OutputRecord {
 	if logRec.AgentIsLoggable() {
-		rec, err := transform.Run(logRec)
+		rec, err := clp.logTransformer.Transform(logRec, appType)
 		if err != nil {
 			log.Printf("ERROR: failed to transform item %s", logRec)
 			return nil
@@ -54,21 +55,20 @@ func (clp *CNKLogProcessor) ProcItem(appType string, logRec transform.InputRecor
 				log.Printf("Failed to fetch GeoIP data for IP %s: %s", ip.String(), err)
 
 			} else {
-				rec.GeoIP.IP = ip.String()
-				rec.GeoIP.CountryName = city.Country.Names["en"]
-				rec.GeoIP.Latitude = float32(city.Location.Latitude)
-				rec.GeoIP.Longitude = float32(city.Location.Longitude)
-				rec.GeoIP.Location[0] = rec.GeoIP.Longitude
-				rec.GeoIP.Location[1] = rec.GeoIP.Latitude
-				rec.GeoIP.Timezone = city.Location.TimeZone
+				rec.SetLocation(city.Country.Names["en"], float32(city.Location.Latitude),
+					float32(city.Location.Longitude), city.Location.TimeZone)
 			}
 		}
 		return rec
-
-	} else {
-		clp.numNonLoggable++
-		return nil
 	}
+	clp.numNonLoggable++
+	return nil
+}
+
+// GetAppType returns a string idenfier unique for a concrete application we
+// want to archive logs for (e.g. 'kontext', 'syd', ...)
+func (clp *CNKLogProcessor) GetAppType() string {
+	return clp.appType
 }
 
 func pushDataToElastic(data [][]byte, esconf *elastic.SearchConf) error {
@@ -82,7 +82,7 @@ func pushDataToElastic(data [][]byte, esconf *elastic.SearchConf) error {
 	return nil
 }
 
-func processRedisLogs(conf *Conf, queue *sredis.RedisQueue, processor *CNKLogProcessor, destChans ...chan *kontext.OutputRecord) {
+func processRedisLogs(conf *Conf, queue *sredis.RedisQueue, processor *CNKLogProcessor, destChans ...chan transform.OutputRecord) {
 	for _, item := range queue.GetItems() {
 		rec := processor.ProcItem(conf.AppType, item)
 		if rec != nil {
@@ -143,14 +143,20 @@ func processLogs(conf *Conf) {
 	}
 	defer geoDb.Close()
 
-	chunkChannelES := make(chan *kontext.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
-	chunkChannelInflux := make(chan *kontext.OutputRecord, conf.InfluxDB.PushChunkSize)
+	chunkChannelES := make(chan transform.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
+	chunkChannelInflux := make(chan transform.OutputRecord, conf.InfluxDB.PushChunkSize)
 	var rescue ESImportFailHandler
 
 	go func() {
-		transformer := &CNKLogProcessor{
-			geoIPDb:   geoDb,
-			chunkSize: conf.ElasticSearch.PushChunkSize,
+		lt, err := GetLogTransformer(conf.AppType)
+		if err != nil {
+			panic(err) // TODO
+		}
+		processor := &CNKLogProcessor{
+			geoIPDb:        geoDb,
+			chunkSize:      conf.ElasticSearch.PushChunkSize,
+			appType:        conf.AppType,
+			logTransformer: lt,
 		}
 
 		if conf.UsesRedis() {
@@ -169,19 +175,19 @@ func processLogs(conf *Conf) {
 				log.Fatalf("ERROR: %s. Please fix the problem before running the program again",
 					err)
 			}
-			processRedisLogs(conf, redisQueue, transformer, chunkChannelES, chunkChannelInflux)
+			processRedisLogs(conf, redisQueue, processor, chunkChannelES, chunkChannelInflux)
 
 		} else {
 			worklog := sfiles.NewWorklog(conf.LogFiles.WorklogPath)
 			log.Printf("INFO: using worklog %s", conf.LogFiles.WorklogPath)
 			defer worklog.Save()
 			rescue = worklog
-			proc := sfiles.CreateLogFileProcessor(transformer, chunkChannelES, chunkChannelInflux)
-			proc(&conf.LogFiles, conf.AppType, conf.LocalTimezone, worklog.GetLastRecord())
+			proc := sfiles.CreateLogFileProcFunc(processor, chunkChannelES, chunkChannelInflux)
+			proc(&conf.LogFiles, conf.LocalTimezone, worklog.GetLastRecord())
 		}
 		close(chunkChannelES)
 		close(chunkChannelInflux)
-		log.Printf("INFO: Ignored %d non-loggable items (bots etc.)", transformer.numNonLoggable)
+		log.Printf("INFO: Ignored %d non-loggable items (bots etc.)", processor.numNonLoggable)
 	}()
 
 	var wg sync.WaitGroup
@@ -198,8 +204,8 @@ func processLogs(conf *Conf) {
 			for rec := range chunkChannelES {
 				jsonData, err := rec.ToJSON()
 				jsonMeta := elastic.CNKRecordMeta{
-					ID:    rec.ID,
-					Type:  rec.Type,
+					ID:    rec.GetID(),
+					Type:  rec.GetType(),
 					Index: conf.ElasticSearch.Index,
 				}
 				jsonMetaES, err2 := (&elastic.ESCNKRecordMeta{Index: jsonMeta}).ToJSON()
@@ -210,7 +216,7 @@ func processLogs(conf *Conf) {
 					i += 2
 
 				} else {
-					log.Print("ERROR: Failed to encode item ", rec.Datetime)
+					log.Print("ERROR: Failed to encode item ", rec.GetTime())
 				}
 				if i == conf.ElasticSearch.PushChunkSize*2 {
 					data[i] = []byte("\n")

@@ -110,35 +110,40 @@ func (cnkr *OutputRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(cnkr)
 }
 
+func (cnkr *OutputRecord) ToInfluxDB() (tags map[string]string, values map[string]interface{}) {
+	tags = make(map[string]string)
+	values = make(map[string]interface{})
+	values["procTime"] = cnkr.ProcTime
+	values["error"] = cnkr.Error.Name
+	values["errorAnchor"] = cnkr.Error.Anchor
+	tags["corpname"] = cnkr.Corpus
+	tags["queryType"] = cnkr.QueryType
+	tags["action"] = cnkr.Action
+	return
+}
+
+func (cnkr *OutputRecord) GetID() string {
+	return cnkr.ID
+}
+
+func (cnkr *OutputRecord) GetType() string {
+	return cnkr.Type
+}
+
 // GetTime returns Go Time instance representing
 // date and time when the record was created.
 func (cnkr *OutputRecord) GetTime() time.Time {
 	return cnkr.datetime
 }
 
-// New creates a new OutputRecord out of an existing InputRecord
-func New(logRecord *InputRecord, recType string) *OutputRecord {
-	fullCorpname := importCorpname(logRecord)
-	r := &OutputRecord{
-		Type:           recType,
-		Action:         logRecord.Action,
-		Corpus:         fullCorpname.Corpname,
-		AlignedCorpora: logRecord.GetAlignedCorpora(),
-		Datetime:       logRecord.Date,
-		datetime:       logRecord.GetTime(),
-		IPAddress:      logRecord.GetClientIP().String(),
-		// IsAnonymous - not set here
-		IsQuery:   isEntryQuery(logRecord.Action),
-		Limited:   fullCorpname.limited,
-		ProcTime:  logRecord.ProcTime,
-		QueryType: importQueryType(logRecord),
-		Type2:     recType,
-		UserAgent: logRecord.Request.HTTPUserAgent,
-		UserID:    logRecord.UserID,
-		Error:     logRecord.Error,
-	}
-	r.ID = createID(r)
-	return r
+func (cnkr *OutputRecord) SetLocation(countryName string, latitude float32, longitude float32, timezone string) {
+	cnkr.GeoIP.IP = cnkr.IPAddress
+	cnkr.GeoIP.CountryName = countryName
+	cnkr.GeoIP.Latitude = latitude
+	cnkr.GeoIP.Longitude = longitude
+	cnkr.GeoIP.Location[0] = cnkr.GeoIP.Longitude
+	cnkr.GeoIP.Location[1] = cnkr.GeoIP.Latitude
+	cnkr.GeoIP.Timezone = timezone
 }
 
 type fullCorpname struct {
