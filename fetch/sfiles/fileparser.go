@@ -91,7 +91,7 @@ type Parser struct {
 
 // parseLine parses a query log line - i.e. it expects
 // that the line contains user interaction log
-func (p *Parser) parseLine(s string, lineNum int) (*kontext.InputRecord, error) {
+func (p *Parser) parseLine(s string, lineNum int) (transform.InputRecord, error) {
 	jsonLine := parseRawLine(s)
 	if jsonLine != "" {
 		return kontext.ImportJSONLog([]byte(jsonLine), p.localTimezone)

@@ -24,6 +24,7 @@ import (
 	"github.com/czcorpus/klogproc/fetch/sfiles"
 	"github.com/czcorpus/klogproc/fetch/sredis"
 	"github.com/czcorpus/klogproc/influx"
+	"github.com/czcorpus/klogproc/transform"
 	"github.com/czcorpus/klogproc/transform/kontext"
 	"github.com/oschwald/geoip2-golang"
 )
@@ -39,9 +40,13 @@ type CNKLogProcessor struct {
 
 // ProcItem transforms input log record into an output format.
 // In case an unsupported record is encountered, nil is returned.
-func (clp *CNKLogProcessor) ProcItem(appType string, logRec *kontext.InputRecord) *kontext.OutputRecord {
+func (clp *CNKLogProcessor) ProcItem(appType string, logRec transform.InputRecord) *kontext.OutputRecord {
 	if logRec.AgentIsLoggable() {
-		rec := kontext.New(logRec, appType)
+		rec, err := transform.Run(logRec)
+		if err != nil {
+			log.Printf("ERROR: failed to transform item %s", logRec)
+			return nil
+		}
 		ip := logRec.GetClientIP()
 		if ip != nil {
 			city, err := clp.geoIPDb.City(ip)
