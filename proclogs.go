@@ -136,7 +136,7 @@ func retryRescuedItems(queue *sredis.RedisQueue, conf *elastic.SearchConf) error
 // or from a directory of files (in such case it keeps a worklog containing
 // last loaded value). In case both locations are configured, Redis has
 // precedence.
-func processLogs(conf *Conf) {
+func processLogs(conf *Conf, action string) {
 	geoDb, err := geoip2.Open(conf.GeoIPDbPath)
 	if err != nil {
 		panic(err)
@@ -159,7 +159,11 @@ func processLogs(conf *Conf) {
 			logTransformer: lt,
 		}
 
-		if conf.UsesRedis() {
+		switch action {
+		case actionRedis:
+			if !conf.UsesRedis() {
+				panic("Redis not configured") // TODO
+			}
 			redisQueue, err := sredis.OpenRedisQueue(
 				conf.LogRedis.Address,
 				conf.LogRedis.Database,
@@ -177,13 +181,17 @@ func processLogs(conf *Conf) {
 			}
 			processRedisLogs(conf, redisQueue, processor, chunkChannelES, chunkChannelInflux)
 
-		} else {
+		case actionBatch:
+			// TODO test config
 			worklog := sfiles.NewWorklog(conf.LogFiles.WorklogPath)
 			log.Printf("INFO: using worklog %s", conf.LogFiles.WorklogPath)
 			defer worklog.Save()
 			rescue = worklog
 			proc := sfiles.CreateLogFileProcFunc(processor, chunkChannelES, chunkChannelInflux)
 			proc(&conf.LogFiles, conf.LocalTimezone, worklog.GetLastRecord())
+
+		case actionTail:
+			log.Printf("TODO")
 		}
 		close(chunkChannelES)
 		close(chunkChannelInflux)
@@ -235,7 +243,9 @@ func processLogs(conf *Conf) {
 					failed = append(failed, data[:i+1]...)
 				}
 			}
-			rescue.RescueFailedChunks(failed)
+			if rescue != nil {
+				rescue.RescueFailedChunks(failed)
+			}
 
 		} else {
 			for range chunkChannelES {
