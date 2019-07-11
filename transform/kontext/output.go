@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/czcorpus/klogproc/transform"
 )
 
 // importQueryType translates KonText/Bonito query type argument
@@ -68,20 +70,6 @@ func importCorpname(record *InputRecord) fullCorpname {
 	return fullCorpname{}
 }
 
-// GeoDataRecord represents a full client geographical
-// position information as provided by GeoIP database
-type GeoDataRecord struct {
-	ContinentCode string     `json:"continent_code"`
-	CountryCode2  string     `json:"country_code2"`
-	CountryCode3  string     `json:"country_code3"`
-	CountryName   string     `json:"country_name"`
-	IP            string     `json:"ip"`
-	Latitude      float32    `json:"latitude"`
-	Longitude     float32    `json:"longitude"`
-	Location      [2]float32 `json:"location"`
-	Timezone      string     `json:"timezone"`
-}
-
 // OutputRecord represents an exported application log record ready
 // to be inserted into ElasticSearch index.
 type OutputRecord struct {
@@ -92,17 +80,17 @@ type OutputRecord struct {
 	AlignedCorpora []string `json:"alignedCorpora"`
 	Datetime       string   `json:"datetime"`
 	datetime       time.Time
-	IPAddress      string        `json:"ipAddress"`
-	IsAnonymous    bool          `json:"isAnonymous"`
-	IsQuery        bool          `json:"isQuery"`
-	Limited        bool          `json:"limited"`
-	ProcTime       float32       `json:"procTime"`
-	QueryType      string        `json:"queryType"`
-	Type2          string        `json:"type"` // TODO do we need this?
-	UserAgent      string        `json:"userAgent"`
-	UserID         int           `json:"userId"`
-	GeoIP          GeoDataRecord `json:"geoip"`
-	Error          ErrorRecord   `json:"error"`
+	IPAddress      string                  `json:"ipAddress"`
+	IsAnonymous    bool                    `json:"isAnonymous"`
+	IsQuery        bool                    `json:"isQuery"`
+	Limited        bool                    `json:"limited"`
+	ProcTime       float32                 `json:"procTime"`
+	QueryType      string                  `json:"queryType"`
+	Type2          string                  `json:"type"` // TODO do we need this?
+	UserAgent      string                  `json:"userAgent"`
+	UserID         int                     `json:"userId"`
+	GeoIP          transform.GeoDataRecord `json:"geoip"`
+	Error          ErrorRecord             `json:"error"`
 }
 
 // ToJSON converts self to JSON string

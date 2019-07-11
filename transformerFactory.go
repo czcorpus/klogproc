@@ -19,16 +19,19 @@ import (
 
 	"github.com/czcorpus/klogproc/transform"
 	"github.com/czcorpus/klogproc/transform/kontext"
+	"github.com/czcorpus/klogproc/transform/syd"
 )
 
-// KonText is a simple type-safe wrapper for kontext app type log transformer
-type KonText struct {
+// ------------------------------------
+
+// konTextTransformer is a simple type-safe wrapper for kontext app type log transformer
+type konTextTransformer struct {
 	t *kontext.Transformer
 }
 
 // Transform transforms KonText app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (k *KonText) Transform(logRec transform.InputRecord, recType string) (transform.OutputRecord, error) {
+func (k *konTextTransformer) Transform(logRec transform.InputRecord, recType string) (transform.OutputRecord, error) {
 	tRec, ok := logRec.(*kontext.InputRecord)
 	if ok {
 		return k.t.Transform(tRec, recType)
@@ -36,12 +39,32 @@ func (k *KonText) Transform(logRec transform.InputRecord, recType string) (trans
 	return nil, fmt.Errorf("Invalid type for conversion by KonText transformer %T", logRec)
 }
 
+// ------------------------------------
+
+type sydTransformer struct {
+	t *syd.Transformer
+}
+
+// Transform transforms KonText app log record types as general InputRecord
+// In case of type mismatch, error is returned.
+func (s *sydTransformer) Transform(logRec transform.InputRecord, recType string) (transform.OutputRecord, error) {
+	tRec, ok := logRec.(*syd.InputRecord)
+	if ok {
+		return s.t.Transform(tRec, recType)
+	}
+	return nil, fmt.Errorf("Invalid type for conversion by SyD transformer %T", logRec)
+}
+
+// ------------------------------------
+
 // GetLogTransformer returns a type-safe transformer for a concrete app type
 func GetLogTransformer(appType string) (transform.LogItemTransformer, error) {
 
 	switch appType {
 	case "kontext":
-		return &KonText{t: &kontext.Transformer{}}, nil
+		return &konTextTransformer{t: &kontext.Transformer{}}, nil
+	case "syd":
+		return &sydTransformer{t: &syd.Transformer{}}, nil
 	default:
 		return nil, fmt.Errorf("Cannot find log transformer for app type %s", appType)
 	}

@@ -24,6 +24,7 @@ import (
 	"github.com/czcorpus/klogproc/influx"
 	"github.com/czcorpus/klogproc/load/batch"
 	"github.com/czcorpus/klogproc/load/sredis"
+	"github.com/czcorpus/klogproc/load/tail"
 	"github.com/czcorpus/klogproc/transform"
 	"github.com/oschwald/geoip2-golang"
 )
@@ -180,6 +181,8 @@ func processLogs(conf *Conf, action string) {
 					err)
 			}
 			processRedisLogs(conf, redisQueue, processor, chunkChannelES, chunkChannelInflux)
+			close(chunkChannelES)
+			close(chunkChannelInflux)
 
 		case actionBatch:
 			// TODO test config
@@ -189,12 +192,46 @@ func processLogs(conf *Conf, action string) {
 			rescue = worklog
 			proc := batch.CreateLogFileProcFunc(processor, chunkChannelES, chunkChannelInflux)
 			proc(&conf.LogFiles, conf.LocalTimezone, worklog.GetLastRecord())
+			close(chunkChannelES)
+			close(chunkChannelInflux)
 
 		case actionTail:
-			log.Printf("TODO")
+			lineParsers := make(map[string]batch.LineParser)
+			logTransformers := make(map[string]transform.LogItemTransformer)
+			var err error
+			for _, f := range conf.LogTail.Files {
+				lineParsers[f.AppType], err = batch.NewLineParser(f.AppType)
+				if err != nil {
+					log.Fatal("Failed to initialize parser: ", err)
+				}
+				logTransformers[f.AppType], err = GetLogTransformer(f.AppType)
+				if err != nil {
+					log.Fatal("Failed to initialize transformer: ", err)
+				}
+			}
+			tail.Run(
+				&conf.LogTail,
+				func(rec string, appType string) {
+					fmt.Println(">>>> ", appType, rec)
+					parsed, err := lineParsers[appType].ParseLine(rec, 0, conf.LocalTimezone)
+					if err != nil {
+						log.Printf("ERROR: %s", err)
+						return
+					}
+					fmt.Println("  parsed: ", parsed)
+					outRec, err := logTransformers[appType].Transform(parsed, appType)
+					if err != nil {
+						log.Printf("ERROR: %s", err)
+						return
+					}
+					fmt.Println("    transformed ", outRec)
+				},
+				func() {
+					close(chunkChannelES)
+					close(chunkChannelInflux)
+				},
+			)
 		}
-		close(chunkChannelES)
-		close(chunkChannelInflux)
 		log.Printf("INFO: Ignored %d non-loggable items (bots etc.)", processor.numNonLoggable)
 	}()
 

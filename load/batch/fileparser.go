@@ -39,7 +39,7 @@ func newParser(path string, localTimezone string, appType string) *Parser {
 		panic(err)
 	}
 	sc := bufio.NewScanner(f)
-	lineParser, err := newLineParser(appType)
+	lineParser, err := NewLineParser(appType)
 	if err != nil {
 		panic(err) // TODO
 	}

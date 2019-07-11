@@ -41,6 +41,20 @@ type InputRecord interface {
 	AgentIsLoggable() bool
 }
 
+// GeoDataRecord represents a full client geographical
+// position information as provided by GeoIP database
+type GeoDataRecord struct {
+	ContinentCode string     `json:"continent_code"`
+	CountryCode2  string     `json:"country_code2"`
+	CountryCode3  string     `json:"country_code3"`
+	CountryName   string     `json:"country_name"`
+	IP            string     `json:"ip"`
+	Latitude      float32    `json:"latitude"`
+	Longitude     float32    `json:"longitude"`
+	Location      [2]float32 `json:"location"`
+	Timezone      string     `json:"timezone"`
+}
+
 // OutputRecord describes a common behavior for records ready to
 // be stored to the storage with a defined type
 type OutputRecord interface {

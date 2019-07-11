@@ -19,7 +19,10 @@ import (
 
 	"github.com/czcorpus/klogproc/transform"
 	"github.com/czcorpus/klogproc/transform/kontext"
+	"github.com/czcorpus/klogproc/transform/syd"
 )
+
+// ------------------------------------
 
 // kontextLineParser wraps kontext-specific parser into a general form as required
 // by core of the klogproc
@@ -32,10 +35,26 @@ func (parser *kontextLineParser) ParseLine(s string, lineNum int, localTimezone 
 	return parser.lp.ParseLine(s, lineNum, localTimezone)
 }
 
-func newLineParser(appType string) (LineParser, error) {
+// ------------------------------------
+
+type sydLineParser struct {
+	lp *syd.LineParser
+}
+
+// ParseLine parses a passed line of a respective log
+func (parser *sydLineParser) ParseLine(s string, lineNum int, localTimezone string) (transform.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum, localTimezone)
+}
+
+// ------------------------------------
+
+// NewLineParser creates a parser for individual lines of a respective appType
+func NewLineParser(appType string) (LineParser, error) {
 	switch appType {
 	case "kontext":
 		return &kontextLineParser{lp: &kontext.LineParser{}}, nil
+	case "syd":
+		return &sydLineParser{lp: &syd.LineParser{}}, nil
 	default:
 		return nil, fmt.Errorf("Parser not found for application type %s", appType)
 	}

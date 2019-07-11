@@ -25,6 +25,7 @@ import (
 
 	"github.com/czcorpus/klogproc/load/batch"
 	"github.com/czcorpus/klogproc/load/sredis"
+	"github.com/czcorpus/klogproc/load/tail"
 
 	"os"
 
@@ -45,6 +46,7 @@ const (
 type Conf struct {
 	LogRedis       sredis.RedisConf   `json:"logRedis"`
 	LogFiles       batch.Conf         `json:"logFiles"`
+	LogTail        tail.Conf          `json:"logTail"`
 	GeoIPDbPath    string             `json:"geoIpDbPath"`
 	LocalTimezone  string             `json:"localTimezone"`
 	AnonymousUsers int                `json:"anonymousUsers"`
