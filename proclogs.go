@@ -21,9 +21,9 @@ import (
 	"sync"
 
 	"github.com/czcorpus/klogproc/elastic"
-	"github.com/czcorpus/klogproc/fetch/batch"
-	"github.com/czcorpus/klogproc/fetch/sredis"
 	"github.com/czcorpus/klogproc/influx"
+	"github.com/czcorpus/klogproc/load/batch"
+	"github.com/czcorpus/klogproc/load/sredis"
 	"github.com/czcorpus/klogproc/transform"
 	"github.com/oschwald/geoip2-golang"
 )

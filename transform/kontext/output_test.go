@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/czcorpus/klogproc/fetch"
+	"github.com/czcorpus/klogproc/load"
 )
 
 // cnkr.Action + cnkr.Corpus + cnkr.Datetime + cnkr.IPAddress + cnkr.Type + cnkr.UserAgent + cnkr.UserID

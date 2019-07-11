@@ -23,8 +23,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	batch "github.com/czcorpus/klogproc/fetch/batch"
-	"github.com/czcorpus/klogproc/fetch/sredis"
+	"github.com/czcorpus/klogproc/load/batch"
+	"github.com/czcorpus/klogproc/load/sredis"
 
 	"os"
 
