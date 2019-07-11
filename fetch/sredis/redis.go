@@ -18,7 +18,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/czcorpus/klogproc/fetch"
+	"github.com/czcorpus/klogproc/transform"
+	"github.com/czcorpus/klogproc/transform/kontext"
 	"github.com/go-redis/redis"
 )
 
@@ -64,18 +65,18 @@ func OpenRedisQueue(address string, database int, queueKey string, localTimezone
 // Please note that invalid records are taken from queue too
 // and then thrown away (with logged message containing the
 // original item source).
-func (rc *RedisQueue) GetItems() []*fetch.LogRecord {
+func (rc *RedisQueue) GetItems() []transform.InputRecord {
 
 	size := int(rc.db.LLen(rc.queueKey).Val())
 	log.Printf("INFO: Found %d records in log queue", size)
-	ans := make([]*fetch.LogRecord, 0, size)
+	ans := make([]transform.InputRecord, 0, size)
 
 	for i := 0; i < size; i++ {
 		rawItem, err := rc.db.LPop(rc.queueKey).Bytes()
 		if err != nil {
 			log.Printf("WARNING: %s, orig item: %s", err, rawItem)
 		}
-		item, err := fetch.ImportJSONLog(rawItem, rc.localTimezone)
+		item, err := kontext.ImportJSONLog(rawItem, rc.localTimezone)
 		if err != nil {
 			log.Printf("WARNING: %s, orig item: %s", err, rawItem)
 

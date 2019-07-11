@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package record
+package kontext
 
 import (
 	"fmt"
@@ -22,8 +22,8 @@ import (
 )
 
 // cnkr.Action + cnkr.Corpus + cnkr.Datetime + cnkr.IPAddress + cnkr.Type + cnkr.UserAgent + cnkr.UserID
-func createRecord() *CNKRecord {
-	return &CNKRecord{
+func createRecord() *OutputRecord {
+	return &OutputRecord{
 		ID:          "abcdef",
 		Type:        "kontext",
 		Action:      "view",
@@ -60,7 +60,7 @@ func TestCreateID(t *testing.T) {
 func TestImportCorpname(t *testing.T) {
 	p := make(map[string]interface{})
 	p["corpname"] = "omezeni/foobar7;x=10"
-	r := &fetch.LogRecord{Params: p}
+	r := &kontext.InputRecord{Params: p}
 	c := importCorpname(r)
 	if c.Corpname != "foobar7" || c.limited != true {
 		t.Error("Failed import corpname: ", c)

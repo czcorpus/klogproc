@@ -19,7 +19,7 @@ package influx
 import (
 	"log"
 
-	"github.com/czcorpus/klogproc/record"
+	"github.com/czcorpus/klogproc/transform"
 	client "github.com/influxdata/influxdb1-client/v2"
 )
 
@@ -65,17 +65,8 @@ type RecordWriter struct {
 // it also stores the record to a configured database and
 // measurement. Please note that without calling Finish() at
 // the end of an operation, stale records may remain.
-func (c *RecordWriter) AddRecord(rec *record.CNKRecord) error {
-	//fmt.Println("ADD REC >>> ", rec)
-	tags := make(map[string]string)
-	values := make(map[string]interface{})
-	values["procTime"] = rec.ProcTime
-	values["error"] = rec.Error.Name
-	values["errorAnchor"] = rec.Error.Anchor
-	tags["corpname"] = rec.Corpus
-	tags["queryType"] = rec.QueryType
-	tags["action"] = rec.Action
-
+func (c *RecordWriter) AddRecord(rec transform.OutputRecord) error {
+	tags, values := rec.ToInfluxDB()
 	point, err := client.NewPoint(c.measurement, tags, values, rec.GetTime())
 	if err != nil {
 		log.Printf("ERROR: Failed to add record to influxdb: %s", err)

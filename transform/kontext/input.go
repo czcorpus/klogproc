@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package fetch
+package kontext
 
 import (
 	"encoding/json"
@@ -27,12 +27,6 @@ var (
 	datetimeRegexp = regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2})(\\s|T)([012]\\d:[0-5]\\d:[0-5]\\d\\.\\d+)")
 )
 
-// LogItemHandler defines an object which is able to
-// process individual LogRecord instances
-type LogItemHandler interface {
-	ProcItem(appType string, record *LogRecord)
-}
-
 func importDatetimeString(dateStr string, localTimezone string) (string, error) {
 	srch := datetimeRegexp.FindStringSubmatch(dateStr)
 	if len(srch) > 0 {
@@ -43,8 +37,8 @@ func importDatetimeString(dateStr string, localTimezone string) (string, error) 
 
 // ImportJSONLog parses original JSON record with some
 // additional value corrections.
-func ImportJSONLog(jsonLine []byte, localTimezone string) (*LogRecord, error) {
-	var record LogRecord
+func ImportJSONLog(jsonLine []byte, localTimezone string) (*InputRecord, error) {
+	var record InputRecord
 	err := json.Unmarshal(jsonLine, &record)
 	if err != nil {
 		return nil, err
@@ -80,8 +74,8 @@ type ErrorRecord struct {
 
 // ------------------------------------------------------------
 
-// LogRecord represents a parsed KonText record
-type LogRecord struct {
+// InputRecord represents a parsed KonText record
+type InputRecord struct {
 	UserID   int                    `json:"user_id"`
 	ProcTime float32                `json:"proc_time"`
 	Date     string                 `json:"date"`
@@ -96,7 +90,7 @@ type LogRecord struct {
 // GetTime returns record's time as a Golang's Time
 // instance. Please note that the value is truncated
 // to seconds.
-func (rec *LogRecord) GetTime() time.Time {
+func (rec *InputRecord) GetTime() time.Time {
 	p := regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2}T[012]\\d:[0-5]\\d:[0-5]\\d)\\.\\d+")
 	srch := p.FindStringSubmatch(rec.Date)
 	if srch != nil {
@@ -110,7 +104,7 @@ func (rec *LogRecord) GetTime() time.Time {
 // GetClientIP returns a client IP no matter in which
 // part of the record it was found
 // (e.g. REMOTE_ADDR vs. HTTP_REMOTE_ADDR vs. HTTP_FORWARDED_FOR)
-func (rec *LogRecord) GetClientIP() net.IP {
+func (rec *InputRecord) GetClientIP() net.IP {
 	if rec.Request.HTTPForwardedFor != "" {
 		return net.ParseIP(rec.Request.HTTPForwardedFor)
 
@@ -126,7 +120,7 @@ func (rec *LogRecord) GetClientIP() net.IP {
 // AgentIsBot returns true if user agent information suggests
 // that the client is not human. The rules are currently
 // hardcoded and quite simple.
-func (rec *LogRecord) AgentIsBot() bool {
+func (rec *InputRecord) AgentIsBot() bool {
 	agentStr := strings.ToLower(rec.Request.HTTPUserAgent)
 	// TODO move this to some external file
 	return strings.Index(agentStr, "ahrefsbot") > -1 ||
@@ -157,7 +151,7 @@ func (rec *LogRecord) AgentIsBot() bool {
 // matches one of "bots" used by the Instatute Czech National Corpus
 // to monitor service availability. The rules are currently
 // hardcoded.
-func (rec *LogRecord) AgentIsMonitor() bool {
+func (rec *InputRecord) AgentIsMonitor() bool {
 	agentStr := strings.ToLower(rec.Request.HTTPUserAgent)
 	return strings.Index(agentStr, "python-urllib/2.7") > -1 ||
 		strings.Index(agentStr, "zabbix-test") > -1
@@ -165,13 +159,13 @@ func (rec *LogRecord) AgentIsMonitor() bool {
 
 // AgentIsLoggable returns true if the current record
 // is determined to be saved (we ignore bots, monitors etc.).
-func (rec *LogRecord) AgentIsLoggable() bool {
+func (rec *InputRecord) AgentIsLoggable() bool {
 	return !rec.AgentIsBot() && !rec.AgentIsMonitor()
 }
 
 // GetStringParam fetches a string parameter from
 // a special "params" sub-object
-func (rec *LogRecord) GetStringParam(name string) string {
+func (rec *InputRecord) GetStringParam(name string) string {
 	switch v := rec.Params[name].(type) {
 	case string:
 		return v
@@ -181,7 +175,7 @@ func (rec *LogRecord) GetStringParam(name string) string {
 
 // GetIntParam fetches an integer parameter from
 // a special "params" sub-object
-func (rec *LogRecord) GetIntParam(name string) int {
+func (rec *InputRecord) GetIntParam(name string) int {
 	switch v := rec.Params[name].(type) {
 	case int:
 		return v
@@ -194,7 +188,7 @@ func (rec *LogRecord) GetIntParam(name string) int {
 // user from miscellaneous idiosyncrasies of KonText/Bonito
 // URL parameter handling (= it's not always that straightforward
 // to detect aligned languages from raw URL).
-func (rec *LogRecord) GetAlignedCorpora() []string {
+func (rec *InputRecord) GetAlignedCorpora() []string {
 	tmp := make(map[string]bool)
 	for k := range rec.Params {
 		if strings.HasPrefix(k, "queryselector_") {

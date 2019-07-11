@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package record
+package kontext
 
 import (
 	"crypto/sha1"
@@ -22,13 +22,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/czcorpus/klogproc/fetch"
 )
 
 // importQueryType translates KonText/Bonito query type argument
 // into a more understandable form
-func importQueryType(record *fetch.LogRecord) string {
+func importQueryType(record *InputRecord) string {
 	val := record.GetStringParam("queryselector")
 	switch val {
 	case "iqueryrow":
@@ -50,7 +48,7 @@ func importQueryType(record *fetch.LogRecord) string {
 
 // importCorpname extracts actual corpus name from
 // URL argument which may contain additional data (e.g. variant prefix)
-func importCorpname(record *fetch.LogRecord) fullCorpname {
+func importCorpname(record *InputRecord) fullCorpname {
 	var corpname string
 	var limited bool
 
@@ -84,9 +82,9 @@ type GeoDataRecord struct {
 	Timezone      string     `json:"timezone"`
 }
 
-// CNKRecord represents an exported application log record ready
+// OutputRecord represents an exported application log record ready
 // to be inserted into ElasticSearch index.
-type CNKRecord struct {
+type OutputRecord struct {
 	ID             string   `json:"-"`
 	Type           string   `json:"-"`
 	Action         string   `json:"action"`
@@ -94,53 +92,58 @@ type CNKRecord struct {
 	AlignedCorpora []string `json:"alignedCorpora"`
 	Datetime       string   `json:"datetime"`
 	datetime       time.Time
-	IPAddress      string            `json:"ipAddress"`
-	IsAnonymous    bool              `json:"isAnonymous"`
-	IsQuery        bool              `json:"isQuery"`
-	Limited        bool              `json:"limited"`
-	ProcTime       float32           `json:"procTime"`
-	QueryType      string            `json:"queryType"`
-	Type2          string            `json:"type"` // TODO do we need this?
-	UserAgent      string            `json:"userAgent"`
-	UserID         int               `json:"userId"`
-	GeoIP          GeoDataRecord     `json:"geoip"`
-	Error          fetch.ErrorRecord `json:"error"`
+	IPAddress      string        `json:"ipAddress"`
+	IsAnonymous    bool          `json:"isAnonymous"`
+	IsQuery        bool          `json:"isQuery"`
+	Limited        bool          `json:"limited"`
+	ProcTime       float32       `json:"procTime"`
+	QueryType      string        `json:"queryType"`
+	Type2          string        `json:"type"` // TODO do we need this?
+	UserAgent      string        `json:"userAgent"`
+	UserID         int           `json:"userId"`
+	GeoIP          GeoDataRecord `json:"geoip"`
+	Error          ErrorRecord   `json:"error"`
 }
 
 // ToJSON converts self to JSON string
-func (cnkr *CNKRecord) ToJSON() ([]byte, error) {
+func (cnkr *OutputRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(cnkr)
+}
+
+func (cnkr *OutputRecord) ToInfluxDB() (tags map[string]string, values map[string]interface{}) {
+	tags = make(map[string]string)
+	values = make(map[string]interface{})
+	values["procTime"] = cnkr.ProcTime
+	values["error"] = cnkr.Error.Name
+	values["errorAnchor"] = cnkr.Error.Anchor
+	tags["corpname"] = cnkr.Corpus
+	tags["queryType"] = cnkr.QueryType
+	tags["action"] = cnkr.Action
+	return
+}
+
+func (cnkr *OutputRecord) GetID() string {
+	return cnkr.ID
+}
+
+func (cnkr *OutputRecord) GetType() string {
+	return cnkr.Type
 }
 
 // GetTime returns Go Time instance representing
 // date and time when the record was created.
-func (cnkr *CNKRecord) GetTime() time.Time {
+func (cnkr *OutputRecord) GetTime() time.Time {
 	return cnkr.datetime
 }
 
-// New creates a new CNKRecord out of an existing LogRecord
-func New(logRecord *fetch.LogRecord, recType string) *CNKRecord {
-	fullCorpname := importCorpname(logRecord)
-	r := &CNKRecord{
-		Type:           recType,
-		Action:         logRecord.Action,
-		Corpus:         fullCorpname.Corpname,
-		AlignedCorpora: logRecord.GetAlignedCorpora(),
-		Datetime:       logRecord.Date,
-		datetime:       logRecord.GetTime(),
-		IPAddress:      logRecord.GetClientIP().String(),
-		// IsAnonymous - not set here
-		IsQuery:   isEntryQuery(logRecord.Action),
-		Limited:   fullCorpname.limited,
-		ProcTime:  logRecord.ProcTime,
-		QueryType: importQueryType(logRecord),
-		Type2:     recType,
-		UserAgent: logRecord.Request.HTTPUserAgent,
-		UserID:    logRecord.UserID,
-		Error:     logRecord.Error,
-	}
-	r.ID = createID(r)
-	return r
+func (cnkr *OutputRecord) SetLocation(countryName string, latitude float32, longitude float32, timezone string) {
+	cnkr.GeoIP.IP = cnkr.IPAddress
+	cnkr.GeoIP.CountryName = countryName
+	cnkr.GeoIP.Latitude = latitude
+	cnkr.GeoIP.Longitude = longitude
+	cnkr.GeoIP.Location[0] = cnkr.GeoIP.Longitude
+	cnkr.GeoIP.Location[1] = cnkr.GeoIP.Latitude
+	cnkr.GeoIP.Timezone = timezone
 }
 
 type fullCorpname struct {
@@ -148,7 +151,7 @@ type fullCorpname struct {
 	limited  bool
 }
 
-func createID(cnkr *CNKRecord) string {
+func createID(cnkr *OutputRecord) string {
 	str := cnkr.Action + cnkr.Corpus + cnkr.Datetime + cnkr.IPAddress +
 		cnkr.Type + cnkr.UserAgent + strconv.Itoa(cnkr.UserID)
 	sum := sha1.Sum([]byte(str))

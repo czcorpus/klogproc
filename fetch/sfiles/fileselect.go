@@ -27,7 +27,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/czcorpus/klogproc/fetch"
+	"github.com/czcorpus/klogproc/transform"
 )
 
 var (
@@ -35,7 +35,7 @@ var (
 )
 
 type Conf struct {
-	SrcDir                 string `json:"srcDir"`
+	SrcPath                string `json:"srcPath"`
 	PartiallyMatchingFiles bool   `json:"partiallyMatchingFiles"`
 	WorklogPath            string `json:"worklogPath"`
 }
@@ -121,11 +121,24 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, timezon
 	return []string{}
 }
 
-func ProcessFileLogs(conf *Conf, appType string, localTimezone string, minTimestamp int64, processor fetch.LogItemHandler) {
-	files := getFilesInDir(conf.SrcDir, minTimestamp, !conf.PartiallyMatchingFiles, localTimezone)
-	log.Printf("Found %d file(s) to process in %s", len(files), conf.SrcDir)
-	for _, file := range files {
-		p := NewParser(file, localTimezone)
-		p.Parse(minTimestamp, appType, processor)
+// LogItemProcessor is an object handling individual
+type LogItemProcessor interface {
+	ProcItem(appType string, logRec transform.InputRecord) transform.OutputRecord
+	GetAppType() string
+}
+
+// LogFileProcFunc is a function for batch/tail processing of file-based logs
+type LogFileProcFunc = func(conf *Conf, localTimezone string, minTimestamp int64)
+
+// CreateLogFileProcFunc joins a defined log transformer and output channels to and
+// returns a customized function for file/directory processing.
+func CreateLogFileProcFunc(processor LogItemProcessor, destChans ...chan transform.OutputRecord) LogFileProcFunc {
+	return func(conf *Conf, localTimezone string, minTimestamp int64) {
+		files := getFilesInDir(conf.SrcPath, minTimestamp, !conf.PartiallyMatchingFiles, localTimezone)
+		log.Printf("Found %d file(s) to process in %s", len(files), conf.SrcPath)
+		for _, file := range files {
+			p := newParser(file, localTimezone, processor.GetAppType())
+			p.Parse(minTimestamp, processor, destChans...)
+		}
 	}
 }

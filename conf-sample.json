@@ -7,7 +7,7 @@
     },
     "logFiles": {
         "worklogPath": "/var/log/klogproc/worklog/worklog.txt",
-        "srcDir": "/var/log/kontext-logs",
+        "srcPath": "/var/log/kontext-logs",
         "partiallyMatchingFiles": false
     },
     "elasticSearch": {
