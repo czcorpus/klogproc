@@ -51,9 +51,9 @@ func (parser *sydLineParser) ParseLine(s string, lineNum int, localTimezone stri
 // NewLineParser creates a parser for individual lines of a respective appType
 func NewLineParser(appType string) (LineParser, error) {
 	switch appType {
-	case "kontext":
+	case transform.AppTypeKontext:
 		return &kontextLineParser{lp: &kontext.LineParser{}}, nil
-	case "syd":
+	case transform.AppTypeSyd:
 		return &sydLineParser{lp: &syd.LineParser{}}, nil
 	default:
 		return nil, fmt.Errorf("Parser not found for application type %s", appType)

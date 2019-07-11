@@ -202,29 +202,28 @@ func processLogs(conf *Conf, action string) {
 			for _, f := range conf.LogTail.Files {
 				lineParsers[f.AppType], err = batch.NewLineParser(f.AppType)
 				if err != nil {
-					log.Fatal("Failed to initialize parser: ", err)
+					log.Fatal("ERROR: Failed to initialize parser: ", err)
 				}
 				logTransformers[f.AppType], err = GetLogTransformer(f.AppType)
 				if err != nil {
-					log.Fatal("Failed to initialize transformer: ", err)
+					log.Fatal("ERROR: Failed to initialize transformer: ", err)
 				}
 			}
 			tail.Run(
 				&conf.LogTail,
 				func(rec string, appType string) {
-					fmt.Println(">>>> ", appType, rec)
 					parsed, err := lineParsers[appType].ParseLine(rec, 0, conf.LocalTimezone)
 					if err != nil {
 						log.Printf("ERROR: %s", err)
 						return
 					}
-					fmt.Println("  parsed: ", parsed)
 					outRec, err := logTransformers[appType].Transform(parsed, appType)
 					if err != nil {
 						log.Printf("ERROR: %s", err)
 						return
 					}
-					fmt.Println("    transformed ", outRec)
+					chunkChannelES <- outRec
+					chunkChannelInflux <- outRec
 				},
 				func() {
 					close(chunkChannelES)

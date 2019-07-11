@@ -19,13 +19,14 @@ import (
 	"testing"
 
 	"github.com/czcorpus/klogproc/load"
+	"github.com/czcorpus/klogproc/transform"
 )
 
 // cnkr.Action + cnkr.Corpus + cnkr.Datetime + cnkr.IPAddress + cnkr.Type + cnkr.UserAgent + cnkr.UserID
 func createRecord() *OutputRecord {
 	return &OutputRecord{
 		ID:          "abcdef",
-		Type:        "kontext",
+		Type:        transform.AppTypeKontext,
 		Action:      "view",
 		Corpus:      "syn2015",
 		Datetime:    "2017-02-11T11:02:31.880",

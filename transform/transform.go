@@ -20,6 +20,14 @@ import (
 	"time"
 )
 
+const (
+	AppTypeKontext = "kontext"
+	AppTypeSyd     = "syd"
+	AppTypeMorfio  = "morfio"
+	AppTypeKwords  = "kwords"
+	AppTypeTreq    = "treq"
+)
+
 type MinorParsingError struct {
 	LineNumber int
 	Message    string

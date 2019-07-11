@@ -28,6 +28,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string) (*Output
 		corpora = []string{"diakon"}
 	}
 	r := &OutputRecord{
+		Type:      recType,
 		Datetime:  logRecord.Datetime,
 		IPAddress: logRecord.IPAddress,
 		UserID:    logRecord.UserID,

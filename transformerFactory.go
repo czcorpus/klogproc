@@ -61,9 +61,9 @@ func (s *sydTransformer) Transform(logRec transform.InputRecord, recType string)
 func GetLogTransformer(appType string) (transform.LogItemTransformer, error) {
 
 	switch appType {
-	case "kontext":
+	case transform.AppTypeKontext:
 		return &konTextTransformer{t: &kontext.Transformer{}}, nil
-	case "syd":
+	case transform.AppTypeSyd:
 		return &sydTransformer{t: &syd.Transformer{}}, nil
 	default:
 		return nil, fmt.Errorf("Cannot find log transformer for app type %s", appType)

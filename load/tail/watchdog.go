@@ -22,22 +22,26 @@ import (
 	"time"
 )
 
+// FileConf represents a configuration for a single
+// log file to be watched
 type FileConf struct {
 	Path    string `json:"path"`
 	AppType string `json:"appType"`
 }
 
+// Conf wraps all the configuration for the 'tail' function
 type Conf struct {
 	IntervalSecs int        `json:"intervalSecs"`
 	Files        []FileConf `json:"files"`
 }
 
+// Run starts the process of (multiple) log watching
 func Run(conf *Conf, onEntry func(item string, appType string), onStop func()) {
 	ticker := time.NewTicker(5 * time.Second)
 	quitChan := make(chan bool)
-	signalChan := make(chan os.Signal, 10)
-	signal.Notify(signalChan, os.Interrupt)
-	signal.Notify(signalChan, syscall.SIGTERM)
+	syscallChan := make(chan os.Signal, 10)
+	signal.Notify(syscallChan, os.Interrupt)
+	signal.Notify(syscallChan, syscall.SIGTERM)
 
 	readers := make([]*FileTailReader, 0, 50)
 	for _, fc := range conf.Files {
@@ -60,8 +64,8 @@ func Run(conf *Conf, onEntry func(item string, appType string), onStop func()) {
 					ticker.Stop()
 					onStop()
 				}
-			case <-signalChan:
-				log.Print("Caught signal, exiting...")
+			case <-syscallChan:
+				log.Print("INFO: Caught signal, exiting...")
 				ticker.Stop()
 				onStop()
 			}
