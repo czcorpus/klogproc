@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/czcorpus/klogproc/fetch/sfiles"
+	batch "github.com/czcorpus/klogproc/fetch/batch"
 	"github.com/czcorpus/klogproc/fetch/sredis"
 
 	"os"
@@ -44,7 +44,7 @@ const (
 // Conf describes klogproc's configuration
 type Conf struct {
 	LogRedis       sredis.RedisConf   `json:"logRedis"`
-	LogFiles       sfiles.Conf        `json:"logFiles"`
+	LogFiles       batch.Conf         `json:"logFiles"`
 	GeoIPDbPath    string             `json:"geoIpDbPath"`
 	LocalTimezone  string             `json:"localTimezone"`
 	AnonymousUsers int                `json:"anonymousUsers"`

@@ -17,7 +17,7 @@
 // is rather a fallback solution as the logs are stored and read from
 // a Redis queue (see redis.go).
 
-package sfiles
+package batch
 
 import (
 	"bufio"

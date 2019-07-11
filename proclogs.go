@@ -21,7 +21,7 @@ import (
 	"sync"
 
 	"github.com/czcorpus/klogproc/elastic"
-	"github.com/czcorpus/klogproc/fetch/sfiles"
+	"github.com/czcorpus/klogproc/fetch/batch"
 	"github.com/czcorpus/klogproc/fetch/sredis"
 	"github.com/czcorpus/klogproc/influx"
 	"github.com/czcorpus/klogproc/transform"
@@ -183,11 +183,11 @@ func processLogs(conf *Conf, action string) {
 
 		case actionBatch:
 			// TODO test config
-			worklog := sfiles.NewWorklog(conf.LogFiles.WorklogPath)
+			worklog := batch.NewWorklog(conf.LogFiles.WorklogPath)
 			log.Printf("INFO: using worklog %s", conf.LogFiles.WorklogPath)
 			defer worklog.Save()
 			rescue = worklog
-			proc := sfiles.CreateLogFileProcFunc(processor, chunkChannelES, chunkChannelInflux)
+			proc := batch.CreateLogFileProcFunc(processor, chunkChannelES, chunkChannelInflux)
 			proc(&conf.LogFiles, conf.LocalTimezone, worklog.GetLastRecord())
 
 		case actionTail:

@@ -16,7 +16,7 @@
 // based on logs processed so far. Please note that in recent KonText and
 // Klogproc versions this is rather a fallback/offline functionality.
 
-package sfiles
+package batch
 
 import (
 	"bufio"
