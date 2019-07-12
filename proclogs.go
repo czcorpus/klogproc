@@ -20,11 +20,12 @@ import (
 	"log"
 	"sync"
 
-	"github.com/czcorpus/klogproc/elastic"
-	"github.com/czcorpus/klogproc/fetch/sfiles"
-	"github.com/czcorpus/klogproc/fetch/sredis"
-	"github.com/czcorpus/klogproc/influx"
-	"github.com/czcorpus/klogproc/transform"
+	"github.com/czcorpus/klogproc/save/elastic"
+	"github.com/czcorpus/klogproc/save/influx"
+	"github.com/czcorpus/klogproc/load/batch"
+	"github.com/czcorpus/klogproc/load/sredis"
+	"github.com/czcorpus/klogproc/load/tail"
+	"github.com/czcorpus/klogproc/conversion"
 	"github.com/oschwald/geoip2-golang"
 )
 
@@ -36,12 +37,12 @@ type CNKLogProcessor struct {
 	chunkSize      int
 	currIdx        int
 	numNonLoggable int
-	logTransformer transform.LogItemTransformer
+	logTransformer conversion.LogItemTransformer
 }
 
 // ProcItem transforms input log record into an output format.
 // In case an unsupported record is encountered, nil is returned.
-func (clp *CNKLogProcessor) ProcItem(appType string, logRec transform.InputRecord) transform.OutputRecord {
+func (clp *CNKLogProcessor) ProcItem(appType string, logRec conversion.InputRecord) conversion.OutputRecord {
 	if logRec.AgentIsLoggable() {
 		rec, err := clp.logTransformer.Transform(logRec, appType)
 		if err != nil {
@@ -82,7 +83,7 @@ func pushDataToElastic(data [][]byte, esconf *elastic.SearchConf) error {
 	return nil
 }
 
-func processRedisLogs(conf *Conf, queue *sredis.RedisQueue, processor *CNKLogProcessor, destChans ...chan transform.OutputRecord) {
+func processRedisLogs(conf *Conf, queue *sredis.RedisQueue, processor *CNKLogProcessor, destChans ...chan conversion.OutputRecord) {
 	for _, item := range queue.GetItems() {
 		rec := processor.ProcItem(conf.AppType, item)
 		if rec != nil {
@@ -136,15 +137,15 @@ func retryRescuedItems(queue *sredis.RedisQueue, conf *elastic.SearchConf) error
 // or from a directory of files (in such case it keeps a worklog containing
 // last loaded value). In case both locations are configured, Redis has
 // precedence.
-func processLogs(conf *Conf) {
+func processLogs(conf *Conf, action string) {
 	geoDb, err := geoip2.Open(conf.GeoIPDbPath)
 	if err != nil {
 		panic(err)
 	}
 	defer geoDb.Close()
 
-	chunkChannelES := make(chan transform.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
-	chunkChannelInflux := make(chan transform.OutputRecord, conf.InfluxDB.PushChunkSize)
+	chunkChannelES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
+	chunkChannelInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
 	var rescue ESImportFailHandler
 
 	go func() {
@@ -159,7 +160,11 @@ func processLogs(conf *Conf) {
 			logTransformer: lt,
 		}
 
-		if conf.UsesRedis() {
+		switch action {
+		case actionRedis:
+			if !conf.UsesRedis() {
+				panic("Redis not configured") // TODO
+			}
 			redisQueue, err := sredis.OpenRedisQueue(
 				conf.LogRedis.Address,
 				conf.LogRedis.Database,
@@ -176,17 +181,56 @@ func processLogs(conf *Conf) {
 					err)
 			}
 			processRedisLogs(conf, redisQueue, processor, chunkChannelES, chunkChannelInflux)
+			close(chunkChannelES)
+			close(chunkChannelInflux)
 
-		} else {
-			worklog := sfiles.NewWorklog(conf.LogFiles.WorklogPath)
+		case actionBatch:
+			// TODO test config
+			worklog := batch.NewWorklog(conf.LogFiles.WorklogPath)
 			log.Printf("INFO: using worklog %s", conf.LogFiles.WorklogPath)
 			defer worklog.Save()
 			rescue = worklog
-			proc := sfiles.CreateLogFileProcFunc(processor, chunkChannelES, chunkChannelInflux)
+			proc := batch.CreateLogFileProcFunc(processor, chunkChannelES, chunkChannelInflux)
 			proc(&conf.LogFiles, conf.LocalTimezone, worklog.GetLastRecord())
+			close(chunkChannelES)
+			close(chunkChannelInflux)
+
+		case actionTail:
+			lineParsers := make(map[string]batch.LineParser)
+			logTransformers := make(map[string]conversion.LogItemTransformer)
+			var err error
+			for _, f := range conf.LogTail.Files {
+				lineParsers[f.AppType], err = batch.NewLineParser(f.AppType)
+				if err != nil {
+					log.Fatal("ERROR: Failed to initialize parser: ", err)
+				}
+				logTransformers[f.AppType], err = GetLogTransformer(f.AppType)
+				if err != nil {
+					log.Fatal("ERROR: Failed to initialize transformer: ", err)
+				}
+			}
+			tail.Run(
+				&conf.LogTail,
+				func(rec string, appType string) {
+					parsed, err := lineParsers[appType].ParseLine(rec, 0, conf.LocalTimezone)
+					if err != nil {
+						log.Printf("ERROR: %s", err)
+						return
+					}
+					outRec, err := logTransformers[appType].Transform(parsed, appType)
+					if err != nil {
+						log.Printf("ERROR: %s", err)
+						return
+					}
+					chunkChannelES <- outRec
+					chunkChannelInflux <- outRec
+				},
+				func() {
+					close(chunkChannelES)
+					close(chunkChannelInflux)
+				},
+			)
 		}
-		close(chunkChannelES)
-		close(chunkChannelInflux)
 		log.Printf("INFO: Ignored %d non-loggable items (bots etc.)", processor.numNonLoggable)
 	}()
 
@@ -235,7 +279,9 @@ func processLogs(conf *Conf) {
 					failed = append(failed, data[:i+1]...)
 				}
 			}
-			rescue.RescueFailedChunks(failed)
+			if rescue != nil {
+				rescue.RescueFailedChunks(failed)
+			}
 
 		} else {
 			for range chunkChannelES {

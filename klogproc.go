@@ -23,27 +23,30 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/czcorpus/klogproc/fetch/sfiles"
-	"github.com/czcorpus/klogproc/fetch/sredis"
+	"github.com/czcorpus/klogproc/load/batch"
+	"github.com/czcorpus/klogproc/load/sredis"
+	"github.com/czcorpus/klogproc/load/tail"
 
 	"os"
 
-	"github.com/czcorpus/klogproc/elastic"
-	"github.com/czcorpus/klogproc/influx"
+	"github.com/czcorpus/klogproc/save/elastic"
+	"github.com/czcorpus/klogproc/save/influx"
 )
 
 const (
-	actionBatch = "batch"
-	actionTail = "tail"
+	actionBatch     = "batch"
+	actionTail      = "tail"
+	actionRedis     = "redis"
 	actionKeyremove = "keyremove"
 	actionDocupdate = "docupdate"
-	actionHelp  = "help"
+	actionHelp      = "help"
 )
 
 // Conf describes klogproc's configuration
 type Conf struct {
 	LogRedis       sredis.RedisConf   `json:"logRedis"`
-	LogFiles       sfiles.Conf        `json:"logFiles"`
+	LogFiles       batch.Conf         `json:"logFiles"`
+	LogTail        tail.Conf          `json:"logTail"`
 	GeoIPDbPath    string             `json:"geoIpDbPath"`
 	LocalTimezone  string             `json:"localTimezone"`
 	AnonymousUsers int                `json:"anonymousUsers"`
@@ -127,8 +130,10 @@ func help(topic string) {
 		fmt.Println(helpTexts[0])
 	case actionTail:
 		fmt.Println(helpTexts[1])
-	case actionDocupdate:
+	case actionRedis:
 		fmt.Println(helpTexts[2])
+	case actionDocupdate:
+		fmt.Println(helpTexts[3])
 	default:
 		fmt.Println("- no information available -")
 	}
@@ -169,14 +174,15 @@ func setup(confPath string) (*Conf, *os.File) {
 func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending KonText/Bonito logs to ElasticSearch\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\t%s\n\nOptions:\n",
-			filepath.Base(os.Args[0]), strings.Join([]string{actionBatch, actionTail, actionDocupdate, actionKeyremove, actionHelp}, ", "))
+			filepath.Base(os.Args[0]), strings.Join([]string{actionBatch, actionTail, actionRedis, actionDocupdate, actionKeyremove, actionHelp}, ", "))
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 	var conf *Conf
 	var logf *os.File
+	action := flag.Arg(0)
 
-	switch flag.Arg(0) {
+	switch action {
 	case actionHelp:
 		help(flag.Arg(1))
 	case actionDocupdate:
@@ -185,12 +191,9 @@ func main() {
 	case actionKeyremove:
 		conf, logf = setup(flag.Arg(1))
 		removeKeyFromRecords(conf)
-	case actionBatch:
+	case actionBatch, actionTail, actionRedis:
 		conf, logf = setup(flag.Arg(1))
-		processLogs(conf)
-	case actionTail:
-		conf, logf = setup(flag.Arg(1))
-		fmt.Println("tail --- TODO")
+		processLogs(conf, action)
 	default:
 		fmt.Printf("Unknown action [%s]. Try -h for help\n", flag.Arg(0))
 		os.Exit(1)

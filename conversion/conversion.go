@@ -1,4 +1,6 @@
 // Copyright 2019 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2019 Institute of the Czech National Corpus,
+//                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package transform
+package conversion
 
 import (
 	"fmt"
@@ -20,6 +22,25 @@ import (
 	"time"
 )
 
+const (
+	// AppTypeKontext defines a universal storage identifier for KonText
+	AppTypeKontext = "kontext"
+
+	// AppTypeSyd defines a universal storage identifier for SyD
+	AppTypeSyd = "syd"
+
+	// AppTypeMorfio defines a universal storage identifier for Morfio
+	AppTypeMorfio = "morfio"
+
+	// AppTypeKwords defines a universal storage identifier for Kwords
+	AppTypeKwords = "kwords"
+
+	// AppTypeTreq defines a universal storage identifier for Treq
+	AppTypeTreq = "treq"
+)
+
+// MinorParsingError is an ignorable error which is used
+// to inform user about exact position where the error occured
 type MinorParsingError struct {
 	LineNumber int
 	Message    string
@@ -29,6 +50,7 @@ func (m MinorParsingError) Error() string {
 	return fmt.Sprintf("line %d: %s", m.LineNumber, m.Message)
 }
 
+// NewMinorParsingError is a constructor for MinorParsingError
 func NewMinorParsingError(lineNumber int, message string) MinorParsingError {
 	return MinorParsingError{LineNumber: lineNumber, Message: message}
 }
@@ -41,8 +63,24 @@ type InputRecord interface {
 	AgentIsLoggable() bool
 }
 
+// GeoDataRecord represents a full client geographical
+// position information as provided by GeoIP database
+type GeoDataRecord struct {
+	ContinentCode string     `json:"continent_code"`
+	CountryCode2  string     `json:"country_code2"`
+	CountryCode3  string     `json:"country_code3"`
+	CountryName   string     `json:"country_name"`
+	IP            string     `json:"ip"`
+	Latitude      float32    `json:"latitude"`
+	Longitude     float32    `json:"longitude"`
+	Location      [2]float32 `json:"location"`
+	Timezone      string     `json:"timezone"`
+}
+
 // OutputRecord describes a common behavior for records ready to
-// be stored to the storage with a defined type
+// be stored to the storage with a defined type. Implementation
+// details are up to concrete implementations but these functions are
+// required by the 'processing template'.
 type OutputRecord interface {
 	SetLocation(countryName string, latitude float32, longitude float32, timezone string)
 

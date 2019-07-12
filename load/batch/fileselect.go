@@ -1,4 +1,6 @@
 // Copyright 2017 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2017 Institute of the Czech National Corpus,
+//                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +18,7 @@
 // based on logs processed so far. Please note that in recent KonText and
 // Klogproc versions this is rather a fallback/offline functionality.
 
-package sfiles
+package batch
 
 import (
 	"bufio"
@@ -27,7 +29,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/czcorpus/klogproc/transform"
+	"github.com/czcorpus/klogproc/conversion"
 )
 
 var (
@@ -123,7 +125,7 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, timezon
 
 // LogItemProcessor is an object handling individual
 type LogItemProcessor interface {
-	ProcItem(appType string, logRec transform.InputRecord) transform.OutputRecord
+	ProcItem(appType string, logRec conversion.InputRecord) conversion.OutputRecord
 	GetAppType() string
 }
 
@@ -132,7 +134,7 @@ type LogFileProcFunc = func(conf *Conf, localTimezone string, minTimestamp int64
 
 // CreateLogFileProcFunc joins a defined log transformer and output channels to and
 // returns a customized function for file/directory processing.
-func CreateLogFileProcFunc(processor LogItemProcessor, destChans ...chan transform.OutputRecord) LogFileProcFunc {
+func CreateLogFileProcFunc(processor LogItemProcessor, destChans ...chan conversion.OutputRecord) LogFileProcFunc {
 	return func(conf *Conf, localTimezone string, minTimestamp int64) {
 		files := getFilesInDir(conf.SrcPath, minTimestamp, !conf.PartiallyMatchingFiles, localTimezone)
 		log.Printf("Found %d file(s) to process in %s", len(files), conf.SrcPath)

@@ -1,4 +1,6 @@
 // Copyright 2017 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2017 Institute of the Czech National Corpus,
+//                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +20,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/czcorpus/klogproc/transform"
+	"github.com/czcorpus/klogproc/conversion"
 )
 
 func parseRawLine(s string) string {
@@ -53,6 +55,6 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 		return nil, fmt.Errorf("Failed to process QUERY entry: %s", s)
 
 	} else {
-		return nil, transform.NewMinorParsingError(lineNum, fmt.Sprintf("ignored non-query entry"))
+		return nil, conversion.NewMinorParsingError(lineNum, fmt.Sprintf("ignored non-query entry"))
 	}
 }

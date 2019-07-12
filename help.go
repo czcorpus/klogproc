@@ -15,29 +15,12 @@
 package main
 
 var helpTexts = []string{
-    // batch
-	`Parse data provided either as a directory containing one or more application
-log files or a Redis list (preferred). A proper JSON configuration file must be specified
-
-{
-    "logRedis": {
-        "address": "127.0.0.1:6379",
-        "database": 1,
-        "queueKey": "kontext_log_queue"
-    },
-    "elasticServer": "http://elastic:9200",
-    "elasticIndex": "trost_kontext",
-    "appType": "kontext",
-    "elasticSearchChunkSize": 1000,
-    "elasticPushChunkSize": 2000,
-    "elasticScrollTtl": "3m",
-    "geoIPDbPath": "/path/to/GeoLite2-City.mmdb",
-    "localTimezone": "+01:00",
-    "anonymousUsers": [4230]
-}
-`,
-    // tail
-    `Tail file logs ... TODO`,
-    // docupdate
+	// batch
+	`Parse log data within a directory or a file`,
+	// tail
+	`Tail file logs ... TODO`,
+	// redis
+	`Parse log data fetched from a Redis queue`,
+	// docupdate
 	`Update each matching (defined by filter in "updates") record using a provided object (defined in "updateData"). NOTE: This is experimental.`,
 }

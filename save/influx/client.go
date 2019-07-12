@@ -19,7 +19,7 @@ package influx
 import (
 	"log"
 
-	"github.com/czcorpus/klogproc/transform"
+	"github.com/czcorpus/klogproc/conversion"
 	client "github.com/influxdata/influxdb1-client/v2"
 )
 
@@ -65,7 +65,7 @@ type RecordWriter struct {
 // it also stores the record to a configured database and
 // measurement. Please note that without calling Finish() at
 // the end of an operation, stale records may remain.
-func (c *RecordWriter) AddRecord(rec transform.OutputRecord) error {
+func (c *RecordWriter) AddRecord(rec conversion.OutputRecord) error {
 	tags, values := rec.ToInfluxDB()
 	point, err := client.NewPoint(c.measurement, tags, values, rec.GetTime())
 	if err != nil {
