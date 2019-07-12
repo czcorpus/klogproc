@@ -1,4 +1,6 @@
 // Copyright 2017 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2017 Institute of the Czech National Corpus,
+//                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,14 +21,14 @@ import (
 	"testing"
 
 	"github.com/czcorpus/klogproc/load"
-	"github.com/czcorpus/klogproc/transform"
+	"github.com/czcorpus/klogproc/conversion"
 )
 
 // cnkr.Action + cnkr.Corpus + cnkr.Datetime + cnkr.IPAddress + cnkr.Type + cnkr.UserAgent + cnkr.UserID
 func createRecord() *OutputRecord {
 	return &OutputRecord{
 		ID:          "abcdef",
-		Type:        transform.AppTypeKontext,
+		Type:        conversion.AppTypeKontext,
 		Action:      "view",
 		Corpus:      "syn2015",
 		Datetime:    "2017-02-11T11:02:31.880",

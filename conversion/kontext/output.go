@@ -1,4 +1,6 @@
 // Copyright 2017 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2017 Institute of the Czech National Corpus,
+//                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/czcorpus/klogproc/transform"
+	"github.com/czcorpus/klogproc/conversion"
 )
 
 // importQueryType translates KonText/Bonito query type argument
@@ -89,7 +91,7 @@ type OutputRecord struct {
 	Type2          string                  `json:"type"` // TODO do we need this?
 	UserAgent      string                  `json:"userAgent"`
 	UserID         int                     `json:"userId"`
-	GeoIP          transform.GeoDataRecord `json:"geoip"`
+	GeoIP          conversion.GeoDataRecord `json:"geoip"`
 	Error          ErrorRecord             `json:"error"`
 }
 

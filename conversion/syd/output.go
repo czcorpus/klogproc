@@ -1,4 +1,6 @@
 // Copyright 2019 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2019 Institute of the Czech National Corpus,
+//                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,34 +24,37 @@ import (
 	"strings"
 	"time"
 
-	"github.com/czcorpus/klogproc/transform"
+	"github.com/czcorpus/klogproc/conversion"
 )
 
 func createID(rec *OutputRecord) string {
 	str := rec.Datetime + strings.Join(rec.Corpus, ":") + rec.IPAddress +
-		rec.UserID + rec.KeyReq + rec.KeyUsed + rec.Key + rec.Ltool + rec.RunScript +
-		strconv.FormatBool(rec.IsQuery) + rec.Type + rec.UserID
+		strconv.Itoa(rec.UserID) + rec.KeyReq + rec.KeyUsed + rec.Key + rec.Ltool + rec.RunScript +
+		strconv.FormatBool(rec.IsQuery) + rec.Type
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }
 
+// OutputRecord represents a final format of log records for SyD as stored
+// for further analysis and archiving
 type OutputRecord struct {
-	ID        string
-	Datetime  string
+	ID        string `json:"-"`
+	Type      string `json:"-"`
+	Datetime  string `json:"datetime"`
 	time      time.Time
-	IPAddress string
-	UserID    string
-	KeyReq    string
-	KeyUsed   string
-	Key       string
-	Ltool     string
-	RunScript string
-	IsQuery   bool
-	Corpus    []string
-	Type      string
-	GeoIP     transform.GeoDataRecord `json:"geoip"`
+	IPAddress string                   `json:"ipAddress"`
+	UserID    int                      `json:"userId"`
+	KeyReq    string                   `json:"keyReq"`
+	KeyUsed   string                   `json:"keyUsed"`
+	Key       string                   `json:"key"`
+	Ltool     string                   `json:"ltool"`
+	RunScript string                   `json:"runScript"`
+	IsQuery   bool                     `json:"isQuery"`
+	Corpus    []string                 `json:"corpus"`
+	GeoIP     conversion.GeoDataRecord `json:"geoip"`
 }
 
+// SetLocation sets all the location related properties
 func (r *OutputRecord) SetLocation(countryName string, latitude float32, longitude float32, timezone string) {
 	r.GeoIP.IP = r.IPAddress
 	r.GeoIP.CountryName = countryName
@@ -60,22 +65,27 @@ func (r *OutputRecord) SetLocation(countryName string, latitude float32, longitu
 	r.GeoIP.Timezone = timezone
 }
 
+// ToJSON converts data to a JSON document (typically for ElasticSearch)
 func (r *OutputRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+// ToInfluxDB creates tags and values to store in InfluxDB
 func (r *OutputRecord) ToInfluxDB() (tags map[string]string, values map[string]interface{}) {
 	return make(map[string]string), make(map[string]interface{})
 }
 
+// GetID Returns an unique ID of the record
 func (r *OutputRecord) GetID() string {
 	return r.ID
 }
 
+// GetType returns application type identifier
 func (r *OutputRecord) GetType() string {
 	return r.Type
 }
 
+// GetTime returns a creation time of the record
 func (r *OutputRecord) GetTime() time.Time {
 	return r.time
 }

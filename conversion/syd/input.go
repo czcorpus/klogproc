@@ -1,4 +1,6 @@
 // Copyright 2019 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2019 Institute of the Czech National Corpus,
+//                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +24,7 @@ import (
 type InputRecord struct {
 	Datetime  string
 	IPAddress string
-	UserID    string
+	UserID    int
 	KeyReq    string
 	KeyUsed   string
 	Key       string

@@ -25,7 +25,7 @@ import (
 	"github.com/czcorpus/klogproc/load/batch"
 	"github.com/czcorpus/klogproc/load/sredis"
 	"github.com/czcorpus/klogproc/load/tail"
-	"github.com/czcorpus/klogproc/transform"
+	"github.com/czcorpus/klogproc/conversion"
 	"github.com/oschwald/geoip2-golang"
 )
 
@@ -37,12 +37,12 @@ type CNKLogProcessor struct {
 	chunkSize      int
 	currIdx        int
 	numNonLoggable int
-	logTransformer transform.LogItemTransformer
+	logTransformer conversion.LogItemTransformer
 }
 
 // ProcItem transforms input log record into an output format.
 // In case an unsupported record is encountered, nil is returned.
-func (clp *CNKLogProcessor) ProcItem(appType string, logRec transform.InputRecord) transform.OutputRecord {
+func (clp *CNKLogProcessor) ProcItem(appType string, logRec conversion.InputRecord) conversion.OutputRecord {
 	if logRec.AgentIsLoggable() {
 		rec, err := clp.logTransformer.Transform(logRec, appType)
 		if err != nil {
@@ -83,7 +83,7 @@ func pushDataToElastic(data [][]byte, esconf *elastic.SearchConf) error {
 	return nil
 }
 
-func processRedisLogs(conf *Conf, queue *sredis.RedisQueue, processor *CNKLogProcessor, destChans ...chan transform.OutputRecord) {
+func processRedisLogs(conf *Conf, queue *sredis.RedisQueue, processor *CNKLogProcessor, destChans ...chan conversion.OutputRecord) {
 	for _, item := range queue.GetItems() {
 		rec := processor.ProcItem(conf.AppType, item)
 		if rec != nil {
@@ -144,8 +144,8 @@ func processLogs(conf *Conf, action string) {
 	}
 	defer geoDb.Close()
 
-	chunkChannelES := make(chan transform.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
-	chunkChannelInflux := make(chan transform.OutputRecord, conf.InfluxDB.PushChunkSize)
+	chunkChannelES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
+	chunkChannelInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
 	var rescue ESImportFailHandler
 
 	go func() {
@@ -197,7 +197,7 @@ func processLogs(conf *Conf, action string) {
 
 		case actionTail:
 			lineParsers := make(map[string]batch.LineParser)
-			logTransformers := make(map[string]transform.LogItemTransformer)
+			logTransformers := make(map[string]conversion.LogItemTransformer)
 			var err error
 			for _, f := range conf.LogTail.Files {
 				lineParsers[f.AppType], err = batch.NewLineParser(f.AppType)

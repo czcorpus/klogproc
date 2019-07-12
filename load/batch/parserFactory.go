@@ -1,4 +1,6 @@
 // Copyright 2019 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2019 Institute of the Czech National Corpus,
+//                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,9 +19,9 @@ package batch
 import (
 	"fmt"
 
-	"github.com/czcorpus/klogproc/transform"
-	"github.com/czcorpus/klogproc/transform/kontext"
-	"github.com/czcorpus/klogproc/transform/syd"
+	"github.com/czcorpus/klogproc/conversion"
+	"github.com/czcorpus/klogproc/conversion/kontext"
+	"github.com/czcorpus/klogproc/conversion/syd"
 )
 
 // ------------------------------------
@@ -31,7 +33,7 @@ type kontextLineParser struct {
 }
 
 // ParseLine parses a passed line of a respective log
-func (parser *kontextLineParser) ParseLine(s string, lineNum int, localTimezone string) (transform.InputRecord, error) {
+func (parser *kontextLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum, localTimezone)
 }
 
@@ -42,7 +44,7 @@ type sydLineParser struct {
 }
 
 // ParseLine parses a passed line of a respective log
-func (parser *sydLineParser) ParseLine(s string, lineNum int, localTimezone string) (transform.InputRecord, error) {
+func (parser *sydLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum, localTimezone)
 }
 
@@ -51,9 +53,9 @@ func (parser *sydLineParser) ParseLine(s string, lineNum int, localTimezone stri
 // NewLineParser creates a parser for individual lines of a respective appType
 func NewLineParser(appType string) (LineParser, error) {
 	switch appType {
-	case transform.AppTypeKontext:
+	case conversion.AppTypeKontext:
 		return &kontextLineParser{lp: &kontext.LineParser{}}, nil
-	case transform.AppTypeSyd:
+	case conversion.AppTypeSyd:
 		return &sydLineParser{lp: &syd.LineParser{}}, nil
 	default:
 		return nil, fmt.Errorf("Parser not found for application type %s", appType)
