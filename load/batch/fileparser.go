@@ -79,7 +79,7 @@ func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, outputs ...ch
 		rec, err := p.lineParser.ParseLine(p.fr.Text(), i, p.localTimezone)
 		if err == nil {
 			if rec.GetTime().Unix() >= fromTimestamp {
-				outRec := proc.ProcItem(p.recType, rec)
+				outRec := proc.ProcItem(rec)
 				if outRec != nil {
 					for _, output := range outputs {
 						output <- outRec

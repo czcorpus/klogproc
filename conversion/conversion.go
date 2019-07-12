@@ -109,5 +109,16 @@ type OutputRecord interface {
 // LogItemTransformer defines a general object able to transform
 // an input log record to an output one.
 type LogItemTransformer interface {
-	Transform(logRec InputRecord, recType string) (OutputRecord, error)
+	Transform(logRec InputRecord, recType string, anonymousUsers []int) (OutputRecord, error)
+}
+
+// UserBelongsToList tests whether a provided user can be
+// found in a provided array of users.
+func UserBelongsToList(userID int, anonymousUsers []int) bool {
+	for _, v := range anonymousUsers {
+		if v == userID {
+			return true
+		}
+	}
+	return false
 }

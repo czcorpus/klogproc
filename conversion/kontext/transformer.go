@@ -16,10 +16,13 @@
 
 package kontext
 
+import "github.com/czcorpus/klogproc/conversion"
+
+// Transformer converts a source log object into a destination one
 type Transformer struct{}
 
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *InputRecord, recType string) (*OutputRecord, error) {
+func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymousUsers []int) (*OutputRecord, error) {
 	fullCorpname := importCorpname(logRecord)
 	r := &OutputRecord{
 		Type:           recType,
@@ -29,15 +32,15 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string) (*Output
 		Datetime:       logRecord.Date,
 		datetime:       logRecord.GetTime(),
 		IPAddress:      logRecord.GetClientIP().String(),
-		// IsAnonymous - not set here
-		IsQuery:   isEntryQuery(logRecord.Action),
-		Limited:   fullCorpname.limited,
-		ProcTime:  logRecord.ProcTime,
-		QueryType: importQueryType(logRecord),
-		Type2:     recType,
-		UserAgent: logRecord.Request.HTTPUserAgent,
-		UserID:    logRecord.UserID,
-		Error:     logRecord.Error,
+		IsAnonymous:    conversion.UserBelongsToList(logRecord.UserID, anonymousUsers),
+		IsQuery:        isEntryQuery(logRecord.Action),
+		Limited:        fullCorpname.limited,
+		ProcTime:       logRecord.ProcTime,
+		QueryType:      importQueryType(logRecord),
+		Type2:          recType,
+		UserAgent:      logRecord.Request.HTTPUserAgent,
+		UserID:         logRecord.UserID,
+		Error:          logRecord.Error,
 	}
 	r.ID = createID(r)
 	return r, nil

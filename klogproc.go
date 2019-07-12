@@ -49,7 +49,7 @@ type Conf struct {
 	LogTail        tail.Conf          `json:"logTail"`
 	GeoIPDbPath    string             `json:"geoIpDbPath"`
 	LocalTimezone  string             `json:"localTimezone"`
-	AnonymousUsers int                `json:"anonymousUsers"`
+	AnonymousUsers []int              `json:"anonymousUsers"`
 	LogPath        string             `json:"logPath"`
 	RecUpdate      elastic.DocUpdConf `json:"recordUpdate"`
 	ElasticSearch  elastic.SearchConf `json:"elasticSearch"`

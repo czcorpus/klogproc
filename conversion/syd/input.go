@@ -24,7 +24,7 @@ import (
 type InputRecord struct {
 	Datetime  string
 	IPAddress string
-	UserID    int
+	UserID    string // must be string as SyD uses also "-"
 	KeyReq    string
 	KeyUsed   string
 	Key       string

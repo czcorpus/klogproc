@@ -28,8 +28,12 @@ import (
 )
 
 func createID(rec *OutputRecord) string {
+	userID := "-"
+	if rec.UserID != nil {
+		userID = strconv.Itoa(*rec.UserID)
+	}
 	str := rec.Datetime + strings.Join(rec.Corpus, ":") + rec.IPAddress +
-		strconv.Itoa(rec.UserID) + rec.KeyReq + rec.KeyUsed + rec.Key + rec.Ltool + rec.RunScript +
+		userID + rec.KeyReq + rec.KeyUsed + rec.Key + rec.Ltool + rec.RunScript +
 		strconv.FormatBool(rec.IsQuery) + rec.Type
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
@@ -38,20 +42,21 @@ func createID(rec *OutputRecord) string {
 // OutputRecord represents a final format of log records for SyD as stored
 // for further analysis and archiving
 type OutputRecord struct {
-	ID        string `json:"-"`
-	Type      string `json:"-"`
-	Datetime  string `json:"datetime"`
-	time      time.Time
-	IPAddress string                   `json:"ipAddress"`
-	UserID    int                      `json:"userId"`
-	KeyReq    string                   `json:"keyReq"`
-	KeyUsed   string                   `json:"keyUsed"`
-	Key       string                   `json:"key"`
-	Ltool     string                   `json:"ltool"`
-	RunScript string                   `json:"runScript"`
-	IsQuery   bool                     `json:"isQuery"`
-	Corpus    []string                 `json:"corpus"`
-	GeoIP     conversion.GeoDataRecord `json:"geoip"`
+	ID          string `json:"-"`
+	Type        string `json:"-"`
+	Datetime    string `json:"datetime"`
+	time        time.Time
+	IPAddress   string                   `json:"ipAddress"`
+	UserID      *int                     `json:"userId"`
+	IsAnonymous bool                     `json:"isAnonymous"`
+	KeyReq      string                   `json:"keyReq"`
+	KeyUsed     string                   `json:"keyUsed"`
+	Key         string                   `json:"key"`
+	Ltool       string                   `json:"ltool"`
+	RunScript   string                   `json:"runScript"`
+	IsQuery     bool                     `json:"isQuery"`
+	Corpus      []string                 `json:"corpus"`
+	GeoIP       conversion.GeoDataRecord `json:"geoip"`
 }
 
 // SetLocation sets all the location related properties

@@ -20,19 +20,34 @@ import (
 	"log"
 	"sync"
 
-	"github.com/czcorpus/klogproc/save/elastic"
-	"github.com/czcorpus/klogproc/save/influx"
+	"github.com/czcorpus/klogproc/conversion"
 	"github.com/czcorpus/klogproc/load/batch"
 	"github.com/czcorpus/klogproc/load/sredis"
 	"github.com/czcorpus/klogproc/load/tail"
-	"github.com/czcorpus/klogproc/conversion"
+	"github.com/czcorpus/klogproc/save/elastic"
+	"github.com/czcorpus/klogproc/save/influx"
 	"github.com/oschwald/geoip2-golang"
 )
+
+func applyLocation(rec conversion.InputRecord, db *geoip2.Reader, outRec conversion.OutputRecord) {
+	ip := rec.GetClientIP()
+	if ip != nil {
+		city, err := db.City(ip)
+		if err != nil {
+			log.Printf("Failed to fetch GeoIP data for IP %s: %s", ip.String(), err)
+
+		} else {
+			outRec.SetLocation(city.Country.Names["en"], float32(city.Location.Latitude),
+				float32(city.Location.Longitude), city.Location.TimeZone)
+		}
+	}
+}
 
 // CNKLogProcessor imports parsed log records represented
 // as InputRecord instances
 type CNKLogProcessor struct {
 	appType        string
+	anonymousUsers []int
 	geoIPDb        *geoip2.Reader
 	chunkSize      int
 	currIdx        int
@@ -42,24 +57,14 @@ type CNKLogProcessor struct {
 
 // ProcItem transforms input log record into an output format.
 // In case an unsupported record is encountered, nil is returned.
-func (clp *CNKLogProcessor) ProcItem(appType string, logRec conversion.InputRecord) conversion.OutputRecord {
+func (clp *CNKLogProcessor) ProcItem(logRec conversion.InputRecord) conversion.OutputRecord {
 	if logRec.AgentIsLoggable() {
-		rec, err := clp.logTransformer.Transform(logRec, appType)
+		rec, err := clp.logTransformer.Transform(logRec, clp.appType, clp.anonymousUsers)
 		if err != nil {
 			log.Printf("ERROR: failed to transform item %s", logRec)
 			return nil
 		}
-		ip := logRec.GetClientIP()
-		if ip != nil {
-			city, err := clp.geoIPDb.City(ip)
-			if err != nil {
-				log.Printf("Failed to fetch GeoIP data for IP %s: %s", ip.String(), err)
-
-			} else {
-				rec.SetLocation(city.Country.Names["en"], float32(city.Location.Latitude),
-					float32(city.Location.Longitude), city.Location.TimeZone)
-			}
-		}
+		applyLocation(logRec, clp.geoIPDb, rec)
 		return rec
 	}
 	clp.numNonLoggable++
@@ -85,7 +90,7 @@ func pushDataToElastic(data [][]byte, esconf *elastic.SearchConf) error {
 
 func processRedisLogs(conf *Conf, queue *sredis.RedisQueue, processor *CNKLogProcessor, destChans ...chan conversion.OutputRecord) {
 	for _, item := range queue.GetItems() {
-		rec := processor.ProcItem(conf.AppType, item)
+		rec := processor.ProcItem(item)
 		if rec != nil {
 			for _, ch := range destChans {
 				ch <- rec
@@ -149,6 +154,7 @@ func processLogs(conf *Conf, action string) {
 	var rescue ESImportFailHandler
 
 	go func() {
+		// TODO - not applicable for all 'case's
 		lt, err := GetLogTransformer(conf.AppType)
 		if err != nil {
 			panic(err) // TODO
@@ -196,9 +202,14 @@ func processLogs(conf *Conf, action string) {
 			close(chunkChannelInflux)
 
 		case actionTail:
+			var err error
+			geoDb, err := geoip2.Open(conf.GeoIPDbPath)
+			if err != nil {
+				log.Fatal("ERROR: ", err)
+			}
 			lineParsers := make(map[string]batch.LineParser)
 			logTransformers := make(map[string]conversion.LogItemTransformer)
-			var err error
+
 			for _, f := range conf.LogTail.Files {
 				lineParsers[f.AppType], err = batch.NewLineParser(f.AppType)
 				if err != nil {
@@ -217,17 +228,19 @@ func processLogs(conf *Conf, action string) {
 						log.Printf("ERROR: %s", err)
 						return
 					}
-					outRec, err := logTransformers[appType].Transform(parsed, appType)
+					outRec, err := logTransformers[appType].Transform(parsed, appType, conf.AnonymousUsers)
 					if err != nil {
 						log.Printf("ERROR: %s", err)
 						return
 					}
+					applyLocation(parsed, geoDb, outRec)
 					chunkChannelES <- outRec
 					chunkChannelInflux <- outRec
 				},
 				func() {
 					close(chunkChannelES)
 					close(chunkChannelInflux)
+					geoDb.Close()
 				},
 			)
 		}

@@ -18,7 +18,6 @@ package syd
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/czcorpus/klogproc/conversion"
@@ -43,7 +42,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 
 	items := strings.Split(s, "\t")
 	var err error
-	userID, err := strconv.Atoi(items[2])
+
 	if len(items) >= 8 {
 		if err != nil {
 			err = conversion.NewMinorParsingError(lineNum, err.Error())
@@ -51,7 +50,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 		return &InputRecord{
 			Datetime:  items[0],
 			IPAddress: items[1],
-			UserID:    userID,
+			UserID:    items[2],
 			KeyReq:    items[3],
 			KeyUsed:   items[4],
 			Key:       items[5],
