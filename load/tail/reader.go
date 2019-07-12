@@ -1,4 +1,6 @@
 // Copyright 2019 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2019 Institute of the Czech National Corpus,
+//                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,11 +47,11 @@ type FileTailReader struct {
 	lastInode   int64
 	lastSize    int64
 	file        *os.File
-	lastReadPos int
+	lastReadPos int64
 }
 
 // ApplyNewContent calls a provided function to newly added lines
-func (ftw *FileTailReader) ApplyNewContent(callback func(line string)) error {
+func (ftw *FileTailReader) ApplyNewContent(onLine func(line string), onDone func(inode int64, seek int64)) error {
 	currInode, currSize, err := getFileProps(ftw.path)
 	if err != nil {
 		return err
@@ -74,19 +76,37 @@ func (ftw *FileTailReader) ApplyNewContent(callback func(line string)) error {
 	if contentChanged {
 		sc := bufio.NewScanner(ftw.file)
 		for sc.Scan() {
-			callback(sc.Text())
+			onLine(sc.Text())
 		}
+		ftw.lastReadPos, err = ftw.file.Seek(0, os.SEEK_CUR)
+		if err != nil {
+			return err
+		}
+		onDone(ftw.lastInode, ftw.lastReadPos)
 	}
 	return nil
 }
 
 // NewReader creates a new file reader instance
-func NewReader(path string, appType string) *FileTailReader {
-	return &FileTailReader{
+func NewReader(path, appType string, lastInode, lastReadPos int64) (*FileTailReader, error) {
+	r := &FileTailReader{
 		path:        path,
-		lastInode:   -1,
+		lastInode:   lastInode,
 		lastSize:    -1,
 		file:        nil,
-		lastReadPos: -1,
+		lastReadPos: lastReadPos,
 	}
+	if lastInode > 0 {
+		var err error
+		r.file, err = os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		_, err = r.file.Seek(lastReadPos, os.SEEK_SET)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+	return r, nil
 }
