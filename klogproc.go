@@ -29,8 +29,8 @@ import (
 
 	"os"
 
-	"github.com/czcorpus/klogproc/elastic"
-	"github.com/czcorpus/klogproc/influx"
+	"github.com/czcorpus/klogproc/save/elastic"
+	"github.com/czcorpus/klogproc/save/influx"
 )
 
 const (

@@ -20,8 +20,8 @@ import (
 	"log"
 	"sync"
 
-	"github.com/czcorpus/klogproc/elastic"
-	"github.com/czcorpus/klogproc/influx"
+	"github.com/czcorpus/klogproc/save/elastic"
+	"github.com/czcorpus/klogproc/save/influx"
 	"github.com/czcorpus/klogproc/load/batch"
 	"github.com/czcorpus/klogproc/load/sredis"
 	"github.com/czcorpus/klogproc/load/tail"
