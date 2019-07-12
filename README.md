@@ -7,7 +7,8 @@ In general klogproc reads a custom format from a file or a Redis queue, parses
 individual lines and converts them into a target format which is then stored to
 ElasticSearch or InfluxDB (both at the same time can be used).
 
-*klogproc* replaces LogStash as a much less resource-hungry alternative.
+*klogproc* replaces LogStash as a much less resource-hungry alternative with
+some improvements (IPv6 support in geolocation).
 
 ## Overview
 

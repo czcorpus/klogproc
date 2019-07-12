@@ -31,10 +31,10 @@ type konTextTransformer struct {
 
 // Transform transforms KonText app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (k *konTextTransformer) Transform(logRec conversion.InputRecord, recType string) (conversion.OutputRecord, error) {
+func (k *konTextTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
 	tRec, ok := logRec.(*kontext.InputRecord)
 	if ok {
-		return k.t.Transform(tRec, recType)
+		return k.t.Transform(tRec, recType, anonymousUsers)
 	}
 	return nil, fmt.Errorf("Invalid type for conversion by KonText transformer %T", logRec)
 }
@@ -47,10 +47,10 @@ type sydTransformer struct {
 
 // Transform transforms KonText app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *sydTransformer) Transform(logRec conversion.InputRecord, recType string) (conversion.OutputRecord, error) {
+func (s *sydTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
 	tRec, ok := logRec.(*syd.InputRecord)
 	if ok {
-		return s.t.Transform(tRec, recType)
+		return s.t.Transform(tRec, recType, anonymousUsers)
 	}
 	return nil, fmt.Errorf("Invalid type for conversion by SyD transformer %T", logRec)
 }

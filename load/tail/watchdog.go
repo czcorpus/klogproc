@@ -32,6 +32,7 @@ type FileConf struct {
 // Conf wraps all the configuration for the 'tail' function
 type Conf struct {
 	IntervalSecs int        `json:"intervalSecs"`
+	WorklogPath  string     `json:"worklogPath"`
 	Files        []FileConf `json:"files"`
 }
 

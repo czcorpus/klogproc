@@ -125,7 +125,7 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, timezon
 
 // LogItemProcessor is an object handling individual
 type LogItemProcessor interface {
-	ProcItem(appType string, logRec conversion.InputRecord) conversion.OutputRecord
+	ProcItem(logRec conversion.InputRecord) conversion.OutputRecord
 	GetAppType() string
 }
 

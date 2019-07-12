@@ -16,11 +16,18 @@
 
 package syd
 
+import (
+	"log"
+	"strconv"
+
+	"github.com/czcorpus/klogproc/conversion"
+)
+
 // Transformer converts a SyD log record to a destination format
 type Transformer struct{}
 
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *InputRecord, recType string) (*OutputRecord, error) {
+func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymousUsers []int) (*OutputRecord, error) {
 	var corpora []string
 	if logRecord.Ltool == "S" {
 		corpora = []string{"syn2010", "oral_v2", "ksk-dopisy"}
@@ -28,18 +35,31 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string) (*Output
 	} else if logRecord.Ltool == "D" {
 		corpora = []string{"diakon"}
 	}
+
+	var userID *int
+	if logRecord.UserID != "-" {
+		uid, err := strconv.Atoi(logRecord.UserID)
+		if err != nil {
+			log.Printf("WARNING: Failed to convert user ID %s", logRecord.UserID)
+
+		} else {
+			userID = &uid
+		}
+	}
+
 	r := &OutputRecord{
-		Type:      recType,
-		Datetime:  logRecord.Datetime,
-		IPAddress: logRecord.IPAddress,
-		UserID:    logRecord.UserID,
-		KeyReq:    logRecord.KeyReq,
-		KeyUsed:   logRecord.KeyUsed,
-		Key:       logRecord.Key,
-		Ltool:     logRecord.Ltool,
-		RunScript: logRecord.RunScript,
-		IsQuery:   true,
-		Corpus:    corpora,
+		Type:        recType,
+		Datetime:    logRecord.Datetime,
+		IPAddress:   logRecord.IPAddress,
+		UserID:      userID,
+		IsAnonymous: userID == nil || conversion.UserBelongsToList(*userID, anonymousUsers),
+		KeyReq:      logRecord.KeyReq,
+		KeyUsed:     logRecord.KeyUsed,
+		Key:         logRecord.Key,
+		Ltool:       logRecord.Ltool,
+		RunScript:   logRecord.RunScript,
+		IsQuery:     true,
+		Corpus:      corpora,
 	}
 	r.ID = createID(r)
 	return r, nil
