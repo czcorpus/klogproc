@@ -43,7 +43,7 @@ func createID(rec *OutputRecord) string {
 // for further analysis and archiving
 type OutputRecord struct {
 	ID          string   `json:"-"`
-	Type        string   `json:"-"`
+	Type        string   `json:"type"`
 	Corpus      []string `json:"corpus"`
 	Datetime    string   `json:"datetime"`
 	time        time.Time

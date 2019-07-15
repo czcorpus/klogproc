@@ -38,7 +38,6 @@ func createRecord() *OutputRecord {
 		Limited:     false,
 		ProcTime:    0.712,
 		QueryType:   "cql",
-		Type2:       "kontext",
 		UserAgent:   "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:51.0) Gecko/20100101 Firefox/51.0",
 		UserID:      100,
 		GeoIP: GeoDataRecord{
