@@ -17,15 +17,16 @@
 package tail
 
 import (
-	"os"
-	"io/ioutil"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
 )
 
 // WorklogItem stores inode & seek position of last read operation
 type WorklogItem struct {
 	Inode int64 `json:"inode"`
-	Seek int64 `json:"seek"`
+	Seek  int64 `json:"seek"`
 }
 
 // WorklogRecord provides WorkLogItem info for all configured apps
@@ -36,15 +37,18 @@ type WorklogRecord = map[string]WorklogItem
 // interruption
 type Worklog struct {
 	filePath string
-	fr *os.File
-	rec WorklogRecord
+	fr       *os.File
+	rec      WorklogRecord
 }
 
 // Init initializes the worklog. It must be called before any other
 // operation.
 func (w *Worklog) Init() error {
 	var err error
-	w.fr, err = os.OpenFile(w.filePath, os.O_CREATE | os.O_RDWR, 0644)
+	if w.filePath == "" {
+		return fmt.Errorf("Failed to initialize tail worklog - no path specified")
+	}
+	w.fr, err = os.OpenFile(w.filePath, os.O_CREATE|os.O_RDWR, 0644)
 	byteValue, err := ioutil.ReadAll(w.fr)
 	if err != nil {
 		return err

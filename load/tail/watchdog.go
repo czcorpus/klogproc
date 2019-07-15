@@ -46,24 +46,28 @@ func Run(conf *Conf, onEntry func(item string, appType string), onStop func()) {
 	signal.Notify(syscallChan, os.Interrupt)
 	signal.Notify(syscallChan, syscall.SIGTERM)
 	worklog := NewWorklog(conf.WorklogPath)
+	var readers []*FileTailReader
+
 	err := worklog.Init()
 	if err != nil {
 		log.Print("ERROR: ", err)
 		quitChan <- true
-	}
 
-	readers := make([]*FileTailReader, 0, 50)
-	for _, fc := range conf.Files {
-		wlItem := worklog.GetData(fc.AppType)
-		if wlItem.Inode > -1 {
-			log.Printf("Found worklog for %s, inode: %d, seek: %d", fc.Path, wlItem.Inode, wlItem.Seek)
+	} else {
+		readers = make([]*FileTailReader, 0, 50)
+		for _, fc := range conf.Files {
+			wlItem := worklog.GetData(fc.AppType)
+			log.Printf("INFO: Found configuration for file %s", fc.Path)
+			if wlItem.Inode > -1 {
+				log.Printf("INFO: Found worklog for %s, inode: %d, seek: %d", fc.Path, wlItem.Inode, wlItem.Seek)
+			}
+			rdr, err := NewReader(fc.Path, fc.AppType, wlItem.Inode, wlItem.Seek)
+			if err != nil {
+				log.Print("ERROR: ", err)
+				quitChan <- true
+			}
+			readers = append(readers, rdr)
 		}
-		rdr, err := NewReader(fc.Path, fc.AppType, wlItem.Inode, wlItem.Seek)
-		if err != nil {
-			log.Print("ERROR: ", err)
-			quitChan <- true
-		}
-		readers = append(readers, rdr)
 	}
 
 	go func() {

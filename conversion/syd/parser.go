@@ -23,7 +23,8 @@ import (
 	"github.com/czcorpus/klogproc/conversion"
 )
 
-// LineParser is a parser for reading KonText application logs
+// LineParser is a parser for reading SyD application log
+// which is basically a TAB separated list of items.
 type LineParser struct {
 }
 
@@ -44,9 +45,6 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 	var err error
 
 	if len(items) >= 8 {
-		if err != nil {
-			err = conversion.NewMinorParsingError(lineNum, err.Error())
-		}
 		return &InputRecord{
 			Datetime:  items[0],
 			IPAddress: items[1],
@@ -58,5 +56,6 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 			RunScript: items[7],
 		}, err
 	}
-	return nil, fmt.Errorf("Invalid line format. Expecting 8 tab-separated items, found %d", len(items))
+	return nil, conversion.NewMinorParsingError(
+		lineNum, fmt.Sprintf("Invalid line format. Expecting 8 tab-separated items, found %d", len(items)))
 }
