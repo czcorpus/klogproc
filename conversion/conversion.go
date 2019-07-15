@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"time"
+	"strconv"
 )
 
 const (
@@ -121,4 +122,17 @@ func UserBelongsToList(userID int, anonymousUsers []int) bool {
 		}
 	}
 	return false
+}
+
+// ImportBool imports typical bool formats (as supported by Go) with
+// additional support for an empty space
+func ImportBool(v, keyName string) (bool, error) {
+	if v == "" {
+		return false, nil
+	}
+	ans, err := strconv.ParseBool(v)
+	if err != nil {
+		return false, fmt.Errorf("invalid data for %s: %s", keyName, v)
+	}
+	return ans, nil
 }
