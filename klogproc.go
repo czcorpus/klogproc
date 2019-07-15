@@ -80,14 +80,14 @@ func (c *Conf) HasElasticOut() bool {
 // TODO fix/update this
 func validateConf(conf *Conf) {
 	if conf.AppType == "" {
-		log.Fatal("Application type not set")
+		log.Fatal("ERROR: Application type not set")
 	}
 	if conf.HasElasticOut() {
 		if conf.ElasticSearch.ScrollTTL == "" {
-			log.Fatal("elasticScrollTtl must be a valid ElasticSearch scroll arg value (e.g. '2m', '30s')")
+			log.Fatal("ERROR: elasticScrollTtl must be a valid ElasticSearch scroll arg value (e.g. '2m', '30s')")
 		}
 		if conf.ElasticSearch.PushChunkSize == 0 {
-			log.Fatal("elasticPushChunkSize is missing")
+			log.Fatal("ERROR: elasticPushChunkSize is missing")
 		}
 	}
 }
