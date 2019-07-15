@@ -37,7 +37,6 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 		Limited:        fullCorpname.limited,
 		ProcTime:       logRecord.ProcTime,
 		QueryType:      importQueryType(logRecord),
-		Type2:          recType,
 		UserAgent:      logRecord.Request.HTTPUserAgent,
 		UserID:         logRecord.UserID,
 		Error:          logRecord.Error,

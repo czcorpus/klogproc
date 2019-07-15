@@ -76,23 +76,22 @@ func importCorpname(record *InputRecord) fullCorpname {
 // to be inserted into ElasticSearch index.
 type OutputRecord struct {
 	ID             string   `json:"-"`
-	Type           string   `json:"-"`
+	Type           string   `json:"type"`
 	Action         string   `json:"action"`
 	Corpus         string   `json:"corpus"`
 	AlignedCorpora []string `json:"alignedCorpora"`
 	Datetime       string   `json:"datetime"`
 	datetime       time.Time
-	IPAddress      string                  `json:"ipAddress"`
-	IsAnonymous    bool                    `json:"isAnonymous"`
-	IsQuery        bool                    `json:"isQuery"`
-	Limited        bool                    `json:"limited"`
-	ProcTime       float32                 `json:"procTime"`
-	QueryType      string                  `json:"queryType"`
-	Type2          string                  `json:"type"` // TODO do we need this?
-	UserAgent      string                  `json:"userAgent"`
-	UserID         int                     `json:"userId"`
+	IPAddress      string                   `json:"ipAddress"`
+	IsAnonymous    bool                     `json:"isAnonymous"`
+	IsQuery        bool                     `json:"isQuery"`
+	Limited        bool                     `json:"limited"`
+	ProcTime       float32                  `json:"procTime"`
+	QueryType      string                   `json:"queryType"`
+	UserAgent      string                   `json:"userAgent"`
+	UserID         int                      `json:"userId"`
 	GeoIP          conversion.GeoDataRecord `json:"geoip"`
-	Error          ErrorRecord             `json:"error"`
+	Error          ErrorRecord              `json:"error"`
 }
 
 // ToJSON converts self to JSON string
