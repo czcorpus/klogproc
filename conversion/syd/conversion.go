@@ -17,7 +17,7 @@
 package syd
 
 import (
-	"log"
+	"fmt"
 	"strconv"
 
 	"github.com/czcorpus/klogproc/conversion"
@@ -40,16 +40,15 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 	if logRecord.UserID != "-" {
 		uid, err := strconv.Atoi(logRecord.UserID)
 		if err != nil {
-			log.Printf("WARNING: Failed to convert user ID %s", logRecord.UserID)
-
-		} else {
-			userID = &uid
+			return nil, fmt.Errorf("Failed to convert user ID [%s]", logRecord.UserID)
 		}
+		userID = &uid
 	}
 
 	r := &OutputRecord{
 		Type:        recType,
 		Datetime:    logRecord.Datetime,
+		time:        logRecord.GetTime(),
 		IPAddress:   logRecord.IPAddress,
 		UserID:      userID,
 		IsAnonymous: userID == nil || conversion.UserBelongsToList(*userID, anonymousUsers),

@@ -22,6 +22,7 @@ import (
 	"github.com/czcorpus/klogproc/conversion"
 	"github.com/czcorpus/klogproc/conversion/kontext"
 	"github.com/czcorpus/klogproc/conversion/syd"
+	"github.com/czcorpus/klogproc/conversion/treq"
 )
 
 // ------------------------------------
@@ -50,6 +51,16 @@ func (parser *sydLineParser) ParseLine(s string, lineNum int, localTimezone stri
 
 // ------------------------------------
 
+type treqLineParser struct {
+	lp *treq.LineParser
+}
+
+func (parser *treqLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum, localTimezone)
+}
+
+// ------------------------------------
+
 // NewLineParser creates a parser for individual lines of a respective appType
 func NewLineParser(appType string) (LineParser, error) {
 	switch appType {
@@ -57,6 +68,8 @@ func NewLineParser(appType string) (LineParser, error) {
 		return &kontextLineParser{lp: &kontext.LineParser{}}, nil
 	case conversion.AppTypeSyd:
 		return &sydLineParser{lp: &syd.LineParser{}}, nil
+	case conversion.AppTypeTreq:
+		return &treqLineParser{lp: &treq.LineParser{}}, nil
 	default:
 		return nil, fmt.Errorf("Parser not found for application type %s", appType)
 	}

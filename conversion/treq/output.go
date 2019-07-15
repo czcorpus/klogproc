@@ -14,50 +14,49 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package syd
+package treq
 
 import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
 )
 
 func createID(rec *OutputRecord) string {
-	userID := "-"
-	if rec.UserID != nil {
-		userID = strconv.Itoa(*rec.UserID)
-	}
-	str := rec.Type + strings.Join(rec.Corpus, ":") + rec.Datetime + rec.IPAddress +
-		userID + rec.KeyReq + rec.KeyUsed + rec.Key + rec.Ltool + rec.RunScript +
-		strconv.FormatBool(rec.IsQuery)
+	str := rec.Type + rec.Corpus + rec.Datetime + rec.QLang + rec.SecondLang + rec.IPAddress +
+		rec.UserID + rec.Subcorpus + strconv.FormatBool(rec.IsQuery) + strconv.FormatBool(rec.IsRegexp) +
+		strconv.FormatBool(rec.IsCaseInsen) + strconv.FormatBool(rec.IsMultiWord) +
+		strconv.FormatBool(rec.IsLemma) + rec.QType + rec.Query + rec.Query2
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }
 
-// OutputRecord represents a final format of log records for SyD as stored
-// for further analysis and archiving
+// OutputRecord is an archive-ready Treq log record
 type OutputRecord struct {
-	ID          string   `json:"-"`
-	Type        string   `json:"-"`
-	Corpus      []string `json:"corpus"`
-	Datetime    string   `json:"datetime"`
+	ID          string `json:"-"`
+	Type        string `json:"type"`
 	time        time.Time
-	IPAddress   string `json:"ipAddress"`
-	UserID      *int   `json:"userId"`
-	IsAnonymous bool   `json:"isAnonymous"`
-	KeyReq      string `json:"keyReq"`
-	KeyUsed     string `json:"keyUsed"`
-	Key         string `json:"key"`
-	Ltool       string `json:"ltool"`
-	RunScript   string `json:"runScript"`
-	IsQuery     bool   `json:"isQuery"`
-
-	GeoIP conversion.GeoDataRecord `json:"geoip"`
+	Datetime    string                   `json:"datetime"`
+	QLang       string                   `json:"qLang"`
+	SecondLang  string                   `json:"secondLang"`
+	IPAddress   string                   `json:"ipAddress"`
+	UserID      string                   `json:"userId"`
+	IsAnonymous bool                     `json:"isAnonymous"`
+	Corpus      string                   `json:"corpus"`
+	Subcorpus   string                   `json:"subcorpus"`
+	IsQuery     bool                     `json:"isQuery"`
+	IsRegexp    bool                     `json:"isRegexp"`
+	IsCaseInsen bool                     `json:"isCaseInsen"`
+	IsMultiWord bool                     `json:"isMultiWord"`
+	IsLemma     bool                     `json:"lemma"`
+	QType       string                   `json:"qType"`
+	Query       string                   `json:"query"`
+	Query2      string                   `json:"query2"`
+	GeoIP       conversion.GeoDataRecord `json:"geoip"`
 }
 
 // SetLocation sets all the location related properties
