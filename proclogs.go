@@ -149,8 +149,9 @@ func processLogs(conf *Conf, action string) {
 	}
 	defer geoDb.Close()
 
-	chunkChannelES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
-	chunkChannelInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
+	channelWriteES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
+	channelWriteInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
+	useChunkMode := true
 	var rescue ESImportFailHandler
 
 	go func() {
@@ -186,9 +187,9 @@ func processLogs(conf *Conf, action string) {
 				log.Fatalf("ERROR: %s. Please fix the problem before running the program again",
 					err)
 			}
-			processRedisLogs(conf, redisQueue, processor, chunkChannelES, chunkChannelInflux)
-			close(chunkChannelES)
-			close(chunkChannelInflux)
+			processRedisLogs(conf, redisQueue, processor, channelWriteES, channelWriteInflux)
+			close(channelWriteES)
+			close(channelWriteInflux)
 
 		case actionBatch:
 			// TODO test config
@@ -196,13 +197,14 @@ func processLogs(conf *Conf, action string) {
 			log.Printf("INFO: using worklog %s", conf.LogFiles.WorklogPath)
 			defer worklog.Save()
 			rescue = worklog
-			proc := batch.CreateLogFileProcFunc(processor, chunkChannelES, chunkChannelInflux)
+			proc := batch.CreateLogFileProcFunc(processor, channelWriteES, channelWriteInflux)
 			proc(&conf.LogFiles, conf.LocalTimezone, worklog.GetLastRecord())
-			close(chunkChannelES)
-			close(chunkChannelInflux)
+			close(channelWriteES)
+			close(channelWriteInflux)
 
 		case actionTail:
 			var err error
+			useChunkMode = false
 			geoDb, err := geoip2.Open(conf.GeoIPDbPath)
 			if err != nil {
 				log.Fatal("ERROR: ", err)
@@ -234,12 +236,12 @@ func processLogs(conf *Conf, action string) {
 						return
 					}
 					applyLocation(parsed, geoDb, outRec)
-					chunkChannelES <- outRec
-					chunkChannelInflux <- outRec
+					channelWriteES <- outRec
+					channelWriteInflux <- outRec
 				},
 				func() {
-					close(chunkChannelES)
-					close(chunkChannelInflux)
+					close(channelWriteES)
+					close(channelWriteInflux)
 					geoDb.Close()
 				},
 			)
@@ -258,7 +260,7 @@ func processLogs(conf *Conf, action string) {
 			data := make([][]byte, conf.ElasticSearch.PushChunkSize*2+1)
 			failed := make([][]byte, 0, 50)
 			var esErr error
-			for rec := range chunkChannelES {
+			for rec := range channelWriteES {
 				jsonData, err := rec.ToJSON()
 				jsonMeta := elastic.CNKRecordMeta{
 					ID:    rec.GetID(),
@@ -275,15 +277,16 @@ func processLogs(conf *Conf, action string) {
 				} else {
 					log.Print("ERROR: Failed to encode item ", rec.GetTime())
 				}
-				if i == conf.ElasticSearch.PushChunkSize*2 {
+				if i == conf.ElasticSearch.PushChunkSize*2 || !useChunkMode {
 					data[i] = []byte("\n")
-					esErr = pushDataToElastic(data, &conf.ElasticSearch)
+					esErr = pushDataToElastic(data[:i+1], &conf.ElasticSearch)
 					if esErr != nil {
 						failed = append(failed, data[:i+1]...)
 					}
 					i = 0
 				}
 			}
+
 			if i > 0 {
 				data[i] = []byte("\n")
 				esErr = pushDataToElastic(data[:i+1], &conf.ElasticSearch)
@@ -297,7 +300,7 @@ func processLogs(conf *Conf, action string) {
 			}
 
 		} else {
-			for range chunkChannelES {
+			for range channelWriteES {
 			}
 		}
 	}()
@@ -311,7 +314,7 @@ func processLogs(conf *Conf, action string) {
 			if err != nil {
 				log.Printf("ERROR: %s", err)
 			}
-			for rec := range chunkChannelInflux {
+			for rec := range channelWriteInflux {
 				client.AddRecord(rec)
 			}
 			err = client.Finish()
@@ -320,7 +323,7 @@ func processLogs(conf *Conf, action string) {
 			}
 
 		} else {
-			for range chunkChannelInflux {
+			for range channelWriteInflux {
 			}
 		}
 	}()
