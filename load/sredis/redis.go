@@ -30,6 +30,7 @@ type RedisConf struct {
 	Address  string `json:"address"`
 	Database int    `json:"database"`
 	QueueKey string `json:"queueKey"`
+	AppType  string `json:"appType"`
 }
 
 // RedisQueue provides access to Redis database containing

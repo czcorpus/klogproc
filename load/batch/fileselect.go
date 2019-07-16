@@ -40,6 +40,7 @@ type Conf struct {
 	SrcPath                string `json:"srcPath"`
 	PartiallyMatchingFiles bool   `json:"partiallyMatchingFiles"`
 	WorklogPath            string `json:"worklogPath"`
+	AppType                string `json:"appType"`
 }
 
 // importTimeFromLine import a datetime information from the beginning

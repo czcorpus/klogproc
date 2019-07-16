@@ -152,22 +152,20 @@ func processLogs(conf *Conf, action string) {
 
 	finishEvent := make(chan bool)
 	go func() {
-		// TODO - not applicable for all 'case's
-		lt, err := GetLogTransformer(conf.AppType)
-		if err != nil {
-			log.Fatal(err)
-		}
-		processor := &CNKLogProcessor{
-			geoIPDb:        geoDb,
-			chunkSize:      conf.ElasticSearch.PushChunkSize,
-			appType:        conf.AppType,
-			logTransformer: lt,
-		}
-
 		switch action {
 		case actionRedis:
 			if !conf.UsesRedis() {
 				log.Fatal("FATAL: Redis not configured")
+			}
+			lt, err := GetLogTransformer(conf.LogRedis.AppType)
+			if err != nil {
+				log.Fatal(err)
+			}
+			processor := &CNKLogProcessor{
+				geoIPDb:        geoDb,
+				chunkSize:      conf.ElasticSearch.PushChunkSize,
+				appType:        conf.LogRedis.AppType,
+				logTransformer: lt,
 			}
 			channelWriteES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
 			channelWriteInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
@@ -194,9 +192,19 @@ func processLogs(conf *Conf, action string) {
 			close(channelWriteES)
 			close(channelWriteInflux)
 			finishEvent <- true
+			log.Printf("INFO: Ignored %d non-loggable items (bots etc.)", processor.numNonLoggable)
 
 		case actionBatch:
-			// TODO test config
+			lt, err := GetLogTransformer(conf.LogFiles.AppType)
+			if err != nil {
+				log.Fatal(err)
+			}
+			processor := &CNKLogProcessor{
+				geoIPDb:        geoDb,
+				chunkSize:      conf.ElasticSearch.PushChunkSize,
+				appType:        conf.LogFiles.AppType,
+				logTransformer: lt,
+			}
 			channelWriteES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
 			channelWriteInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
 			worklog := batch.NewWorklog(conf.LogFiles.WorklogPath)
@@ -213,11 +221,11 @@ func processLogs(conf *Conf, action string) {
 			close(channelWriteInflux)
 			wg.Wait()
 			finishEvent <- true
+			log.Printf("INFO: Ignored %d non-loggable items (bots etc.)", processor.numNonLoggable)
 
 		case actionTail:
 			runTailAction(conf, geoDb, finishEvent)
 		}
-		log.Printf("INFO: Ignored %d non-loggable items (bots etc.)", processor.numNonLoggable)
 	}()
 	<-finishEvent
 
