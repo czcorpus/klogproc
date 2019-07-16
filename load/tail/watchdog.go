@@ -38,8 +38,17 @@ type Conf struct {
 	Files        []FileConf `json:"files"`
 }
 
+// FileTailProcessor specifies an object which is able to utilize all
+// the "events" watchdog provides when processing a file tail.
+type FileTailProcessor interface {
+	OnCheckStart()
+	OnEntry(item, appType string)
+	OnCheckStop()
+	OnQuit()
+}
+
 // Run starts the process of (multiple) log watching
-func Run(conf *Conf, onEntry func(item string, appType string), onStop func()) {
+func Run(conf *Conf, processor FileTailProcessor, finishEvent chan bool) {
 	ticker := time.NewTicker(5 * time.Second)
 	quitChan := make(chan bool, 10)
 	syscallChan := make(chan os.Signal, 10)
@@ -47,7 +56,6 @@ func Run(conf *Conf, onEntry func(item string, appType string), onStop func()) {
 	signal.Notify(syscallChan, syscall.SIGTERM)
 	worklog := NewWorklog(conf.WorklogPath)
 	var readers []*FileTailReader
-
 	err := worklog.Init()
 	if err != nil {
 		log.Print("ERROR: ", err)
@@ -74,30 +82,32 @@ func Run(conf *Conf, onEntry func(item string, appType string), onStop func()) {
 		for {
 			select {
 			case <-ticker.C:
-				for _, f := range conf.Files {
-					for _, reader := range readers {
-						reader.ApplyNewContent(
-							func(v string) {
-								onEntry(v, f.AppType)
-							},
-							func(inode int64, seek int64) {
-								worklog.UpdateFileInfo(f.AppType, inode, seek)
-								worklog.Save()
-							},
-						)
-					}
+				processor.OnCheckStart()
+				for _, reader := range readers {
+					reader.ApplyNewContent(
+						func(v string) {
+							processor.OnEntry(v, reader.AppType())
+						},
+						func(inode int64, seek int64) {
+							worklog.UpdateFileInfo(reader.AppType(), inode, seek)
+							worklog.Save()
+						},
+					)
 				}
+				processor.OnCheckStop()
 			case quit := <-quitChan:
 				if quit {
 					ticker.Stop()
-					onStop()
+					processor.OnQuit()
 					worklog.Close()
+					finishEvent <- true
 				}
 			case <-syscallChan:
 				log.Print("INFO: Caught signal, exiting...")
 				ticker.Stop()
-				onStop()
+				processor.OnQuit()
 				worklog.Close()
+				finishEvent <- true
 			}
 		}
 	}()
