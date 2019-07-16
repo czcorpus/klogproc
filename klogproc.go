@@ -54,7 +54,6 @@ type Conf struct {
 	RecUpdate      elastic.DocUpdConf `json:"recordUpdate"`
 	ElasticSearch  elastic.SearchConf `json:"elasticSearch"`
 	InfluxDB       influx.Conf        `json:"influxDb"`
-	AppType        string             `json:"appType"`
 }
 
 // UsesRedis tests whether the config contains Redis
@@ -79,9 +78,6 @@ func (c *Conf) HasElasticOut() bool {
 
 // TODO fix/update this
 func validateConf(conf *Conf) {
-	if conf.AppType == "" {
-		log.Fatal("ERROR: Application type not set")
-	}
 	if conf.HasElasticOut() {
 		if conf.ElasticSearch.ScrollTTL == "" {
 			log.Fatal("ERROR: elasticScrollTtl must be a valid ElasticSearch scroll arg value (e.g. '2m', '30s')")
