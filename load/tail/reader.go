@@ -43,11 +43,17 @@ func getFileProps(filePath string) (inode int64, size int64, err error) {
 // 2) during normal operation the inode of the file remains the same
 // 3) change of inode means we start reading a new file from the beginning
 type FileTailReader struct {
+	appType     string
 	path        string
 	lastInode   int64
 	lastSize    int64
 	file        *os.File
 	lastReadPos int64
+}
+
+// AppType returns app type identifier (kontext, syd, treq,...)
+func (ftw *FileTailReader) AppType() string {
+	return ftw.appType
 }
 
 // ApplyNewContent calls a provided function to newly added lines
@@ -90,6 +96,7 @@ func (ftw *FileTailReader) ApplyNewContent(onLine func(line string), onDone func
 // NewReader creates a new file reader instance
 func NewReader(path, appType string, lastInode, lastReadPos int64) (*FileTailReader, error) {
 	r := &FileTailReader{
+		appType:     appType,
 		path:        path,
 		lastInode:   lastInode,
 		lastSize:    -1,

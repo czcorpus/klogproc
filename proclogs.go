@@ -1,4 +1,6 @@
 // Copyright 2017 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2017 Institute of the Czech National Corpus,
+//                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +25,6 @@ import (
 	"github.com/czcorpus/klogproc/conversion"
 	"github.com/czcorpus/klogproc/load/batch"
 	"github.com/czcorpus/klogproc/load/sredis"
-	"github.com/czcorpus/klogproc/load/tail"
 	"github.com/czcorpus/klogproc/save/elastic"
 	"github.com/czcorpus/klogproc/save/influx"
 	"github.com/oschwald/geoip2-golang"
@@ -145,20 +146,16 @@ func retryRescuedItems(queue *sredis.RedisQueue, conf *elastic.SearchConf) error
 func processLogs(conf *Conf, action string) {
 	geoDb, err := geoip2.Open(conf.GeoIPDbPath)
 	if err != nil {
-		panic(err)
+		log.Fatal("FATAL: ", err)
 	}
 	defer geoDb.Close()
 
-	channelWriteES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
-	channelWriteInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
-	useChunkMode := true
-	var rescue ESImportFailHandler
-
+	finishEvent := make(chan bool)
 	go func() {
 		// TODO - not applicable for all 'case's
 		lt, err := GetLogTransformer(conf.AppType)
 		if err != nil {
-			panic(err) // TODO
+			log.Fatal(err)
 		}
 		processor := &CNKLogProcessor{
 			geoIPDb:        geoDb,
@@ -170,8 +167,10 @@ func processLogs(conf *Conf, action string) {
 		switch action {
 		case actionRedis:
 			if !conf.UsesRedis() {
-				panic("Redis not configured") // TODO
+				log.Fatal("FATAL: Redis not configured")
 			}
+			channelWriteES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
+			channelWriteInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
 			redisQueue, err := sredis.OpenRedisQueue(
 				conf.LogRedis.Address,
 				conf.LogRedis.Database,
@@ -181,152 +180,119 @@ func processLogs(conf *Conf, action string) {
 			if err != nil {
 				panic(err)
 			}
-			rescue = redisQueue
 			err = retryRescuedItems(redisQueue, &conf.ElasticSearch)
 			if err != nil {
 				log.Fatalf("ERROR: %s. Please fix the problem before running the program again",
 					err)
 			}
 			processRedisLogs(conf, redisQueue, processor, channelWriteES, channelWriteInflux)
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go runElasticWrite(conf, channelWriteES, &wg, redisQueue)
+			go runInfluxWrite(conf, channelWriteInflux, &wg)
+			wg.Wait()
 			close(channelWriteES)
 			close(channelWriteInflux)
+			finishEvent <- true
 
 		case actionBatch:
 			// TODO test config
+			channelWriteES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
+			channelWriteInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
 			worklog := batch.NewWorklog(conf.LogFiles.WorklogPath)
 			log.Printf("INFO: using worklog %s", conf.LogFiles.WorklogPath)
 			defer worklog.Save()
-			rescue = worklog
 			proc := batch.CreateLogFileProcFunc(processor, channelWriteES, channelWriteInflux)
 			proc(&conf.LogFiles, conf.LocalTimezone, worklog.GetLastRecord())
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go runElasticWrite(conf, channelWriteES, &wg, worklog)
+			go runInfluxWrite(conf, channelWriteInflux, &wg)
+			wg.Wait()
 			close(channelWriteES)
 			close(channelWriteInflux)
+			finishEvent <- true
 
 		case actionTail:
-			var err error
-			useChunkMode = false
-			geoDb, err := geoip2.Open(conf.GeoIPDbPath)
-			if err != nil {
-				log.Fatal("ERROR: ", err)
-			}
-			lineParsers := make(map[string]batch.LineParser)
-			logTransformers := make(map[string]conversion.LogItemTransformer)
-
-			for _, f := range conf.LogTail.Files {
-				lineParsers[f.AppType], err = batch.NewLineParser(f.AppType)
-				if err != nil {
-					log.Fatal("ERROR: Failed to initialize parser: ", err)
-				}
-				logTransformers[f.AppType], err = GetLogTransformer(f.AppType)
-				if err != nil {
-					log.Fatal("ERROR: Failed to initialize transformer: ", err)
-				}
-			}
-			tail.Run(
-				&conf.LogTail,
-				func(rec string, appType string) {
-					parsed, err := lineParsers[appType].ParseLine(rec, 0, conf.LocalTimezone)
-					if err != nil {
-						log.Printf("ERROR: %s", err)
-						return
-					}
-					outRec, err := logTransformers[appType].Transform(parsed, appType, conf.AnonymousUsers)
-					if err != nil {
-						log.Printf("ERROR: %s", err)
-						return
-					}
-					applyLocation(parsed, geoDb, outRec)
-					channelWriteES <- outRec
-					channelWriteInflux <- outRec
-				},
-				func() {
-					close(channelWriteES)
-					close(channelWriteInflux)
-					geoDb.Close()
-				},
-			)
+			runTailAction(conf, geoDb, finishEvent)
 		}
 		log.Printf("INFO: Ignored %d non-loggable items (bots etc.)", processor.numNonLoggable)
 	}()
+	<-finishEvent
 
-	var wg sync.WaitGroup
-	wg.Add(2)
+}
 
+func runElasticWrite(conf *Conf, incomingData chan conversion.OutputRecord, waitGroup *sync.WaitGroup, failHandler ESImportFailHandler) {
 	// Elasticsearch bulk writes
-	go func() {
-		defer wg.Done()
-		if conf.HasElasticOut() {
-			i := 0
-			data := make([][]byte, conf.ElasticSearch.PushChunkSize*2+1)
-			failed := make([][]byte, 0, 50)
-			var esErr error
-			for rec := range channelWriteES {
-				jsonData, err := rec.ToJSON()
-				jsonMeta := elastic.CNKRecordMeta{
-					ID:    rec.GetID(),
-					Type:  rec.GetType(),
-					Index: conf.ElasticSearch.Index,
-				}
-				jsonMetaES, err2 := (&elastic.ESCNKRecordMeta{Index: jsonMeta}).ToJSON()
-
-				if err == nil && err2 == nil {
-					data[i] = jsonMetaES
-					data[i+1] = jsonData
-					i += 2
-
-				} else {
-					log.Print("ERROR: Failed to encode item ", rec.GetTime())
-				}
-				if i == conf.ElasticSearch.PushChunkSize*2 || !useChunkMode {
-					data[i] = []byte("\n")
-					esErr = pushDataToElastic(data[:i+1], &conf.ElasticSearch)
-					if esErr != nil {
-						failed = append(failed, data[:i+1]...)
-					}
-					i = 0
-				}
+	defer waitGroup.Done()
+	if conf.HasElasticOut() {
+		i := 0
+		data := make([][]byte, conf.ElasticSearch.PushChunkSize*2+1)
+		failed := make([][]byte, 0, 50)
+		var esErr error
+		for rec := range incomingData {
+			jsonData, err := rec.ToJSON()
+			jsonMeta := elastic.CNKRecordMeta{
+				ID:    rec.GetID(),
+				Type:  rec.GetType(),
+				Index: conf.ElasticSearch.Index,
 			}
+			jsonMetaES, err2 := (&elastic.ESCNKRecordMeta{Index: jsonMeta}).ToJSON()
 
-			if i > 0 {
+			if err == nil && err2 == nil {
+				data[i] = jsonMetaES
+				data[i+1] = jsonData
+				i += 2
+
+			} else {
+				log.Print("ERROR: Failed to encode item ", rec.GetTime())
+			}
+			if i == conf.ElasticSearch.PushChunkSize*2 {
 				data[i] = []byte("\n")
 				esErr = pushDataToElastic(data[:i+1], &conf.ElasticSearch)
 				if esErr != nil {
-					log.Printf("ERROR: %s", esErr)
 					failed = append(failed, data[:i+1]...)
 				}
-			}
-			if rescue != nil {
-				rescue.RescueFailedChunks(failed)
-			}
-
-		} else {
-			for range channelWriteES {
+				i = 0
 			}
 		}
-	}()
+		if i > 0 {
+			data[i] = []byte("\n")
+			esErr = pushDataToElastic(data[:i+1], &conf.ElasticSearch)
+			if esErr != nil {
+				log.Printf("ERROR: %s", esErr)
+				failed = append(failed, data[:i+1]...)
+			}
+		}
+		if failHandler != nil {
+			failHandler.RescueFailedChunks(failed)
+		}
 
+	} else {
+		for range incomingData {
+		}
+	}
+}
+
+func runInfluxWrite(conf *Conf, incomingData chan conversion.OutputRecord, waitGroup *sync.WaitGroup) {
 	// InfluxDB batch writes
-	go func() {
-		defer wg.Done()
-		if conf.HasInfluxOut() {
-			var err error
-			client, err := influx.NewRecordWriter(&conf.InfluxDB)
-			if err != nil {
-				log.Printf("ERROR: %s", err)
-			}
-			for rec := range channelWriteInflux {
-				client.AddRecord(rec)
-			}
-			err = client.Finish()
-			if err != nil {
-				log.Printf("ERROR: %s", err)
-			}
-
-		} else {
-			for range channelWriteInflux {
-			}
+	defer waitGroup.Done()
+	if conf.HasInfluxOut() {
+		var err error
+		client, err := influx.NewRecordWriter(&conf.InfluxDB)
+		if err != nil {
+			log.Printf("ERROR: %s", err)
 		}
-	}()
+		for rec := range incomingData {
+			client.AddRecord(rec)
+		}
+		err = client.Finish()
+		if err != nil {
+			log.Printf("ERROR: %s", err)
+		}
 
-	wg.Wait()
+	} else {
+		for range incomingData {
+		}
+	}
 }
