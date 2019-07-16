@@ -24,6 +24,10 @@ import (
 	"time"
 )
 
+const (
+	defaultTickerIntervalSecs = 60
+)
+
 // FileConf represents a configuration for a single
 // log file to be watched
 type FileConf struct {
@@ -49,7 +53,15 @@ type FileTailProcessor interface {
 
 // Run starts the process of (multiple) log watching
 func Run(conf *Conf, processor FileTailProcessor, finishEvent chan bool) {
-	ticker := time.NewTicker(5 * time.Second)
+	tickerInterval := time.Duration(conf.IntervalSecs)
+	if tickerInterval == 0 {
+		log.Printf("WARNING: intervalSecs for tail mode not set, using default %ds", defaultTickerIntervalSecs)
+		tickerInterval = time.Duration(defaultTickerIntervalSecs)
+
+	} else {
+		log.Printf("INFO: configured to check for file changes every %d second(s)", tickerInterval)
+	}
+	ticker := time.NewTicker(tickerInterval * time.Second)
 	quitChan := make(chan bool, 10)
 	syscallChan := make(chan os.Signal, 10)
 	signal.Notify(syscallChan, os.Interrupt)
