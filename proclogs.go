@@ -202,15 +202,16 @@ func processLogs(conf *Conf, action string) {
 			worklog := batch.NewWorklog(conf.LogFiles.WorklogPath)
 			log.Printf("INFO: using worklog %s", conf.LogFiles.WorklogPath)
 			defer worklog.Save()
-			proc := batch.CreateLogFileProcFunc(processor, channelWriteES, channelWriteInflux)
-			proc(&conf.LogFiles, conf.LocalTimezone, worklog.GetLastRecord())
+
 			var wg sync.WaitGroup
 			wg.Add(2)
 			go runElasticWrite(conf, channelWriteES, &wg, worklog)
 			go runInfluxWrite(conf, channelWriteInflux, &wg)
-			wg.Wait()
+			proc := batch.CreateLogFileProcFunc(processor, channelWriteES, channelWriteInflux)
+			proc(&conf.LogFiles, conf.LocalTimezone, worklog.GetLastRecord())
 			close(channelWriteES)
 			close(channelWriteInflux)
+			wg.Wait()
 			finishEvent <- true
 
 		case actionTail:
