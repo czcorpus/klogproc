@@ -43,8 +43,7 @@ func getFileProps(filePath string) (inode int64, size int64, err error) {
 // 2) during normal operation the inode of the file remains the same
 // 3) change of inode means we start reading a new file from the beginning
 type FileTailReader struct {
-	appType     string
-	path        string
+	processor   FileTailProcessor
 	lastInode   int64
 	lastSize    int64
 	file        *os.File
@@ -53,12 +52,17 @@ type FileTailReader struct {
 
 // AppType returns app type identifier (kontext, syd, treq,...)
 func (ftw *FileTailReader) AppType() string {
-	return ftw.appType
+	return ftw.processor.AppType()
+}
+
+// Processor returns attached file tail processor
+func (ftw *FileTailReader) Processor() FileTailProcessor {
+	return ftw.processor
 }
 
 // ApplyNewContent calls a provided function to newly added lines
 func (ftw *FileTailReader) ApplyNewContent(onLine func(line string), onDone func(inode int64, seek int64)) error {
-	currInode, currSize, err := getFileProps(ftw.path)
+	currInode, currSize, err := getFileProps(ftw.processor.FilePath())
 	if err != nil {
 		return err
 	}
@@ -70,7 +74,7 @@ func (ftw *FileTailReader) ApplyNewContent(onLine func(line string), onDone func
 		ftw.lastSize = currSize
 		ftw.lastReadPos = 0
 		ftw.file.Close()
-		ftw.file, err = os.Open(ftw.path)
+		ftw.file, err = os.Open(ftw.processor.FilePath())
 		if err != nil {
 			return err
 		}
@@ -94,10 +98,9 @@ func (ftw *FileTailReader) ApplyNewContent(onLine func(line string), onDone func
 }
 
 // NewReader creates a new file reader instance
-func NewReader(path, appType string, lastInode, lastReadPos int64) (*FileTailReader, error) {
+func NewReader(processor FileTailProcessor, lastInode, lastReadPos int64) (*FileTailReader, error) {
 	r := &FileTailReader{
-		appType:     appType,
-		path:        path,
+		processor:   processor,
 		lastInode:   lastInode,
 		lastSize:    -1,
 		file:        nil,
@@ -105,7 +108,7 @@ func NewReader(path, appType string, lastInode, lastReadPos int64) (*FileTailRea
 	}
 	if lastInode > 0 {
 		var err error
-		r.file, err = os.Open(path)
+		r.file, err = os.Open(processor.FilePath())
 		if err != nil {
 			return nil, err
 		}

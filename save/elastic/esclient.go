@@ -31,6 +31,7 @@ type SearchConf struct {
 	PushChunkSize  int    `json:"pushChunkSize"`
 	ScrollTTL      string `json:"scrollTtl"`
 	ReqTimeoutSecs int    `json:"reqTimeoutSecs"`
+	MajorVersion   int    `json:"majorVersion"`
 }
 
 // ErrorResultObj describes an error response from ElasticSearch
@@ -73,12 +74,20 @@ type ESClient struct {
 
 // NewClient returns an instance of ESClient
 func NewClient(conf *SearchConf) *ESClient {
-	c := ESClient{
+	return &ESClient{
 		server:         conf.Server,
 		index:          conf.Index,
 		reqTimeoutSecs: conf.ReqTimeoutSecs,
 	}
-	return &c
+}
+
+// NewClient6 returns an instance of ESClient for ElasticSearch 6+
+func NewClient6(conf *SearchConf, appType string) *ESClient {
+	return &ESClient{
+		server:         conf.Server,
+		index:          fmt.Sprintf("%s_%s", conf.Index, appType),
+		reqTimeoutSecs: conf.ReqTimeoutSecs,
+	}
 }
 
 func (c ESClient) String() string {
