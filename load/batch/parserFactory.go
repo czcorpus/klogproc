@@ -21,6 +21,8 @@ import (
 
 	"github.com/czcorpus/klogproc/conversion"
 	"github.com/czcorpus/klogproc/conversion/kontext"
+	"github.com/czcorpus/klogproc/conversion/kwords"
+	"github.com/czcorpus/klogproc/conversion/morfio"
 	"github.com/czcorpus/klogproc/conversion/syd"
 	"github.com/czcorpus/klogproc/conversion/treq"
 )
@@ -61,6 +63,26 @@ func (parser *treqLineParser) ParseLine(s string, lineNum int, localTimezone str
 
 // ------------------------------------
 
+type morfioLineParser struct {
+	lp *morfio.LineParser
+}
+
+func (parser *morfioLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum, localTimezone)
+}
+
+// ------------------------------------
+
+type kwordsLineParser struct {
+	lp *kwords.LineParser
+}
+
+func (parser *kwordsLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum, localTimezone)
+}
+
+// ------------------------------------
+
 // NewLineParser creates a parser for individual lines of a respective appType
 func NewLineParser(appType string) (LineParser, error) {
 	switch appType {
@@ -70,6 +92,10 @@ func NewLineParser(appType string) (LineParser, error) {
 		return &sydLineParser{lp: &syd.LineParser{}}, nil
 	case conversion.AppTypeTreq:
 		return &treqLineParser{lp: &treq.LineParser{}}, nil
+	case conversion.AppTypeMorfio:
+		return &morfioLineParser{lp: &morfio.LineParser{}}, nil
+	case conversion.AppTypeKwords:
+		return &kwordsLineParser{lp: &kwords.LineParser{}}, nil
 	default:
 		return nil, fmt.Errorf("Parser not found for application type %s", appType)
 	}

@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package morfio
+package kwords
 
 import (
 	"crypto/sha1"
@@ -27,9 +27,14 @@ import (
 )
 
 func createID(rec *OutputRecord) string {
-	str := rec.Type + rec.Datetime + rec.IPAddress + rec.UserID + rec.KeyReq + rec.KeyUsed +
-		rec.Key + rec.RunScript + rec.Corpus + strconv.Itoa(rec.MinFreq) + rec.InputAttr + rec.OutputAttr +
-		rec.CaseInsensitive
+	rls := ""
+	if rec.RefLength != nil {
+		rls = strconv.Itoa(*rec.RefLength)
+	}
+	str := rec.Type + rec.Datetime + rec.IPAddress + rec.UserID + strconv.Itoa(rec.NumFiles) +
+		rec.TargetInputType + strconv.Itoa(rec.TargetLength) + rec.Corpus + rls +
+		strconv.FormatBool(rec.Pronouns) + strconv.FormatBool(rec.Prep) + strconv.FormatBool(rec.Con) +
+		strconv.FormatBool(rec.Num) + strconv.FormatBool(rec.CaseInsensitive)
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }
@@ -42,15 +47,16 @@ type OutputRecord struct {
 	IPAddress       string                   `json:"ipAddress"`
 	UserID          string                   `json:"userId"`
 	IsAnonymous     bool                     `json:"isAnonymous"`
-	KeyReq          string                   `json:"keyReq"`
-	KeyUsed         string                   `json:"keyUsed"`
-	Key             string                   `json:"key"`
-	RunScript       string                   `json:"runScript"`
-	Corpus          string                   `json:"corpus"`
-	MinFreq         int                      `json:"minFreq"`
-	InputAttr       string                   `json:"inputAttr"`
-	OutputAttr      string                   `json:"outputAttr"`
-	CaseInsensitive string                   `json:"caseInsensitive"`
+	NumFiles        int                      `json:"numFiles"`
+	TargetInputType string                   `json:"targetInputType"`
+	TargetLength    int                      `json:"targetLength"`
+	Corpus          string                   `json:"string"`
+	RefLength       *int                     `json:"refLength"`
+	Pronouns        bool                     `json:"pronouns"`
+	Prep            bool                     `json:"prep"`
+	Con             bool                     `json:"con"`
+	Num             bool                     `json:"num"`
+	CaseInsensitive bool                     `json:"caseInsensitive"`
 	GeoIP           conversion.GeoDataRecord `json:"geoip"`
 }
 
