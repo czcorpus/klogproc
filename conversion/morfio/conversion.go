@@ -14,18 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package treq
+package morfio
 
 import (
-	"fmt"
 	"strconv"
+	"fmt"
 
 	"github.com/czcorpus/klogproc/conversion"
-)
-
-const (
-	qTypeD = "D"
-	qTypeL = "L"
 )
 
 // Transformer converts a Treq log record to a destination format
@@ -35,7 +30,7 @@ type Transformer struct{}
 func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymousUsers []int) (*OutputRecord, error) {
 
 	userID := -1
-	if logRecord.UserID != "-" {
+	if logRecord.UserID != "-" && logRecord.UserID != "" {
 		uid, err := strconv.Atoi(logRecord.UserID)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to convert user ID [%s]", logRecord.UserID)
@@ -43,48 +38,30 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 		userID = uid
 	}
 
-	isRegexp, err := conversion.ImportBool(logRecord.IsRegexp, "isRegexp")
-	if err != nil {
-		return nil, err
-	}
-	isCaseInsen, err := conversion.ImportBool(logRecord.IsCaseInsen, "isCaseInsen")
-	if err != nil {
-		return nil, err
-	}
-	isMultiWord, err := conversion.ImportBool(logRecord.IsMultiWord, "isMultiWord")
-	if err != nil {
-		return nil, err
-	}
-	isLemma, err := conversion.ImportBool(logRecord.IsMultiWord, "isLemma")
+	minFreq, err := strconv.Atoi(logRecord.MinFreq)
 	if err != nil {
 		return nil, err
 	}
 
-	out := &OutputRecord{
-		Type:        "treq",
-		time:        logRecord.GetTime(),
-		Datetime:    logRecord.Datetime,
-		QLang:       logRecord.QLang,
-		SecondLang:  logRecord.SecondLang,
-		IPAddress:   logRecord.IPAddress,
-		UserID:      logRecord.UserID,
+	ans := &OutputRecord{
+		// ID set later
+		Type:            "morfio",
+		time:            logRecord.GetTime(),
+		Datetime:        logRecord.Datetime,
+		IPAddress:       logRecord.IPAddress,
+		UserID:          logRecord.UserID,
 		IsAnonymous: userID == -1 || conversion.UserBelongsToList(userID, anonymousUsers),
-		// Corpus set later
-		Subcorpus: logRecord.Subcorpus,
-		// IsQuery set later
-		IsRegexp:    isRegexp,
-		IsCaseInsen: isCaseInsen,
-		IsMultiWord: isMultiWord,
-		IsLemma:     isLemma,
-		QType:       logRecord.QType,
-		Query:       logRecord.Query,
-		Query2:      logRecord.Query2,
-		// GeoIP set elsewhere
+		KeyReq:          logRecord.KeyReq,
+		KeyUsed:         logRecord.KeyUsed,
+		Key:             logRecord.Key,
+		RunScript:       logRecord.RunScript,
+		Corpus:          logRecord.Corpus,
+		MinFreq:         minFreq,
+		InputAttr:       logRecord.InputAttr,
+		OutputAttr:      logRecord.OutputAttr,
+		CaseInsensitive: logRecord.CaseInsensitive,
 	}
-	out.ID = createID(out)
-	if out.QType == qTypeD {
-		out.Corpus = fmt.Sprintf("intercorp_v8_%s", logRecord.QLang)
-		out.IsQuery = true
-	}
-	return out, nil
+
+	ans.ID = createID(ans)
+	return ans, nil
 }
