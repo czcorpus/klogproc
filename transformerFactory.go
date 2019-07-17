@@ -18,8 +18,9 @@ import (
 	"fmt"
 
 	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/conversion/morfio"
 	"github.com/czcorpus/klogproc/conversion/kontext"
+	"github.com/czcorpus/klogproc/conversion/kwords"
+	"github.com/czcorpus/klogproc/conversion/morfio"
 	"github.com/czcorpus/klogproc/conversion/syd"
 	"github.com/czcorpus/klogproc/conversion/treq"
 )
@@ -89,6 +90,21 @@ func (s *morfioTransformer) Transform(logRec conversion.InputRecord, recType str
 	return nil, fmt.Errorf("Invalid type for conversion by Morfio transformer %T", logRec)
 }
 
+// ------------------------------------
+
+type kwordsTransformer struct {
+	t *kwords.Transformer
+}
+
+// Transform transforms KWords app log record types as general InputRecord
+// In case of type mismatch, error is returned.
+func (s *kwordsTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
+	tRec, ok := logRec.(*kwords.InputRecord)
+	if ok {
+		return s.t.Transform(tRec, recType, anonymousUsers)
+	}
+	return nil, fmt.Errorf("Invalid type for conversion by KWords transformer %T", logRec)
+}
 
 // ------------------------------------
 
@@ -104,6 +120,8 @@ func GetLogTransformer(appType string) (conversion.LogItemTransformer, error) {
 		return &treqTransformer{t: &treq.Transformer{}}, nil
 	case conversion.AppTypeMorfio:
 		return &morfioTransformer{t: &morfio.Transformer{}}, nil
+	case conversion.AppTypeKwords:
+		return &kwordsTransformer{t: &kwords.Transformer{}}, nil
 	default:
 		return nil, fmt.Errorf("Cannot find log transformer for app type %s", appType)
 	}

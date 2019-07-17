@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package morfio
+package kwords
 
 import (
 	"fmt"
@@ -38,7 +38,40 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 		userID = uid
 	}
 
-	minFreq, err := strconv.Atoi(logRecord.MinFreq)
+	numFiles, err := strconv.Atoi(logRecord.NumFiles)
+	if err != nil {
+		return nil, err
+	}
+	targetLength, err := strconv.Atoi(logRecord.TargetLength)
+	if err != nil {
+		return nil, err
+	}
+
+	var refLength *int
+	if logRecord.RefLength != "-" {
+		rl, err := strconv.Atoi(logRecord.RefLength)
+		if err != nil {
+			return nil, err
+		}
+		refLength = &rl
+	}
+	pronouns, err := conversion.ImportBool(logRecord.Prep, "pronouns")
+	if err != nil {
+		return nil, err
+	}
+	prep, err := conversion.ImportBool(logRecord.Prep, "prep")
+	if err != nil {
+		return nil, err
+	}
+	con, err := conversion.ImportBool(logRecord.Prep, "con")
+	if err != nil {
+		return nil, err
+	}
+	num, err := conversion.ImportBool(logRecord.Prep, "num")
+	if err != nil {
+		return nil, err
+	}
+	caseInsen, err := conversion.ImportBool(logRecord.Prep, "caseInsensitive")
 	if err != nil {
 		return nil, err
 	}
@@ -51,15 +84,17 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 		IPAddress:       logRecord.IPAddress,
 		UserID:          logRecord.UserID,
 		IsAnonymous:     userID == -1 || conversion.UserBelongsToList(userID, anonymousUsers),
-		KeyReq:          logRecord.KeyReq,
-		KeyUsed:         logRecord.KeyUsed,
-		Key:             logRecord.Key,
-		RunScript:       logRecord.RunScript,
+		NumFiles:        numFiles,
+		TargetInputType: logRecord.TargetInputType,
+		TargetLength:    targetLength,
 		Corpus:          logRecord.Corpus,
-		MinFreq:         minFreq,
-		InputAttr:       logRecord.InputAttr,
-		OutputAttr:      logRecord.OutputAttr,
-		CaseInsensitive: logRecord.CaseInsensitive,
+		RefLength:       refLength,
+		Pronouns:        pronouns,
+		Prep:            prep,
+		Con:             con,
+		Num:             num,
+		CaseInsensitive: caseInsen,
+		// GeoIP set elsewhere
 	}
 
 	ans.ID = createID(ans)

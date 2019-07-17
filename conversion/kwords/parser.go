@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package morfio
+package kwords
 
 import (
 	"fmt"
@@ -23,7 +23,11 @@ import (
 	"github.com/czcorpus/klogproc/conversion"
 )
 
-// LineParser is a parser for reading Morfio application log
+/*
+
+ */
+
+// LineParser is a parser for reading KWords application log
 // which is basically a TAB separated list of items.
 type LineParser struct {
 }
@@ -31,30 +35,32 @@ type LineParser struct {
 // ParseLine parses a query log line - i.e. it expects
 // that the line contains user interaction log
 // Format:
-// {datetime_ISO8601}[TAB]{ipAddress}[TAB]{userId}[TAB]{keyReq}[TAB]{keyUsed}[TAB]
-// {key}[TAB]{runScript}[TAB]{corpus}[TAB]{minFreq}[TAB]{inputAttr}[TAB]{outputAttr}[TAB]
-// {caseInsensitive}[TAB].*
+// {datetime_ISO8601}[TAB]{ipAddress}[TAB]{userId}[TAB]{numFiles}[TAB]
+// {targetInputType}[TAB]{targetLength}[TAB]{corpus}[TAB]{refLength}[TAB]
+// {pronouns}[TAB]{prep}[TAB]{con}[TAB]{num}[TAB]{caseInsensitive}
 func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*InputRecord, error) {
-
 	items := strings.Split(s, "\t")
 	var err error
 
-	if len(items) >= 12 {
+	if len(items) >= 13 {
 		return &InputRecord{
 			Datetime:        items[0],
 			IPAddress:       items[1],
 			UserID:          items[2],
-			KeyReq:          items[3],
-			KeyUsed:         items[4],
-			Key:             items[5],
-			RunScript:       items[6],
-			Corpus:          items[7],
-			MinFreq:         items[8],
-			InputAttr:       items[9],
-			OutputAttr:      items[10],
-			CaseInsensitive: items[11],
+			NumFiles:        items[3],
+			TargetInputType: items[4],
+			TargetLength:    items[5],
+			Corpus:          items[6],
+			RefLength:       items[7],
+			Pronouns:        items[8],
+			Prep:            items[9],
+			Con:             items[10],
+			Num:             items[11],
+			CaseInsensitive: items[12],
 		}, err
 	}
 	return nil, conversion.NewMinorParsingError(
-		lineNum, fmt.Sprintf("Invalid line format for Morfio. Expecting 12 tab-separated items, found %d", len(items)))
+		lineNum,
+		fmt.Sprintf("Invalid line format for KWords. Expecting 13 tab-separated items, found %d", len(items)),
+	)
 }
