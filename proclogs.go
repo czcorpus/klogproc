@@ -260,6 +260,7 @@ func runElasticWrite(conf *Conf, incomingData chan conversion.OutputRecord, wait
 				data[i] = []byte("\n")
 				esErr = pushDataToElastic(data[:i+1], &conf.ElasticSearch)
 				if esErr != nil {
+					log.Print("ERROR: Failed to save a data chunk to ElasticSearch")
 					failed = append(failed, data[:i+1]...)
 				}
 				i = 0

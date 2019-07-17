@@ -78,7 +78,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 
 	ans := &OutputRecord{
 		// ID set later
-		Type:            "morfio",
+		Type:            "kwords",
 		time:            logRecord.GetTime(),
 		Datetime:        logRecord.Datetime,
 		IPAddress:       logRecord.IPAddress,
