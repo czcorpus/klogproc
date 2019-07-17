@@ -43,16 +43,20 @@ type Conf struct {
 }
 
 // FileTailProcessor specifies an object which is able to utilize all
-// the "events" watchdog provides when processing a file tail.
+// the "events" watchdog provides when processing a file tail for
+// a concrete appType
 type FileTailProcessor interface {
+	AppType() string
+	FilePath() string
+	CheckIntervalSecs() int
 	OnCheckStart()
-	OnEntry(item, appType string)
+	OnEntry(item string)
 	OnCheckStop()
 	OnQuit()
 }
 
 // Run starts the process of (multiple) log watching
-func Run(conf *Conf, processor FileTailProcessor, finishEvent chan bool) {
+func Run(conf *Conf, processors []FileTailProcessor, finishEvent chan bool) {
 	tickerInterval := time.Duration(conf.IntervalSecs)
 	if tickerInterval == 0 {
 		log.Printf("WARNING: intervalSecs for tail mode not set, using default %ds", defaultTickerIntervalSecs)
@@ -74,19 +78,19 @@ func Run(conf *Conf, processor FileTailProcessor, finishEvent chan bool) {
 		quitChan <- true
 
 	} else {
-		readers = make([]*FileTailReader, 0, 50)
-		for _, fc := range conf.Files {
-			wlItem := worklog.GetData(fc.AppType)
-			log.Printf("INFO: Found configuration for file %s", fc.Path)
+		readers = make([]*FileTailReader, len(processors))
+		for i, processor := range processors {
+			wlItem := worklog.GetData(processor.AppType())
+			log.Printf("INFO: Found configuration for file %s", processor.FilePath())
 			if wlItem.Inode > -1 {
-				log.Printf("INFO: Found worklog for %s, inode: %d, seek: %d", fc.Path, wlItem.Inode, wlItem.Seek)
+				log.Printf("INFO: Found worklog for %s, inode: %d, seek: %d", processor.FilePath(), wlItem.Inode, wlItem.Seek)
 			}
-			rdr, err := NewReader(fc.Path, fc.AppType, wlItem.Inode, wlItem.Seek)
+			rdr, err := NewReader(processor, wlItem.Inode, wlItem.Seek)
 			if err != nil {
 				log.Print("ERROR: ", err)
 				quitChan <- true
 			}
-			readers = append(readers, rdr)
+			readers[i] = rdr
 		}
 	}
 
@@ -94,30 +98,34 @@ func Run(conf *Conf, processor FileTailProcessor, finishEvent chan bool) {
 		for {
 			select {
 			case <-ticker.C:
-				processor.OnCheckStart()
 				for _, reader := range readers {
+					reader.Processor().OnCheckStart()
 					reader.ApplyNewContent(
 						func(v string) {
-							processor.OnEntry(v, reader.AppType())
+							reader.Processor().OnEntry(v)
 						},
 						func(inode int64, seek int64) {
 							worklog.UpdateFileInfo(reader.AppType(), inode, seek)
 							worklog.Save()
 						},
 					)
+					reader.Processor().OnCheckStop()
 				}
-				processor.OnCheckStop()
 			case quit := <-quitChan:
 				if quit {
 					ticker.Stop()
-					processor.OnQuit()
+					for _, processor := range processors {
+						processor.OnQuit()
+					}
 					worklog.Close()
 					finishEvent <- true
 				}
 			case <-syscallChan:
 				log.Print("INFO: Caught signal, exiting...")
 				ticker.Stop()
-				processor.OnQuit()
+				for _, reader := range readers {
+					reader.Processor().OnQuit()
+				}
 				worklog.Close()
 				finishEvent <- true
 			}

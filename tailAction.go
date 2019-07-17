@@ -38,17 +38,20 @@ func (n *notifyFailedChunks) RescueFailedChunks(chunk [][]byte) error {
 // -----
 
 type tailProcessor struct {
-	conf             *Conf
-	lineParsers      map[string]batch.LineParser
-	logTransformers  map[string]conversion.LogItemTransformer
-	geoDB            *geoip2.Reader
-	dataForES        chan conversion.OutputRecord
-	dataForInflux    chan conversion.OutputRecord
-	localTimezone    string
-	anonymousUsers   []int
-	elasticChunkSize int
-	influxChunkSize  int
-	outSync          sync.WaitGroup
+	appType           string
+	filePath          string
+	checkIntervalSecs int
+	conf              *Conf
+	lineParser        batch.LineParser
+	logTransformer    conversion.LogItemTransformer
+	geoDB             *geoip2.Reader
+	dataForES         chan conversion.OutputRecord
+	dataForInflux     chan conversion.OutputRecord
+	localTimezone     string
+	anonymousUsers    []int
+	elasticChunkSize  int
+	influxChunkSize   int
+	outSync           sync.WaitGroup
 }
 
 func (tp *tailProcessor) OnCheckStart() {
@@ -56,17 +59,17 @@ func (tp *tailProcessor) OnCheckStart() {
 	tp.dataForInflux = make(chan conversion.OutputRecord, tp.influxChunkSize)
 	tp.outSync = sync.WaitGroup{}
 	tp.outSync.Add(2)
-	go runElasticWrite(tp.conf, tp.dataForES, &tp.outSync, &notifyFailedChunks{})
+	go runElasticWrite(tp.appType, tp.conf, tp.dataForES, &tp.outSync, &notifyFailedChunks{})
 	go runInfluxWrite(tp.conf, tp.dataForInflux, &tp.outSync)
 }
 
-func (tp *tailProcessor) OnEntry(item, appType string) {
-	parsed, err := tp.lineParsers[appType].ParseLine(item, 0, tp.localTimezone)
+func (tp *tailProcessor) OnEntry(item string) {
+	parsed, err := tp.lineParser.ParseLine(item, 0, tp.localTimezone)
 	if err != nil {
 		log.Printf("ERROR: %s", err)
 		return
 	}
-	outRec, err := tp.logTransformers[appType].Transform(parsed, appType, tp.anonymousUsers)
+	outRec, err := tp.logTransformer.Transform(parsed, tp.appType, tp.anonymousUsers)
 	if err != nil {
 		log.Printf("ERROR: %s", err)
 		return
@@ -86,37 +89,52 @@ func (tp *tailProcessor) OnQuit() {
 
 }
 
-func newTailProcessor(conf *Conf, geoDB *geoip2.Reader) *tailProcessor {
-	var err error
+func (tp *tailProcessor) AppType() string {
+	return tp.appType
+}
 
-	lineParsers := make(map[string]batch.LineParser)
-	logTransformers := make(map[string]conversion.LogItemTransformer)
-	for _, f := range conf.LogTail.Files {
-		lineParsers[f.AppType], err = batch.NewLineParser(f.AppType)
-		if err != nil {
-			log.Fatal("ERROR: Failed to initialize parser: ", err)
-		}
-		logTransformers[f.AppType], err = GetLogTransformer(f.AppType)
-		if err != nil {
-			log.Fatal("ERROR: Failed to initialize transformer: ", err)
-		}
+func (tp *tailProcessor) FilePath() string {
+	return tp.filePath
+}
+
+func (tp *tailProcessor) CheckIntervalSecs() int {
+	return tp.checkIntervalSecs
+}
+
+// -----
+
+func newTailProcessor(tailConf *tail.FileConf, conf *Conf, geoDB *geoip2.Reader) *tailProcessor {
+	lineParser, err := batch.NewLineParser(tailConf.AppType)
+	if err != nil {
+		log.Fatal("ERROR: Failed to initialize parser: ", err)
+	}
+	logTransformer, err := GetLogTransformer(tailConf.AppType)
+	if err != nil {
+		log.Fatal("ERROR: Failed to initialize transformer: ", err)
 	}
 
 	return &tailProcessor{
-		conf:             conf,
-		lineParsers:      lineParsers,
-		logTransformers:  logTransformers,
-		geoDB:            geoDB,
-		localTimezone:    conf.LocalTimezone,
-		anonymousUsers:   conf.AnonymousUsers,
-		elasticChunkSize: conf.ElasticSearch.PushChunkSize,
-		influxChunkSize:  conf.InfluxDB.PushChunkSize,
+		appType:           tailConf.AppType,
+		filePath:          tailConf.Path,
+		checkIntervalSecs: conf.LogTail.IntervalSecs, // TODO maybe per-app type here ??
+		conf:              conf,
+		lineParser:        lineParser,
+		logTransformer:    logTransformer,
+		geoDB:             geoDB,
+		localTimezone:     conf.LocalTimezone,
+		anonymousUsers:    conf.AnonymousUsers,
+		elasticChunkSize:  conf.ElasticSearch.PushChunkSize,
+		influxChunkSize:   conf.InfluxDB.PushChunkSize,
 	}
 }
 
 // -----
 
 func runTailAction(conf *Conf, geoDB *geoip2.Reader, finishEvt chan bool) {
-	proc := newTailProcessor(conf, geoDB)
-	tail.Run(&conf.LogTail, proc, finishEvt)
+	tailProcessors := make([]tail.FileTailProcessor, len(conf.LogTail.Files))
+	for i, f := range conf.LogTail.Files {
+		tailProcessors[i] = newTailProcessor(&f, conf, geoDB)
+
+	}
+	tail.Run(&conf.LogTail, tailProcessors, finishEvt)
 }
