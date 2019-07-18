@@ -17,6 +17,7 @@
 package influx
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/czcorpus/klogproc/conversion"
@@ -40,11 +41,26 @@ func (conf *ConnectionConf) IsConfigured() bool {
 }
 
 // Validate tests whether the configuration is filled in
-// correctly. Please note that if the function returns 'true'
-// then IsConfigured() must return 'true' too.
-func (conf *ConnectionConf) Validate() bool {
-	return conf.Server != "" && conf.Database != "" && conf.Measurement != "" && conf.RetentionPolicy != ""
+// correctly. Please note that if the function returns nil
+// then IsConfigured() must return 'true'.
+func (conf *ConnectionConf) Validate() error {
+	var err error
+	if conf.Server == "" {
+		err = fmt.Errorf("Missing 'server' information for InfluxDB")
+	}
+	if conf.Database == "" {
+		err = fmt.Errorf("Missing 'database' information for InfluxDB")
+	}
+	if conf.Measurement == "" {
+		err = fmt.Errorf("Missing 'measurement' information for InfluxDB")
+	}
+	if conf.RetentionPolicy == "" {
+		err = fmt.Errorf("Missing 'retentionPolicy' information for InfluxDB")
+	}
+	return err
 }
+
+// ------
 
 func newBatchPoints(database string, retentionPolicy string) (client.BatchPoints, error) {
 	bp, err := client.NewBatchPoints(client.BatchPointsConfig{

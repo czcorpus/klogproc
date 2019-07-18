@@ -70,16 +70,22 @@ func (c *Conf) HasInfluxOut() bool {
 	return c.InfluxDB.Server != ""
 }
 
-// TODO fix/update this
+// TODO test additional important items
 func validateConf(conf *Conf) {
+	var err error
 	if conf.ElasticSearch.IsConfigured() {
-		if conf.ElasticSearch.ScrollTTL == "" {
-			log.Fatal("ERROR: elasticScrollTtl must be a valid ElasticSearch scroll arg value (e.g. '2m', '30s')")
-		}
-		if conf.ElasticSearch.PushChunkSize == 0 {
-			log.Fatal("ERROR: elasticPushChunkSize is missing")
+		err = conf.ElasticSearch.Validate()
+		if err != nil {
+			log.Fatal("FATAL: ", err)
 		}
 	}
+	if conf.InfluxDB.IsConfigured() {
+		err = conf.InfluxDB.Validate()
+		if err != nil {
+			log.Fatal("FATAL: ", err)
+		}
+	}
+
 }
 
 func updateRecords(conf *Conf) {

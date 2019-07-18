@@ -43,10 +43,19 @@ func (conf *ConnectionConf) IsConfigured() bool {
 }
 
 // Validate tests whether the configuration is filled in
-// correctly. Please note that if the function returns 'true'
-// then IsConfigured() must return 'true' too.
-func (conf *ConnectionConf) Validate() bool {
-	return conf.Server != "" && conf.Index != ""
+// correctly. Please note that if the function returns nil
+// then IsConfigured() must return 'true'.
+func (conf *ConnectionConf) Validate() error {
+	if conf.Index == "" {
+		return fmt.Errorf("ERROR: index/indexPrefix not set for ElasticSearch")
+	}
+	if conf.ScrollTTL == "" {
+		return fmt.Errorf("ERROR: elasticScrollTtl must be a valid ElasticSearch scroll arg value (e.g. '2m', '30s')")
+	}
+	if conf.PushChunkSize == 0 {
+		return fmt.Errorf("ERROR: elasticPushChunkSize is missing")
+	}
+	return nil
 }
 
 // -------
