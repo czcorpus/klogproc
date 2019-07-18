@@ -36,13 +36,17 @@ type ConnectionConf struct {
 	MajorVersion   int    `json:"majorVersion"`
 }
 
+// IsConfigured tests whether the configuration is considered
+// to be enabled (i.e. no error checking just enabled/disabled)
 func (conf *ConnectionConf) IsConfigured() bool {
 	return conf.Server != ""
 }
 
+// Validate tests whether the configuration is filled in
+// correctly. Please note that if the function returns 'true'
+// then IsConfigured() must return 'true' too.
 func (conf *ConnectionConf) Validate() bool {
 	return conf.Server != "" && conf.Index != ""
-
 }
 
 // -------

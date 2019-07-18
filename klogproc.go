@@ -53,7 +53,7 @@ type Conf struct {
 	LogPath        string                 `json:"logPath"`
 	RecUpdate      elastic.DocUpdConf     `json:"recordUpdate"`
 	ElasticSearch  elastic.ConnectionConf `json:"elasticSearch"`
-	InfluxDB       influx.Conf            `json:"influxDb"`
+	InfluxDB       influx.ConnectionConf  `json:"influxDb"`
 }
 
 // UsesRedis tests whether the config contains Redis

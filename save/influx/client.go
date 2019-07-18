@@ -23,14 +23,27 @@ import (
 	client "github.com/influxdata/influxdb1-client/v2"
 )
 
-// Conf specifies a configuration required to store data
+// ConnectionConf specifies a configuration required to store data
 // to an InfluxDB database
-type Conf struct {
+type ConnectionConf struct {
 	Server          string `json:"server"`
 	PushChunkSize   int    `json:"pushChunkSize"`
 	Database        string `json:"database"`
 	Measurement     string `json:"measurement"`
 	RetentionPolicy string `json:"retentionPolicy"`
+}
+
+// IsConfigured tests whether the configuration is considered
+// to be enabled (i.e. no error checking just enabled/disabled)
+func (conf *ConnectionConf) IsConfigured() bool {
+	return conf.Server != ""
+}
+
+// Validate tests whether the configuration is filled in
+// correctly. Please note that if the function returns 'true'
+// then IsConfigured() must return 'true' too.
+func (conf *ConnectionConf) Validate() bool {
+	return conf.Server != "" && conf.Database != "" && conf.Measurement != "" && conf.RetentionPolicy != ""
 }
 
 func newBatchPoints(database string, retentionPolicy string) (client.BatchPoints, error) {
@@ -99,7 +112,7 @@ func (c *RecordWriter) writeCurrBatch() error {
 }
 
 // NewRecordWriter is a factory function for RecordWriter
-func NewRecordWriter(conf *Conf) (*RecordWriter, error) {
+func NewRecordWriter(conf *ConnectionConf) (*RecordWriter, error) {
 	conn, err := client.NewHTTPClient(client.HTTPConfig{Addr: conf.Server})
 	if err != nil {
 		return nil, err

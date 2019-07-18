@@ -168,7 +168,7 @@ func processLogs(conf *Conf, action string) {
 			var wg sync.WaitGroup
 			wg.Add(2)
 			go elastic.RunWriteConsumer(conf.LogRedis.AppType, &conf.ElasticSearch, channelWriteES, &wg, redisQueue)
-			go runInfluxWrite(conf, channelWriteInflux, &wg)
+			go influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux, &wg)
 			wg.Wait()
 			close(channelWriteES)
 			close(channelWriteInflux)
@@ -195,7 +195,7 @@ func processLogs(conf *Conf, action string) {
 			var wg sync.WaitGroup
 			wg.Add(2)
 			go elastic.RunWriteConsumer(conf.LogRedis.AppType, &conf.ElasticSearch, channelWriteES, &wg, worklog)
-			go runInfluxWrite(conf, channelWriteInflux, &wg)
+			go influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux, &wg)
 			proc := batch.CreateLogFileProcFunc(processor, channelWriteES, channelWriteInflux)
 			proc(&conf.LogFiles, conf.LocalTimezone, worklog.GetLastRecord())
 			close(channelWriteES)
@@ -210,27 +210,4 @@ func processLogs(conf *Conf, action string) {
 	}()
 	<-finishEvent
 
-}
-
-func runInfluxWrite(conf *Conf, incomingData chan conversion.OutputRecord, waitGroup *sync.WaitGroup) {
-	// InfluxDB batch writes
-	defer waitGroup.Done()
-	if conf.HasInfluxOut() {
-		var err error
-		client, err := influx.NewRecordWriter(&conf.InfluxDB)
-		if err != nil {
-			log.Printf("ERROR: %s", err)
-		}
-		for rec := range incomingData {
-			client.AddRecord(rec)
-		}
-		err = client.Finish()
-		if err != nil {
-			log.Printf("ERROR: %s", err)
-		}
-
-	} else {
-		for range incomingData {
-		}
-	}
 }
