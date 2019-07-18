@@ -189,6 +189,7 @@ func main() {
 		removeKeyFromRecords(conf)
 	case actionBatch, actionTail, actionRedis:
 		conf, logf = setup(flag.Arg(1))
+		log.Print("INFO: ######################## Starting klogproc ########################")
 		processLogs(conf, action)
 	default:
 		fmt.Printf("Unknown action [%s]. Try -h for help\n", flag.Arg(0))
