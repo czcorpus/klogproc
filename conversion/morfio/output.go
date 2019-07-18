@@ -29,7 +29,7 @@ import (
 func createID(rec *OutputRecord) string {
 	str := rec.Type + rec.Datetime + rec.IPAddress + rec.UserID + rec.KeyReq + rec.KeyUsed +
 		rec.Key + rec.RunScript + rec.Corpus + strconv.Itoa(rec.MinFreq) + rec.InputAttr + rec.OutputAttr +
-		rec.CaseInsensitive
+		strconv.FormatBool(rec.CaseInsensitive)
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }
@@ -50,7 +50,7 @@ type OutputRecord struct {
 	MinFreq         int                      `json:"minFreq"`
 	InputAttr       string                   `json:"inputAttr"`
 	OutputAttr      string                   `json:"outputAttr"`
-	CaseInsensitive string                   `json:"caseInsensitive"`
+	CaseInsensitive bool                     `json:"caseInsensitive"`
 	GeoIP           conversion.GeoDataRecord `json:"geoip"`
 }
 

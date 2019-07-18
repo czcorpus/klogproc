@@ -19,8 +19,8 @@ package conversion
 import (
 	"fmt"
 	"net"
-	"time"
 	"strconv"
+	"time"
 )
 
 const (
@@ -125,9 +125,15 @@ func UserBelongsToList(userID int, anonymousUsers []int) bool {
 }
 
 // ImportBool imports typical bool formats (as supported by Go) with
-// additional support for an empty space
+// additional support for an empty space, 'yes' and 'no' strings.
 func ImportBool(v, keyName string) (bool, error) {
 	if v == "" {
+		return false, nil
+	}
+	if v == "yes" {
+		return true, nil
+	}
+	if v == "no" {
 		return false, nil
 	}
 	ans, err := strconv.ParseBool(v)

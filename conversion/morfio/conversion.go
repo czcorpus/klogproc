@@ -43,6 +43,11 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 		return nil, err
 	}
 
+	caseIns, err := conversion.ImportBool(logRecord.CaseInsensitive, "caseInsensitive")
+	if err != nil {
+		return nil, err
+	}
+
 	ans := &OutputRecord{
 		// ID set later
 		Type:            "morfio",
@@ -59,7 +64,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 		MinFreq:         minFreq,
 		InputAttr:       logRecord.InputAttr,
 		OutputAttr:      logRecord.OutputAttr,
-		CaseInsensitive: logRecord.CaseInsensitive,
+		CaseInsensitive: caseIns,
 	}
 
 	ans.ID = createID(ans)
