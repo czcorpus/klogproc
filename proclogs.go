@@ -17,7 +17,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"sync"
@@ -78,24 +77,6 @@ func (clp *CNKLogProcessor) GetAppType() string {
 	return clp.appType
 }
 
-func pushDataToElastic(data [][]byte, appType string, esconf *elastic.SearchConf) error {
-	var esclient *elastic.ESClient
-	if esconf.MajorVersion < 6 {
-		esclient = elastic.NewClient(esconf)
-
-	} else {
-		esclient = elastic.NewClient6(esconf, appType)
-	}
-
-	q := bytes.Join(data, []byte("\n"))
-	_, err := esclient.Do("POST", "/_bulk", q)
-	if err != nil {
-		return fmt.Errorf("Failed to push log chunk: %s", err)
-	}
-	log.Printf("INFO: Inserted chunk of %d items to ElasticSearch\n", (len(data)-1)/2)
-	return nil
-}
-
 func processRedisLogs(conf *Conf, queue *sredis.RedisQueue, processor *CNKLogProcessor, destChans ...chan conversion.OutputRecord) {
 	for _, item := range queue.GetItems() {
 		rec := processor.ProcItem(item)
@@ -109,22 +90,15 @@ func processRedisLogs(conf *Conf, queue *sredis.RedisQueue, processor *CNKLogPro
 
 // ---------
 
-// ESImportFailHandler represents an object able to handle (valid)
-// log items we failed to insert to ElasticSearch (typically due
-// to inavailability)
-type ESImportFailHandler interface {
-	RescueFailedChunks(chunk [][]byte) error
-}
-
 // retryRescuedItems inserts (sychronously) rescued raw bulk
 // insert items to ElasticSearch. There is no additial rescue here.
 // If something goes wrong we stop (while keeping data in
 // rescue queue) and refuse to continue.
-func retryRescuedItems(appType string, queue *sredis.RedisQueue, conf *elastic.SearchConf) error {
+func retryRescuedItems(appType string, queue *sredis.RedisQueue, conf *elastic.ConnectionConf) error {
 	iterator := queue.GetRescuedChunksIterator()
 	chunk := iterator.GetNextChunk()
 	for len(chunk) > 0 {
-		err := pushDataToElastic(chunk, appType, conf)
+		err := elastic.BulkWriteRequest(chunk, appType, conf)
 		if err != nil {
 			return fmt.Errorf("failed to reuse rescued data chunk")
 		}
@@ -193,7 +167,7 @@ func processLogs(conf *Conf, action string) {
 			processRedisLogs(conf, redisQueue, processor, channelWriteES, channelWriteInflux)
 			var wg sync.WaitGroup
 			wg.Add(2)
-			go runElasticWrite(conf.LogRedis.AppType, conf, channelWriteES, &wg, redisQueue)
+			go elastic.RunWriteConsumer(conf.LogRedis.AppType, &conf.ElasticSearch, channelWriteES, &wg, redisQueue)
 			go runInfluxWrite(conf, channelWriteInflux, &wg)
 			wg.Wait()
 			close(channelWriteES)
@@ -220,7 +194,7 @@ func processLogs(conf *Conf, action string) {
 
 			var wg sync.WaitGroup
 			wg.Add(2)
-			go runElasticWrite(conf.LogRedis.AppType, conf, channelWriteES, &wg, worklog)
+			go elastic.RunWriteConsumer(conf.LogRedis.AppType, &conf.ElasticSearch, channelWriteES, &wg, worklog)
 			go runInfluxWrite(conf, channelWriteInflux, &wg)
 			proc := batch.CreateLogFileProcFunc(processor, channelWriteES, channelWriteInflux)
 			proc(&conf.LogFiles, conf.LocalTimezone, worklog.GetLastRecord())
@@ -236,66 +210,6 @@ func processLogs(conf *Conf, action string) {
 	}()
 	<-finishEvent
 
-}
-
-func runElasticWrite(appType string, conf *Conf, incomingData chan conversion.OutputRecord, waitGroup *sync.WaitGroup, failHandler ESImportFailHandler) {
-	// Elasticsearch bulk writes
-	defer waitGroup.Done()
-	if conf.HasElasticOut() {
-		i := 0
-		data := make([][]byte, conf.ElasticSearch.PushChunkSize*2+1)
-		failed := make([][]byte, 0, 50)
-		var esErr error
-		for rec := range incomingData {
-			jsonData, err := rec.ToJSON()
-			recType := "query"
-			// TODO ES module should be responsible for creating the following index name
-			index := fmt.Sprintf("%s_%s", conf.ElasticSearch.Index, appType)
-			if conf.ElasticSearch.MajorVersion < 6 {
-				recType = rec.GetType()
-				index = conf.ElasticSearch.Index
-			}
-			jsonMeta := elastic.CNKRecordMeta{
-				ID:    rec.GetID(),
-				Type:  recType,
-				Index: index,
-			}
-			jsonMetaES, err2 := (&elastic.ESCNKRecordMeta{Index: jsonMeta}).ToJSON()
-
-			if err == nil && err2 == nil {
-				data[i] = jsonMetaES
-				data[i+1] = jsonData
-				i += 2
-
-			} else {
-				log.Print("ERROR: Failed to encode item ", rec.GetTime())
-			}
-			if i == conf.ElasticSearch.PushChunkSize*2 {
-				data[i] = []byte("\n")
-				esErr = pushDataToElastic(data[:i+1], appType, &conf.ElasticSearch)
-				if esErr != nil {
-					log.Print("ERROR: Failed to save a data chunk to ElasticSearch")
-					failed = append(failed, data[:i+1]...)
-				}
-				i = 0
-			}
-		}
-		if i > 0 {
-			data[i] = []byte("\n")
-			esErr = pushDataToElastic(data[:i+1], appType, &conf.ElasticSearch)
-			if esErr != nil {
-				log.Printf("ERROR: %s", esErr)
-				failed = append(failed, data[:i+1]...)
-			}
-		}
-		if failHandler != nil {
-			failHandler.RescueFailedChunks(failed)
-		}
-
-	} else {
-		for range incomingData {
-		}
-	}
 }
 
 func runInfluxWrite(conf *Conf, incomingData chan conversion.OutputRecord, waitGroup *sync.WaitGroup) {

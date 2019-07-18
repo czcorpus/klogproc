@@ -44,16 +44,16 @@ const (
 
 // Conf describes klogproc's configuration
 type Conf struct {
-	LogRedis       sredis.RedisConf   `json:"logRedis"`
-	LogFiles       batch.Conf         `json:"logFiles"`
-	LogTail        tail.Conf          `json:"logTail"`
-	GeoIPDbPath    string             `json:"geoIpDbPath"`
-	LocalTimezone  string             `json:"localTimezone"`
-	AnonymousUsers []int              `json:"anonymousUsers"`
-	LogPath        string             `json:"logPath"`
-	RecUpdate      elastic.DocUpdConf `json:"recordUpdate"`
-	ElasticSearch  elastic.SearchConf `json:"elasticSearch"`
-	InfluxDB       influx.Conf        `json:"influxDb"`
+	LogRedis       sredis.RedisConf       `json:"logRedis"`
+	LogFiles       batch.Conf             `json:"logFiles"`
+	LogTail        tail.Conf              `json:"logTail"`
+	GeoIPDbPath    string                 `json:"geoIpDbPath"`
+	LocalTimezone  string                 `json:"localTimezone"`
+	AnonymousUsers []int                  `json:"anonymousUsers"`
+	LogPath        string                 `json:"logPath"`
+	RecUpdate      elastic.DocUpdConf     `json:"recordUpdate"`
+	ElasticSearch  elastic.ConnectionConf `json:"elasticSearch"`
+	InfluxDB       influx.Conf            `json:"influxDb"`
 }
 
 // UsesRedis tests whether the config contains Redis
@@ -70,15 +70,9 @@ func (c *Conf) HasInfluxOut() bool {
 	return c.InfluxDB.Server != ""
 }
 
-// HasElasticOut tests whether an ElasticSearch
-// output is confgured
-func (c *Conf) HasElasticOut() bool {
-	return c.ElasticSearch.Server != ""
-}
-
 // TODO fix/update this
 func validateConf(conf *Conf) {
-	if conf.HasElasticOut() {
+	if conf.ElasticSearch.IsConfigured() {
 		if conf.ElasticSearch.ScrollTTL == "" {
 			log.Fatal("ERROR: elasticScrollTtl must be a valid ElasticSearch scroll arg value (e.g. '2m', '30s')")
 		}
