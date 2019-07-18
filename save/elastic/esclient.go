@@ -1,4 +1,6 @@
 // Copyright 2017 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2017 Institute of the Czech National Corpus,
+//                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,9 +25,9 @@ import (
 	"time"
 )
 
-// SearchConf defines a configuration
+// ConnectionConf defines a configuration
 // required to work with ES client.
-type SearchConf struct {
+type ConnectionConf struct {
 	Server         string `json:"server"`
 	Index          string `json:"index"`
 	PushChunkSize  int    `json:"pushChunkSize"`
@@ -33,6 +35,30 @@ type SearchConf struct {
 	ReqTimeoutSecs int    `json:"reqTimeoutSecs"`
 	MajorVersion   int    `json:"majorVersion"`
 }
+
+// IsConfigured tests whether the configuration is considered
+// to be enabled (i.e. no error checking just enabled/disabled)
+func (conf *ConnectionConf) IsConfigured() bool {
+	return conf.Server != ""
+}
+
+// Validate tests whether the configuration is filled in
+// correctly. Please note that if the function returns nil
+// then IsConfigured() must return 'true'.
+func (conf *ConnectionConf) Validate() error {
+	if conf.Index == "" {
+		return fmt.Errorf("ERROR: index/indexPrefix not set for ElasticSearch")
+	}
+	if conf.ScrollTTL == "" {
+		return fmt.Errorf("ERROR: elasticScrollTtl must be a valid ElasticSearch scroll arg value (e.g. '2m', '30s')")
+	}
+	if conf.PushChunkSize == 0 {
+		return fmt.Errorf("ERROR: elasticPushChunkSize is missing")
+	}
+	return nil
+}
+
+// -------
 
 // ErrorResultObj describes an error response from ElasticSearch
 type ErrorResultObj struct {
@@ -73,7 +99,7 @@ type ESClient struct {
 }
 
 // NewClient returns an instance of ESClient
-func NewClient(conf *SearchConf) *ESClient {
+func NewClient(conf *ConnectionConf) *ESClient {
 	return &ESClient{
 		server:         conf.Server,
 		index:          conf.Index,
@@ -82,7 +108,7 @@ func NewClient(conf *SearchConf) *ESClient {
 }
 
 // NewClient6 returns an instance of ESClient for ElasticSearch 6+
-func NewClient6(conf *SearchConf, appType string) *ESClient {
+func NewClient6(conf *ConnectionConf, appType string) *ESClient {
 	return &ESClient{
 		server:         conf.Server,
 		index:          fmt.Sprintf("%s_%s", conf.Index, appType),

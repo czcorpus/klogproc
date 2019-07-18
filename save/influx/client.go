@@ -17,21 +17,50 @@
 package influx
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/czcorpus/klogproc/conversion"
 	client "github.com/influxdata/influxdb1-client/v2"
 )
 
-// Conf specifies a configuration required to store data
+// ConnectionConf specifies a configuration required to store data
 // to an InfluxDB database
-type Conf struct {
+type ConnectionConf struct {
 	Server          string `json:"server"`
 	PushChunkSize   int    `json:"pushChunkSize"`
 	Database        string `json:"database"`
 	Measurement     string `json:"measurement"`
 	RetentionPolicy string `json:"retentionPolicy"`
 }
+
+// IsConfigured tests whether the configuration is considered
+// to be enabled (i.e. no error checking just enabled/disabled)
+func (conf *ConnectionConf) IsConfigured() bool {
+	return conf.Server != ""
+}
+
+// Validate tests whether the configuration is filled in
+// correctly. Please note that if the function returns nil
+// then IsConfigured() must return 'true'.
+func (conf *ConnectionConf) Validate() error {
+	var err error
+	if conf.Server == "" {
+		err = fmt.Errorf("Missing 'server' information for InfluxDB")
+	}
+	if conf.Database == "" {
+		err = fmt.Errorf("Missing 'database' information for InfluxDB")
+	}
+	if conf.Measurement == "" {
+		err = fmt.Errorf("Missing 'measurement' information for InfluxDB")
+	}
+	if conf.RetentionPolicy == "" {
+		err = fmt.Errorf("Missing 'retentionPolicy' information for InfluxDB")
+	}
+	return err
+}
+
+// ------
 
 func newBatchPoints(database string, retentionPolicy string) (client.BatchPoints, error) {
 	bp, err := client.NewBatchPoints(client.BatchPointsConfig{
@@ -99,7 +128,7 @@ func (c *RecordWriter) writeCurrBatch() error {
 }
 
 // NewRecordWriter is a factory function for RecordWriter
-func NewRecordWriter(conf *Conf) (*RecordWriter, error) {
+func NewRecordWriter(conf *ConnectionConf) (*RecordWriter, error) {
 	conn, err := client.NewHTTPClient(client.HTTPConfig{Addr: conf.Server})
 	if err != nil {
 		return nil, err

@@ -44,16 +44,16 @@ const (
 
 // Conf describes klogproc's configuration
 type Conf struct {
-	LogRedis       sredis.RedisConf   `json:"logRedis"`
-	LogFiles       batch.Conf         `json:"logFiles"`
-	LogTail        tail.Conf          `json:"logTail"`
-	GeoIPDbPath    string             `json:"geoIpDbPath"`
-	LocalTimezone  string             `json:"localTimezone"`
-	AnonymousUsers []int              `json:"anonymousUsers"`
-	LogPath        string             `json:"logPath"`
-	RecUpdate      elastic.DocUpdConf `json:"recordUpdate"`
-	ElasticSearch  elastic.SearchConf `json:"elasticSearch"`
-	InfluxDB       influx.Conf        `json:"influxDb"`
+	LogRedis       sredis.RedisConf       `json:"logRedis"`
+	LogFiles       batch.Conf             `json:"logFiles"`
+	LogTail        tail.Conf              `json:"logTail"`
+	GeoIPDbPath    string                 `json:"geoIpDbPath"`
+	LocalTimezone  string                 `json:"localTimezone"`
+	AnonymousUsers []int                  `json:"anonymousUsers"`
+	LogPath        string                 `json:"logPath"`
+	RecUpdate      elastic.DocUpdConf     `json:"recordUpdate"`
+	ElasticSearch  elastic.ConnectionConf `json:"elasticSearch"`
+	InfluxDB       influx.ConnectionConf  `json:"influxDb"`
 }
 
 // UsesRedis tests whether the config contains Redis
@@ -70,22 +70,22 @@ func (c *Conf) HasInfluxOut() bool {
 	return c.InfluxDB.Server != ""
 }
 
-// HasElasticOut tests whether an ElasticSearch
-// output is confgured
-func (c *Conf) HasElasticOut() bool {
-	return c.ElasticSearch.Server != ""
-}
-
-// TODO fix/update this
+// TODO test additional important items
 func validateConf(conf *Conf) {
-	if conf.HasElasticOut() {
-		if conf.ElasticSearch.ScrollTTL == "" {
-			log.Fatal("ERROR: elasticScrollTtl must be a valid ElasticSearch scroll arg value (e.g. '2m', '30s')")
-		}
-		if conf.ElasticSearch.PushChunkSize == 0 {
-			log.Fatal("ERROR: elasticPushChunkSize is missing")
+	var err error
+	if conf.ElasticSearch.IsConfigured() {
+		err = conf.ElasticSearch.Validate()
+		if err != nil {
+			log.Fatal("FATAL: ", err)
 		}
 	}
+	if conf.InfluxDB.IsConfigured() {
+		err = conf.InfluxDB.Validate()
+		if err != nil {
+			log.Fatal("FATAL: ", err)
+		}
+	}
+
 }
 
 func updateRecords(conf *Conf) {

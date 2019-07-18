@@ -23,6 +23,8 @@ import (
 	"github.com/czcorpus/klogproc/conversion"
 	"github.com/czcorpus/klogproc/load/batch"
 	"github.com/czcorpus/klogproc/load/tail"
+	"github.com/czcorpus/klogproc/save/elastic"
+	"github.com/czcorpus/klogproc/save/influx"
 	"github.com/oschwald/geoip2-golang"
 )
 
@@ -59,8 +61,8 @@ func (tp *tailProcessor) OnCheckStart() {
 	tp.dataForInflux = make(chan conversion.OutputRecord, tp.influxChunkSize)
 	tp.outSync = sync.WaitGroup{}
 	tp.outSync.Add(2)
-	go runElasticWrite(tp.appType, tp.conf, tp.dataForES, &tp.outSync, &notifyFailedChunks{})
-	go runInfluxWrite(tp.conf, tp.dataForInflux, &tp.outSync)
+	go elastic.RunWriteConsumer(tp.appType, &tp.conf.ElasticSearch, tp.dataForES, &tp.outSync, &notifyFailedChunks{})
+	go influx.RunWriteConsumer(&tp.conf.InfluxDB, tp.dataForInflux, &tp.outSync)
 }
 
 func (tp *tailProcessor) OnEntry(item string) {
