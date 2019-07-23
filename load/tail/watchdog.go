@@ -20,6 +20,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -94,41 +95,44 @@ func Run(conf *Conf, processors []FileTailProcessor, finishEvent chan bool) {
 		}
 	}
 
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				for _, reader := range readers {
-					reader.Processor().OnCheckStart()
-					reader.ApplyNewContent(
+	for {
+		select {
+		case <-ticker.C:
+			var wg sync.WaitGroup
+			wg.Add(len(readers))
+			for _, reader := range readers {
+				go func(rdr *FileTailReader) {
+					rdr.Processor().OnCheckStart()
+					rdr.ApplyNewContent(
 						func(v string) {
-							reader.Processor().OnEntry(v)
+							rdr.Processor().OnEntry(v)
 						},
 						func(inode int64, seek int64) {
-							worklog.UpdateFileInfo(reader.AppType(), inode, seek)
-							worklog.Save()
+							worklog.UpdateFileInfo(rdr.AppType(), inode, seek)
 						},
 					)
-					reader.Processor().OnCheckStop()
-				}
-			case quit := <-quitChan:
-				if quit {
-					ticker.Stop()
-					for _, processor := range processors {
-						processor.OnQuit()
-					}
-					worklog.Close()
-					finishEvent <- true
-				}
-			case <-syscallChan:
-				log.Print("INFO: Caught signal, exiting...")
+					rdr.Processor().OnCheckStop()
+					wg.Done()
+				}(reader)
+			}
+			wg.Wait()
+		case quit := <-quitChan:
+			if quit {
 				ticker.Stop()
-				for _, reader := range readers {
-					reader.Processor().OnQuit()
+				for _, processor := range processors {
+					processor.OnQuit()
 				}
 				worklog.Close()
 				finishEvent <- true
 			}
+		case <-syscallChan:
+			log.Print("INFO: Caught signal, exiting...")
+			ticker.Stop()
+			for _, reader := range readers {
+				reader.Processor().OnQuit()
+			}
+			worklog.Close()
+			finishEvent <- true
 		}
-	}()
+	}
 }

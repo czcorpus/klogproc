@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 )
 
@@ -29,6 +30,11 @@ type WorklogItem struct {
 	Seek  int64 `json:"seek"`
 }
 
+type updateRequest struct {
+	AppType string
+	Value   WorklogItem
+}
+
 // WorklogRecord provides WorkLogItem info for all configured apps
 type WorklogRecord = map[string]WorklogItem
 
@@ -36,9 +42,10 @@ type WorklogRecord = map[string]WorklogItem
 // file reading operations to be able to continue in case of an
 // interruption
 type Worklog struct {
-	filePath string
-	fr       *os.File
-	rec      WorklogRecord
+	filePath    string
+	fr          *os.File
+	rec         WorklogRecord
+	updRequests chan updateRequest
 }
 
 // Init initializes the worklog. It must be called before any other
@@ -48,6 +55,7 @@ func (w *Worklog) Init() error {
 	if w.filePath == "" {
 		return fmt.Errorf("Failed to initialize tail worklog - no path specified")
 	}
+	log.Printf("Initializing worklog %s", w.filePath)
 	w.fr, err = os.OpenFile(w.filePath, os.O_CREATE|os.O_RDWR, 0644)
 	byteValue, err := ioutil.ReadAll(w.fr)
 	if err != nil {
@@ -59,16 +67,30 @@ func (w *Worklog) Init() error {
 			return err
 		}
 	}
+	w.updRequests = make(chan updateRequest)
+	go func() {
+		for req := range w.updRequests {
+			w.rec[req.AppType] = req.Value
+			w.save()
+		}
+	}()
 	return nil
 }
 
 // Close cleans up worklog for safe exit
 func (w *Worklog) Close() {
-	w.fr.Close()
+	if w.fr != nil {
+		w.fr.Close()
+	}
+	if w.updRequests != nil {
+		close(w.updRequests)
+	}
 }
 
-// Save stores worklog's state to a configured file
-func (w *Worklog) Save() error {
+// save stores worklog's state to a configured file.
+// It is called automatically after each log update
+// request is processed.
+func (w *Worklog) save() error {
 	err := w.fr.Truncate(0)
 	if err != nil {
 		return err
@@ -95,7 +117,7 @@ func (w *Worklog) Save() error {
 // UpdateFileInfo adds individual app reading position info. Please
 // note that this does not save the worklog.
 func (w *Worklog) UpdateFileInfo(appType string, inode int64, seek int64) {
-	w.rec[appType] = WorklogItem{Inode: inode, Seek: seek}
+	w.updRequests <- updateRequest{AppType: appType, Value: WorklogItem{Inode: inode, Seek: seek}}
 }
 
 // GetData retrieves reading info for a provided app
