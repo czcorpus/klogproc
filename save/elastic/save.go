@@ -61,7 +61,7 @@ func BulkWriteRequest(data [][]byte, appType string, esconf *ConnectionConf) err
 // RunWriteConsumer reads incoming records from incomingData channel and writes them
 // chunk by chunk. Once the channel is closed, the rest of items in buffer is writtten
 // and the consumer finishes.
-func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData chan conversion.OutputRecord, waitGroup *sync.WaitGroup, failHandler ESImportFailHandler) {
+func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan conversion.OutputRecord, waitGroup *sync.WaitGroup, failHandler ESImportFailHandler) {
 	// Elasticsearch bulk writes
 	defer waitGroup.Done()
 	if conf.IsConfigured() {

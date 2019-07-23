@@ -23,7 +23,9 @@ import (
 	"github.com/czcorpus/klogproc/conversion"
 )
 
-func RunWriteConsumer(conf *ConnectionConf, incomingData chan conversion.OutputRecord, waitGroup *sync.WaitGroup) {
+// RunWriteConsumer reads from incomingData channel and stores the data
+// to a configured InfluxDB measurement.
+func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan conversion.OutputRecord, waitGroup *sync.WaitGroup) {
 	// InfluxDB batch writes
 	defer waitGroup.Done()
 	if conf.IsConfigured() {

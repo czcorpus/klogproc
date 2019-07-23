@@ -138,5 +138,5 @@ func runTailAction(conf *Conf, geoDB *geoip2.Reader, finishEvt chan bool) {
 		tailProcessors[i] = newTailProcessor(&f, conf, geoDB)
 
 	}
-	tail.Run(&conf.LogTail, tailProcessors, finishEvt)
+	go tail.Run(&conf.LogTail, tailProcessors, finishEvt)
 }
