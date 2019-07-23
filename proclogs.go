@@ -77,7 +77,7 @@ func (clp *CNKLogProcessor) GetAppType() string {
 	return clp.appType
 }
 
-func processRedisLogs(conf *Conf, queue *sredis.RedisQueue, processor *CNKLogProcessor, destChans ...chan conversion.OutputRecord) {
+func processRedisLogs(conf *Conf, queue *sredis.RedisQueue, processor *CNKLogProcessor, destChans ...chan<- conversion.OutputRecord) {
 	for _, item := range queue.GetItems() {
 		rec := processor.ProcItem(item)
 		if rec != nil {
