@@ -23,9 +23,13 @@ import (
 	"github.com/czcorpus/klogproc/conversion"
 )
 
+var (
+	logLineRegexp  = regexp.MustCompile("^.+\\sINFO:\\s+(\\{.+)$")
+	lineTypeRegexp = regexp.MustCompile("^.+\\s([A-Z]+):\\s+.+$")
+)
+
 func parseRawLine(s string) string {
-	reg := regexp.MustCompile("^.+\\sINFO:\\s+(\\{.+)$")
-	srch := reg.FindStringSubmatch(s)
+	srch := logLineRegexp.FindStringSubmatch(s)
 	if srch != nil {
 		return srch[1]
 	}
@@ -33,8 +37,7 @@ func parseRawLine(s string) string {
 }
 
 func getLineType(s string) string {
-	reg := regexp.MustCompile("^.+\\s([A-Z]+):\\s+.+$")
-	srch := reg.FindStringSubmatch(s)
+	srch := lineTypeRegexp.FindStringSubmatch(s)
 	if srch != nil {
 		return srch[1]
 	}

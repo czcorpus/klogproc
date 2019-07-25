@@ -93,8 +93,7 @@ type InputRecord struct {
 // instance. Please note that the value is truncated
 // to seconds.
 func (rec *InputRecord) GetTime() time.Time {
-	p := regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2}T[012]\\d:[0-5]\\d:[0-5]\\d)\\.\\d+")
-	srch := p.FindStringSubmatch(rec.Date)
+	srch := datetimeRegexp.FindStringSubmatch(rec.Date)
 	if srch != nil {
 		if t, err := time.Parse("2006-01-02T15:04:05", srch[1]); err == nil {
 			return t
