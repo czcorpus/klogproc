@@ -26,11 +26,14 @@ import (
 )
 
 var (
-	datetimeRegexp = regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2})(\\s|T)([012]\\d:[0-5]\\d:[0-5]\\d\\.\\d+)")
+	datetimeRegexp = regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2})(\\s|T)([012]\\d:[0-5]\\d:[0-5]\\d(\\.\\d+))")
 )
 
 func importDatetimeString(dateStr string, localTimezone string) (string, error) {
 	srch := datetimeRegexp.FindStringSubmatch(dateStr)
+	if !strings.HasPrefix(localTimezone, "+") && !strings.HasPrefix(localTimezone, "-") {
+		localTimezone = "+" + localTimezone
+	}
 	if len(srch) > 0 {
 		return fmt.Sprintf("%sT%s%s", srch[1], srch[3], localTimezone), nil
 	}
@@ -93,11 +96,8 @@ type InputRecord struct {
 // instance. Please note that the value is truncated
 // to seconds.
 func (rec *InputRecord) GetTime() time.Time {
-	srch := datetimeRegexp.FindStringSubmatch(rec.Date)
-	if srch != nil {
-		if t, err := time.Parse("2006-01-02T15:04:05", srch[1]); err == nil {
-			return t
-		}
+	if t, err := time.Parse("2006-01-02T15:04:05-07:00", rec.Date); err == nil {
+		return t
 	}
 	return time.Time{}
 }

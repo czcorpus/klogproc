@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/czcorpus/klogproc/load"
 	"github.com/czcorpus/klogproc/conversion"
 )
 
@@ -40,7 +39,7 @@ func createRecord() *OutputRecord {
 		QueryType:   "cql",
 		UserAgent:   "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:51.0) Gecko/20100101 Firefox/51.0",
 		UserID:      100,
-		GeoIP: GeoDataRecord{
+		GeoIP: conversion.GeoDataRecord{
 			CountryCode2: "CZ",
 			CountryName:  "Czech Republic",
 			IP:           "195.113.53.66",
@@ -62,7 +61,7 @@ func TestCreateID(t *testing.T) {
 func TestImportCorpname(t *testing.T) {
 	p := make(map[string]interface{})
 	p["corpname"] = "omezeni/foobar7;x=10"
-	r := &kontext.InputRecord{Params: p}
+	r := &InputRecord{Params: p}
 	c := importCorpname(r)
 	if c.Corpname != "foobar7" || c.limited != true {
 		t.Error("Failed import corpname: ", c)
