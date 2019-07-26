@@ -17,37 +17,36 @@
 package kwords
 
 import (
-	"net"
-	"time"
+	"testing"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"github.com/stretchr/testify/assert"
 )
 
-// InputRecord is a Treq parsed log record
-type InputRecord struct {
-	Datetime        string
-	IPAddress       string
-	UserID          string
-	NumFiles        string
-	TargetInputType string
-	TargetLength    string
-	Corpus          string
-	RefLength       string
-	Pronouns        string
-	Prep            string
-	Con             string
-	Num             string
-	CaseInsensitive string
+func TestGetTime(t *testing.T) {
+	rec := InputRecord{
+		Datetime:  "2019-06-25T14:04:50.23-01:00",
+		IPAddress: "192.168.1.65",
+	}
+	m := rec.GetTime()
+	assert.Equal(t, 2019, m.Year())
+	assert.Equal(t, 6, int(m.Month()))
+	assert.Equal(t, 25, m.Day())
+	assert.Equal(t, 14, m.Hour())
+	assert.Equal(t, 4, m.Minute())
+	assert.Equal(t, 50, m.Second())
+	_, d := m.Zone()
+	assert.Equal(t, -3600, d)
 }
 
-func (r *InputRecord) GetTime() time.Time {
-	return conversion.ConvertDatetimeString(r.Datetime)
+func TestGetIPAddress(t *testing.T) {
+	rec := InputRecord{
+		IPAddress: "192.168.1.65",
+	}
+	a := rec.GetClientIP()
+	assert.Equal(t, "192.168.1.65", a.String())
 }
 
-func (r *InputRecord) GetClientIP() net.IP {
-	return net.ParseIP(r.IPAddress)
-}
-
-func (r *InputRecord) AgentIsLoggable() bool {
-	return true
+func TestAgentIsLoggable(t *testing.T) {
+	rec := InputRecord{}
+	assert.True(t, rec.AgentIsLoggable())
 }

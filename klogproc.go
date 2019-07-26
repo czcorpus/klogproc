@@ -94,10 +94,10 @@ func updateRecords(conf *Conf) {
 		totalUpdated, err := client.ManualBulkRecordUpdate(conf.ElasticSearch.Index, updConf,
 			conf.RecUpdate.Update, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize)
 		if err == nil {
-			log.Printf("Updated %d items\n", totalUpdated)
+			log.Printf("INFO: Updated %d items\n", totalUpdated)
 
 		} else {
-			log.Fatal("Update error: ", err)
+			log.Fatal("FATAL: Update error: ", err)
 		}
 	}
 }
@@ -108,10 +108,10 @@ func removeKeyFromRecords(conf *Conf) {
 		totalUpdated, err := client.ManualBulkRecordKeyRemove(conf.ElasticSearch.Index, updConf,
 			conf.RecUpdate.RemoveKey, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize)
 		if err == nil {
-			log.Printf("Removed key %s from %d items\n", conf.RecUpdate.RemoveKey, totalUpdated)
+			log.Printf("INFO: Removed key %s from %d items\n", conf.RecUpdate.RemoveKey, totalUpdated)
 
 		} else {
-			log.Fatal("Update error: ", err)
+			log.Fatal("FATAL: Update error: ", err)
 		}
 	}
 }
