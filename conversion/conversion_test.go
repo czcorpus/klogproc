@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kwords
+package conversion
 
 import (
 	"testing"
@@ -22,12 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetTime(t *testing.T) {
-	rec := InputRecord{
-		Datetime:  "2019-06-25T14:04:50.23-01:00",
-		IPAddress: "192.168.1.65",
-	}
-	m := rec.GetTime()
+func TestConvertDatetimeString(t *testing.T) {
+	m := ConvertDatetimeString("2019-06-25T14:04:50.23-01:00")
 	assert.Equal(t, 2019, m.Year())
 	assert.Equal(t, 6, int(m.Month()))
 	assert.Equal(t, 25, m.Day())
@@ -38,15 +34,36 @@ func TestGetTime(t *testing.T) {
 	assert.Equal(t, -3600, d)
 }
 
-func TestGetIPAddress(t *testing.T) {
-	rec := InputRecord{
-		IPAddress: "192.168.1.65",
-	}
-	a := rec.GetClientIP()
-	assert.Equal(t, "192.168.1.65", a.String())
+func TestGetTimeInvalid(t *testing.T) {
+	m := ConvertDatetimeString("total nonsense")
+	assert.Equal(t, 1, m.Year())
 }
 
-func TestAgentIsLoggable(t *testing.T) {
-	rec := InputRecord{}
-	assert.True(t, rec.AgentIsLoggable())
+func TestGetTimeNoTimezone(t *testing.T) {
+	m := ConvertDatetimeString("2019-06-25T14:04:50.23")
+	assert.Equal(t, 1, m.Year())
+}
+
+func TestImportBoolNumeric(t *testing.T) {
+	b, err := ImportBool("1", "foo")
+	assert.Nil(t, err)
+	assert.True(t, b)
+
+	b, err = ImportBool("yes", "foo")
+	assert.Nil(t, err)
+	assert.True(t, b)
+
+	b, err = ImportBool("0", "foo")
+	assert.Nil(t, err)
+	assert.False(t, b)
+
+	b, err = ImportBool("no", "foo")
+	assert.Nil(t, err)
+	assert.False(t, b)
+}
+
+func TestUserBelongsToList(t *testing.T) {
+	assert.True(t, UserBelongsToList(37, []int{1, 2, 37, 38}))
+	assert.False(t, UserBelongsToList(137, []int{1, 2, 37, 38}))
+	assert.False(t, UserBelongsToList(0, []int{}))
 }
