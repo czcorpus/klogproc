@@ -138,7 +138,7 @@ func processLogs(conf *Conf, action string) {
 			if !conf.UsesRedis() {
 				log.Fatal("FATAL: Redis not configured")
 			}
-			lt, err := GetLogTransformer(conf.LogRedis.AppType)
+			lt, err := GetLogTransformer(conf.LogRedis.AppType, conf.LogRedis.Version)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -176,7 +176,7 @@ func processLogs(conf *Conf, action string) {
 			log.Printf("INFO: Ignored %d non-loggable items (bots etc.)", processor.numNonLoggable)
 
 		case actionBatch:
-			lt, err := GetLogTransformer(conf.LogFiles.AppType)
+			lt, err := GetLogTransformer(conf.LogFiles.AppType, conf.LogFiles.Version)
 			if err != nil {
 				log.Fatal(err)
 			}

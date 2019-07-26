@@ -109,13 +109,13 @@ func (s *kwordsTransformer) Transform(logRec conversion.InputRecord, recType str
 // ------------------------------------
 
 // GetLogTransformer returns a type-safe transformer for a concrete app type
-func GetLogTransformer(appType string) (conversion.LogItemTransformer, error) {
+func GetLogTransformer(appType string, version int) (conversion.LogItemTransformer, error) {
 
 	switch appType {
 	case conversion.AppTypeKontext:
 		return &konTextTransformer{t: &kontext.Transformer{}}, nil
 	case conversion.AppTypeSyd:
-		return &sydTransformer{t: &syd.Transformer{}}, nil
+		return &sydTransformer{t: syd.NewTransformer(version)}, nil
 	case conversion.AppTypeTreq:
 		return &treqTransformer{t: &treq.Transformer{}}, nil
 	case conversion.AppTypeMorfio:

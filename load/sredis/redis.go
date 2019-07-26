@@ -31,6 +31,7 @@ type RedisConf struct {
 	Database int    `json:"database"`
 	QueueKey string `json:"queueKey"`
 	AppType  string `json:"appType"`
+	Version  int    `json:"version"`
 }
 
 // RedisQueue provides access to Redis database containing
