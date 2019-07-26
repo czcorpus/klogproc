@@ -19,6 +19,8 @@ package treq
 import (
 	"net"
 	"time"
+
+	"github.com/czcorpus/klogproc/conversion"
 )
 
 // InputRecord is a Treq parsed log record
@@ -40,10 +42,7 @@ type InputRecord struct {
 }
 
 func (r *InputRecord) GetTime() time.Time {
-	if t, err := time.Parse("2006-01-02 15:04:05-07:00", r.Datetime); err == nil {
-		return t
-	}
-	return time.Time{}
+	return conversion.ConvertDatetimeString(r.Datetime)
 }
 
 func (r *InputRecord) GetClientIP() net.IP {

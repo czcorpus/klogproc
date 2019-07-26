@@ -34,6 +34,7 @@ const (
 type FileConf struct {
 	Path    string `json:"path"`
 	AppType string `json:"appType"`
+	Version int    `json:"version"`
 }
 
 // Conf wraps all the configuration for the 'tail' function

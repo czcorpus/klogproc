@@ -24,18 +24,14 @@ import (
 )
 
 // Transformer converts a SyD log record to a destination format
-type Transformer struct{}
+type Transformer struct {
+	Version     int
+	SyncCorpora []string
+	DiaCorpora  []string
+}
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymousUsers []int) (*OutputRecord, error) {
-	var corpora []string
-	if logRecord.Ltool == "S" {
-		corpora = []string{"syn2010", "oral_v2", "ksk-dopisy"}
-
-	} else if logRecord.Ltool == "D" {
-		corpora = []string{"diakon"}
-	}
-
 	var userID *int
 	if logRecord.UserID != "-" {
 		uid, err := strconv.Atoi(logRecord.UserID)
@@ -58,8 +54,28 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 		Ltool:       logRecord.Ltool,
 		RunScript:   logRecord.RunScript,
 		IsQuery:     true,
-		Corpus:      corpora,
 	}
 	r.ID = createID(r)
+	if logRecord.Ltool == "S" {
+		r.Corpus = t.SyncCorpora
+
+	} else if logRecord.Ltool == "D" {
+		r.Corpus = t.DiaCorpora
+	}
 	return r, nil
+}
+
+// NewTransformer is a recommended factory for new Transformer instances
+// to reflect the version properly
+func NewTransformer(version int) *Transformer {
+	switch version {
+	case 0:
+		return &Transformer{
+			Version:     version,
+			SyncCorpora: []string{"syn2010", "oral_v2", "ksk-dopisy"},
+			DiaCorpora:  []string{"diakon"},
+		}
+	default:
+		return nil
+	}
 }

@@ -36,11 +36,14 @@ var (
 	datetimePattern = regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2}\\s[012]\\d:[0-5]\\d:[0-5]\\d)[\\.,]\\d+")
 )
 
+// Conf represents a configuration for a single batch task. Currently it is not
+// possible to have configured multiple tasks in a single file. (TODO)
 type Conf struct {
 	SrcPath                string `json:"srcPath"`
 	PartiallyMatchingFiles bool   `json:"partiallyMatchingFiles"`
 	WorklogPath            string `json:"worklogPath"`
 	AppType                string `json:"appType"`
+	Version                int    `json:"version"`
 }
 
 // importTimeFromLine import a datetime information from the beginning

@@ -94,29 +94,6 @@ func TestImportJSONLogDateOnly(t *testing.T) {
 	assert.Equal(t, "2019-06-25T14:04:11.301121-01:00", rec.Date)
 }
 
-func TestGetTime(t *testing.T) {
-	rec := InputRecord{
-		Date: "2019-06-25T14:04:50.23-01:00",
-	}
-	m := rec.GetTime()
-	assert.Equal(t, 2019, m.Year())
-	assert.Equal(t, 6, int(m.Month()))
-	assert.Equal(t, 25, m.Day())
-	assert.Equal(t, 14, m.Hour())
-	assert.Equal(t, 4, m.Minute())
-	assert.Equal(t, 50, m.Second())
-	_, d := m.Zone()
-	assert.Equal(t, -3600, d)
-}
-
-func TestGetTimeInvalid(t *testing.T) {
-	rec := InputRecord{
-		Date: "fooooobar",
-	}
-	m := rec.GetTime()
-	assert.Equal(t, 1, m.Year())
-}
-
 func TestGetStringParam(t *testing.T) {
 	rec := InputRecord{
 		Date: "2019-06-25T14:04:50.23-01:00",

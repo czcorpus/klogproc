@@ -42,6 +42,7 @@ func (n *notifyFailedChunks) RescueFailedChunks(chunk [][]byte) error {
 type tailProcessor struct {
 	appType           string
 	filePath          string
+	version           int
 	checkIntervalSecs int
 	conf              *Conf
 	lineParser        batch.LineParser
@@ -110,7 +111,7 @@ func newTailProcessor(tailConf *tail.FileConf, conf *Conf, geoDB *geoip2.Reader)
 	if err != nil {
 		log.Fatal("ERROR: Failed to initialize parser: ", err)
 	}
-	logTransformer, err := GetLogTransformer(tailConf.AppType)
+	logTransformer, err := GetLogTransformer(tailConf.AppType, tailConf.Version)
 	if err != nil {
 		log.Fatal("ERROR: Failed to initialize transformer: ", err)
 	}
@@ -118,6 +119,7 @@ func newTailProcessor(tailConf *tail.FileConf, conf *Conf, geoDB *geoip2.Reader)
 	return &tailProcessor{
 		appType:           tailConf.AppType,
 		filePath:          tailConf.Path,
+		version:           tailConf.Version,
 		checkIntervalSecs: conf.LogTail.IntervalSecs, // TODO maybe per-app type here ??
 		conf:              conf,
 		lineParser:        lineParser,

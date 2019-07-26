@@ -142,3 +142,12 @@ func ImportBool(v, keyName string) (bool, error) {
 	}
 	return ans, nil
 }
+
+// ConvertDatetimeString imports ISO 8601 datetime string. In case
+// of a parsing error, "zero" time instance is created.
+func ConvertDatetimeString(datetime string) time.Time {
+	if t, err := time.Parse("2006-01-02T15:04:05-07:00", datetime); err == nil {
+		return t
+	}
+	return time.Time{}
+}

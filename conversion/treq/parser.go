@@ -38,43 +38,42 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 
 	items := strings.Split(s, "\t")
 	var err error
+	fmt.Printf("ITEMS: [%v] ", items[3])
 
-	if len(items) >= 11 {
-		if items[3] == "D" {
-			return &InputRecord{
-				Datetime:    items[0],
-				IPAddress:   items[1],
-				UserID:      items[2],
-				QType:       items[3],
-				QLang:       items[4],
-				SecondLang:  items[5],
-				IsMultiWord: items[6],
-				IsLemma:     items[7],
-				Subcorpus:   items[8],
-				IsRegexp:    items[9],
-				IsCaseInsen: items[10],
-				Query:       items[11],
-				// No query2 in case of the 'D' query
-			}, err
+	if len(items) >= 10 && items[3] == "L" {
+		return &InputRecord{
+			Datetime:   items[0],
+			IPAddress:  items[1],
+			UserID:     items[2],
+			QType:      items[3],
+			QLang:      items[4],
+			SecondLang: items[5],
+			// No multiWord info in case of 'L' query; not even an empty col
+			IsLemma:   items[6],
+			Subcorpus: strings.ToUpper(items[7]), // we have to normalize because of Treq
+			// No IsRegexp; not even an empty col
+			// No IsCaseInsen; not even an empty col
+			Query:  items[8],
+			Query2: items[9],
+		}, err
 
-		} else if items[3] == "L" {
-			return &InputRecord{
-				Datetime:   items[0],
-				IPAddress:  items[1],
-				UserID:     items[2],
-				QType:      items[3],
-				QLang:      items[4],
-				SecondLang: items[5],
-				// No multiWord info in case of 'L' query; not even an empty col
-				IsLemma:     items[6],
-				Subcorpus:   items[7],
-				IsRegexp:    items[8],
-				IsCaseInsen: items[9],
-				Query:       items[10],
-				Query2:      items[11],
-			}, err
-		}
+	} else if len(items) >= 12 && items[3] == "D" {
+		return &InputRecord{
+			Datetime:    items[0],
+			IPAddress:   items[1],
+			UserID:      items[2],
+			QType:       items[3],
+			QLang:       items[4],
+			SecondLang:  items[5],
+			IsMultiWord: items[6],
+			IsLemma:     items[7],
+			Subcorpus:   strings.ToUpper(items[8]), // we have to normalize because of Treq
+			IsRegexp:    items[9],
+			IsCaseInsen: items[10],
+			Query:       items[11],
+			// No query2 in case of the 'D' query
+		}, err
 	}
 	return nil, conversion.NewMinorParsingError(
-		lineNum, fmt.Sprintf("Invalid line format. Expecting 12 tab-separated items, found %d", len(items)))
+		lineNum, fmt.Sprintf("Invalid line format. Expecting min. 10 (type L) or min. 12 (type D) tab-separated items, found %d", len(items)))
 }

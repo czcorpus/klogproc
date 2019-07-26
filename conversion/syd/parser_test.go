@@ -14,40 +14,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kwords
+package syd
 
 import (
-	"net"
-	"time"
+	"testing"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"github.com/stretchr/testify/assert"
 )
 
-// InputRecord is a Treq parsed log record
-type InputRecord struct {
-	Datetime        string
-	IPAddress       string
-	UserID          string
-	NumFiles        string
-	TargetInputType string
-	TargetLength    string
-	Corpus          string
-	RefLength       string
-	Pronouns        string
-	Prep            string
-	Con             string
-	Num             string
-	CaseInsensitive string
-}
-
-func (r *InputRecord) GetTime() time.Time {
-	return conversion.ConvertDatetimeString(r.Datetime)
-}
-
-func (r *InputRecord) GetClientIP() net.IP {
-	return net.ParseIP(r.IPAddress)
-}
-
-func (r *InputRecord) AgentIsLoggable() bool {
-	return true
+func TestParseLine(t *testing.T) {
+	line := `2019-07-26T02:43:16+02:00	2a00:1028:8386:6532:5d6c:d8cd:ceab:40da	-	Q	N	VJLAVCnL	S	R`
+	p := LineParser{}
+	rec, err := p.ParseLine(line, 71, "+01:00")
+	assert.Nil(t, err)
+	assert.Equal(t, "2019-07-26T02:43:16+02:00", rec.Datetime)
+	assert.Equal(t, "2a00:1028:8386:6532:5d6c:d8cd:ceab:40da", rec.IPAddress)
+	assert.Equal(t, "-", rec.UserID)
+	assert.Equal(t, "Q", rec.KeyReq)
+	assert.Equal(t, "N", rec.KeyUsed)
+	assert.Equal(t, "VJLAVCnL", rec.Key)
+	assert.Equal(t, "S", rec.Ltool)
+	assert.Equal(t, "R", rec.RunScript)
 }

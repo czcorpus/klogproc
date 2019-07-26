@@ -23,6 +23,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/czcorpus/klogproc/conversion"
 )
 
 var (
@@ -96,10 +98,7 @@ type InputRecord struct {
 // instance. Please note that the value is truncated
 // to seconds.
 func (rec *InputRecord) GetTime() time.Time {
-	if t, err := time.Parse("2006-01-02T15:04:05-07:00", rec.Date); err == nil {
-		return t
-	}
-	return time.Time{}
+	return conversion.ConvertDatetimeString(rec.Date)
 }
 
 // GetClientIP returns a client IP no matter in which
