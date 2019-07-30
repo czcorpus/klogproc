@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/czcorpus/klogproc/load/batch"
+	"github.com/czcorpus/klogproc/load/celery"
 	"github.com/czcorpus/klogproc/load/sredis"
 	"github.com/czcorpus/klogproc/load/tail"
 
@@ -37,9 +38,12 @@ const (
 	actionBatch     = "batch"
 	actionTail      = "tail"
 	actionRedis     = "redis"
+	actionCelery    = "celery"
 	actionKeyremove = "keyremove"
 	actionDocupdate = "docupdate"
 	actionHelp      = "help"
+
+	startingServiceMsg = "INFO: ######################## Starting klogproc ########################"
 )
 
 // Conf describes klogproc's configuration
@@ -47,6 +51,7 @@ type Conf struct {
 	LogRedis       sredis.RedisConf       `json:"logRedis"`
 	LogFiles       batch.Conf             `json:"logFiles"`
 	LogTail        tail.Conf              `json:"logTail"`
+	CeleryStatus   celery.Conf            `json:"celeryStatus"`
 	GeoIPDbPath    string                 `json:"geoIpDbPath"`
 	LocalTimezone  string                 `json:"localTimezone"`
 	AnonymousUsers []int                  `json:"anonymousUsers"`
@@ -189,8 +194,12 @@ func main() {
 		removeKeyFromRecords(conf)
 	case actionBatch, actionTail, actionRedis:
 		conf, logf = setup(flag.Arg(1))
-		log.Print("INFO: ######################## Starting klogproc ########################")
+		log.Print(startingServiceMsg)
 		processLogs(conf, action)
+	case actionCelery:
+		conf, logf = setup(flag.Arg(1))
+		log.Print(startingServiceMsg)
+		processCeleryStatus(conf)
 	default:
 		fmt.Printf("Unknown action [%s]. Try -h for help\n", flag.Arg(0))
 		os.Exit(1)

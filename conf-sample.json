@@ -18,7 +18,7 @@
     },
     "influxDb": {
         "server": "http://192.168.1.24:8086",
-        "pushChunkSize": 500,
+        "pushChunkSize": 1,
         "database": "klogproc",
         "measurement": "procTime",
         "retentionPolicy": "midterm"

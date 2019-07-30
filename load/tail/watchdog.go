@@ -58,7 +58,7 @@ type FileTailProcessor interface {
 }
 
 // Run starts the process of (multiple) log watching
-func Run(conf *Conf, processors []FileTailProcessor, finishEvent chan bool) {
+func Run(conf *Conf, processors []FileTailProcessor, finishEvent chan<- bool) {
 	tickerInterval := time.Duration(conf.IntervalSecs)
 	if tickerInterval == 0 {
 		log.Printf("WARNING: intervalSecs for tail mode not set, using default %ds", defaultTickerIntervalSecs)

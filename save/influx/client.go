@@ -101,7 +101,6 @@ func (c *RecordWriter) AddRecord(rec conversion.OutputRecord) error {
 		log.Printf("ERROR: Failed to add record to influxdb: %s", err)
 	}
 	c.bp.AddPoint(point)
-	log.Printf("NUM POINTS: %d", len(c.bp.Points()))
 	if len(c.bp.Points()) == c.pushChunkSize {
 		return c.writeCurrBatch()
 	}
