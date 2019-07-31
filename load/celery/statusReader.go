@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os/exec"
 	"strings"
 
@@ -48,11 +49,14 @@ type StatusReader struct {
 func (s *StatusReader) ReadStatus() (*celery.InputRecord, error) {
 	var stdOutput bytes.Buffer
 	outWriter := bufio.NewWriter(&stdOutput)
+	var errOutput bytes.Buffer
+	errWriter := bufio.NewWriter(&errOutput)
 	cmd := exec.Command(s.CeleryBinaryPath, "inspect", "stats", "--workdir", s.AppWorkdir, "-A", s.AppName)
 	cmd.Stdout = outWriter
-	cmd.Stderr = &nullWriter{}
+	cmd.Stderr = errWriter
 	err := cmd.Run()
 	if err != nil {
+		log.Print("WARNING: Celery inspect error output: ", string(errOutput.Bytes()))
 		return nil, err
 	}
 	outWriter.Flush()
