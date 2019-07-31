@@ -31,6 +31,7 @@ type OutputRecord struct {
 	ProcTime          float32        `json:"procTime"` // ProcTime = utime + stime
 	NumWorkerRestarts int            `json:"numWorkerRestart"`
 	NumTaskCalls      map[string]int `json:"numTaskCalls"`
+	NumTasksTotal     int            `json:"numTasksTotal"`
 }
 
 // ToJSON converts data to a JSON document (typically for ElasticSearch)
@@ -49,6 +50,7 @@ func (r *OutputRecord) ToInfluxDB() (tags map[string]string, values map[string]i
 	}
 	values["cpu_time"] = r.ProcTime
 	values["num_worker_restarts"] = r.NumWorkerRestarts
+	values["num_tasks_total"] = r.NumTasksTotal
 	values["clock"] = r.Clock
 	return
 }

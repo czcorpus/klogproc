@@ -48,6 +48,7 @@ func (t *Transformer) Transform(logRecord *InputRecord) (*OutputRecord, error) {
 	}
 	for k, v := range logRecord.Total {
 		out.NumTaskCalls[k] = v
+		out.NumTasksTotal += v
 	}
 	out.ID = createID(out)
 	return out, nil
