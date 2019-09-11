@@ -55,6 +55,6 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 			CaseInsensitive: items[11],
 		}, err
 	}
-	return nil, conversion.NewMinorParsingError(
+	return nil, conversion.NewLineParsingError(
 		lineNum, fmt.Sprintf("Invalid line format for Morfio. Expecting 12 tab-separated items, found %d", len(items)))
 }

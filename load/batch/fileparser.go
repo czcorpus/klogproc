@@ -88,11 +88,11 @@ func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, outputs ...ch
 			}
 
 		} else {
-			switch err.(type) {
-			case conversion.MinorParsingError:
-				log.Printf("INFO: file %s, %s", p.fileName, err)
+			switch tErr := err.(type) {
+			case conversion.LineParsingError:
+				log.Printf("INFO: file %s, %s", p.fileName, tErr)
 			default:
-				log.Print("ERROR: ", err)
+				log.Print("ERROR: ", tErr)
 			}
 
 		}

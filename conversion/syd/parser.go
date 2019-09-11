@@ -56,6 +56,6 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 			RunScript: items[7],
 		}, err
 	}
-	return nil, conversion.NewMinorParsingError(
+	return nil, conversion.NewLineParsingError(
 		lineNum, fmt.Sprintf("Invalid line format. Expecting 8 tab-separated items, found %d", len(items)))
 }

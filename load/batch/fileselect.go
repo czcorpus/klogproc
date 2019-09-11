@@ -76,6 +76,21 @@ func getFileMtime(filePath string) int64 {
 	return -1
 }
 
+// isDir tests whether a provided path represents
+// a directory. If not or in case of an IO error,
+// false is returned.
+func isDir(path string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	finfo, err := f.Stat()
+	if err != nil {
+		return false
+	}
+	return finfo.Mode().IsDir()
+}
+
 // LogFileMatches tests whether the log file specified by filePath matches
 // in terms of its first record (whether it is older than the 'minTimestamp').
 // If strictMatch is false then in case of non matching file, also its mtime
@@ -140,7 +155,13 @@ type LogFileProcFunc = func(conf *Conf, localTimezone string, minTimestamp int64
 // returns a customized function for file/directory processing.
 func CreateLogFileProcFunc(processor LogItemProcessor, destChans ...chan conversion.OutputRecord) LogFileProcFunc {
 	return func(conf *Conf, localTimezone string, minTimestamp int64) {
-		files := getFilesInDir(conf.SrcPath, minTimestamp, !conf.PartiallyMatchingFiles, localTimezone)
+		var files []string
+		if isDir(conf.SrcPath) {
+			files = getFilesInDir(conf.SrcPath, minTimestamp, !conf.PartiallyMatchingFiles, localTimezone)
+
+		} else {
+			files = []string{conf.SrcPath}
+		}
 		log.Printf("Found %d file(s) to process in %s", len(files), conf.SrcPath)
 		for _, file := range files {
 			p := newParser(file, localTimezone, processor.GetAppType())

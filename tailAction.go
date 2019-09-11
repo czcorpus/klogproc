@@ -111,7 +111,7 @@ func newTailProcessor(tailConf *tail.FileConf, conf *Conf, geoDB *geoip2.Reader)
 	if err != nil {
 		log.Fatal("ERROR: Failed to initialize parser: ", err)
 	}
-	logTransformer, err := GetLogTransformer(tailConf.AppType, tailConf.Version)
+	logTransformer, err := GetLogTransformer(tailConf.AppType, tailConf.Version, conf.CustomConfDir)
 	if err != nil {
 		log.Fatal("ERROR: Failed to initialize transformer: ", err)
 	}

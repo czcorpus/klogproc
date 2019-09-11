@@ -21,6 +21,7 @@ import (
 	"github.com/czcorpus/klogproc/conversion/kontext"
 	"github.com/czcorpus/klogproc/conversion/kwords"
 	"github.com/czcorpus/klogproc/conversion/morfio"
+	"github.com/czcorpus/klogproc/conversion/ske"
 	"github.com/czcorpus/klogproc/conversion/syd"
 	"github.com/czcorpus/klogproc/conversion/treq"
 )
@@ -108,8 +109,24 @@ func (s *kwordsTransformer) Transform(logRec conversion.InputRecord, recType str
 
 // ------------------------------------
 
+type skeTransformer struct {
+	t *ske.Transformer
+}
+
+// Transform transforms KWords app log record types as general InputRecord
+// In case of type mismatch, error is returned.
+func (s *skeTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
+	tRec, ok := logRec.(*ske.InputRecord)
+	if ok {
+		return s.t.Transform(tRec, recType, anonymousUsers)
+	}
+	return nil, fmt.Errorf("Invalid type for conversion by KWords transformer %T", logRec)
+}
+
+// ------------------------------------
+
 // GetLogTransformer returns a type-safe transformer for a concrete app type
-func GetLogTransformer(appType string, version int) (conversion.LogItemTransformer, error) {
+func GetLogTransformer(appType string, version int, customConfDir string) (conversion.LogItemTransformer, error) {
 
 	switch appType {
 	case conversion.AppTypeKontext:
@@ -122,6 +139,9 @@ func GetLogTransformer(appType string, version int) (conversion.LogItemTransform
 		return &morfioTransformer{t: &morfio.Transformer{}}, nil
 	case conversion.AppTypeKwords:
 		return &kwordsTransformer{t: &kwords.Transformer{}}, nil
+	case conversion.AppTypeSke:
+		t, err := ske.NewTransformer(customConfDir)
+		return &skeTransformer{t: t}, err
 	default:
 		return nil, fmt.Errorf("Cannot find log transformer for app type %s", appType)
 	}
