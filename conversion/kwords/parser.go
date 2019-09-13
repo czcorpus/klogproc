@@ -59,7 +59,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 			CaseInsensitive: items[12],
 		}, err
 	}
-	return nil, conversion.NewMinorParsingError(
+	return nil, conversion.NewLineParsingError(
 		lineNum,
 		fmt.Sprintf("Invalid line format for KWords. Expecting 13 tab-separated items, found %d", len(items)),
 	)

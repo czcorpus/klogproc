@@ -58,6 +58,6 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 		return nil, fmt.Errorf("Failed to process QUERY entry: %s", s)
 
 	} else {
-		return nil, conversion.NewMinorParsingError(lineNum, fmt.Sprintf("ignored non-query entry"))
+		return nil, conversion.NewLineParsingError(lineNum, fmt.Sprintf("ignored non-query entry"))
 	}
 }

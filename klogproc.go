@@ -56,6 +56,7 @@ type Conf struct {
 	LocalTimezone  string                 `json:"localTimezone"`
 	AnonymousUsers []int                  `json:"anonymousUsers"`
 	LogPath        string                 `json:"logPath"`
+	CustomConfDir  string                 `json:"customConfDir"`
 	RecUpdate      elastic.DocUpdConf     `json:"recordUpdate"`
 	ElasticSearch  elastic.ConnectionConf `json:"elasticSearch"`
 	InfluxDB       influx.ConnectionConf  `json:"influxDb"`

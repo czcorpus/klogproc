@@ -74,6 +74,6 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 			// No query2 in case of the 'D' query
 		}, err
 	}
-	return nil, conversion.NewMinorParsingError(
+	return nil, conversion.NewLineParsingError(
 		lineNum, fmt.Sprintf("Invalid line format. Expecting min. 10 (type L) or min. 12 (type D) tab-separated items, found %d", len(items)))
 }

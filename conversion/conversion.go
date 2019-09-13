@@ -38,22 +38,27 @@ const (
 
 	// AppTypeTreq defines a universal storage identifier for Treq
 	AppTypeTreq = "treq"
+
+	// AppTypeSke defines a universal storage identifier for Treq
+	AppTypeSke = "ske"
 )
 
-// MinorParsingError is an ignorable error which is used
-// to inform user about exact position where the error occured
-type MinorParsingError struct {
+// LineParsingError informs that we failed to parse a line we
+// actually wanted to parse. This means no need to stop whole
+// parsing but still it may be important to inform user about
+// that.
+type LineParsingError struct {
 	LineNumber int
 	Message    string
 }
 
-func (m MinorParsingError) Error() string {
+func (m LineParsingError) Error() string {
 	return fmt.Sprintf("line %d: %s", m.LineNumber, m.Message)
 }
 
-// NewMinorParsingError is a constructor for MinorParsingError
-func NewMinorParsingError(lineNumber int, message string) MinorParsingError {
-	return MinorParsingError{LineNumber: lineNumber, Message: message}
+// NewLineParsingError is a constructor for LineParsingError
+func NewLineParsingError(lineNumber int, message string) LineParsingError {
+	return LineParsingError{LineNumber: lineNumber, Message: message}
 }
 
 // InputRecord describes a common behavior for objects extracted
@@ -147,6 +152,13 @@ func ImportBool(v, keyName string) (bool, error) {
 // of a parsing error, "zero" time instance is created.
 func ConvertDatetimeString(datetime string) time.Time {
 	if t, err := time.Parse("2006-01-02T15:04:05-07:00", datetime); err == nil {
+		return t
+	}
+	return time.Time{}
+}
+
+func ConvertAccessLogDatetimeString(datetime string) time.Time {
+	if t, err := time.Parse("02/Jan/2006:15:04:05 -0700", datetime); err == nil {
 		return t
 	}
 	return time.Time{}

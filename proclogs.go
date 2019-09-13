@@ -138,7 +138,7 @@ func processLogs(conf *Conf, action string) {
 			if !conf.UsesRedis() {
 				log.Fatal("FATAL: Redis not configured")
 			}
-			lt, err := GetLogTransformer(conf.LogRedis.AppType, conf.LogRedis.Version)
+			lt, err := GetLogTransformer(conf.LogRedis.AppType, conf.LogRedis.Version, conf.CustomConfDir)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -176,7 +176,7 @@ func processLogs(conf *Conf, action string) {
 			log.Printf("INFO: Ignored %d non-loggable items (bots etc.)", processor.numNonLoggable)
 
 		case actionBatch:
-			lt, err := GetLogTransformer(conf.LogFiles.AppType, conf.LogFiles.Version)
+			lt, err := GetLogTransformer(conf.LogFiles.AppType, conf.LogFiles.Version, conf.CustomConfDir)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -194,7 +194,7 @@ func processLogs(conf *Conf, action string) {
 
 			var wg sync.WaitGroup
 			wg.Add(2)
-			go elastic.RunWriteConsumer(conf.LogRedis.AppType, &conf.ElasticSearch, channelWriteES, &wg, worklog)
+			go elastic.RunWriteConsumer(conf.LogFiles.AppType, &conf.ElasticSearch, channelWriteES, &wg, worklog)
 			go influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux, &wg)
 			proc := batch.CreateLogFileProcFunc(processor, channelWriteES, channelWriteInflux)
 			proc(&conf.LogFiles, conf.LocalTimezone, worklog.GetLastRecord())
