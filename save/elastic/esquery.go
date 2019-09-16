@@ -140,6 +140,9 @@ func NewEmptyResult() Result {
 // find documents matching specified datetime range, optional IP
 // address and optional userAgent substring/pattern
 func CreateClientSrchQuery(fromDate string, toDate string, ipAddress string, userAgent string, chunkSize int) ([]byte, error) {
+	if chunkSize < 1 {
+		return []byte{}, fmt.Errorf("Cannot load results of size < 1 (found %d)", chunkSize)
+	}
 	m := boolObj{Must: make([]interface{}, 1)}
 	dateInterval := datetimeRangeExpr{From: fromDate, To: toDate}
 	m.Must[0] = &rangeObj{Range: datetimeRangeQuery{Datetime: dateInterval}}

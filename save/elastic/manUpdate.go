@@ -128,7 +128,17 @@ func createDocBulkMetaRecord(index string, objType string, id string) ([]byte, e
 	return json.Marshal(obj)
 }
 
-func (c *ESClient) manualBulkRecordOp(index string, filters DocUpdateFilter, rawOp []byte, scrollTTL string, srchChunkSize int) (int, error) {
+func (c *ESClient) logDryRunInfo(hits Hits) int {
+	for _, v := range hits.Hits {
+		log.Printf("INFO: record to update: %s/%s/%s/%s\n", c.server, v.Index, v.Type, v.ID)
+	}
+	return len(hits.Hits)
+}
+
+func (c *ESClient) manualBulkRecordOp(index string, filters DocUpdateFilter, rawOp []byte, scrollTTL string, srchChunkSize int, dryRun bool) (int, error) {
+	if dryRun {
+		log.Print("WARNING: Dry run mode is enabled! No writes will be performed.")
+	}
 	totalUpdated := 0
 	if !filters.Disabled {
 		items, err := c.SearchRecords(filters, scrollTTL, srchChunkSize)
@@ -137,11 +147,18 @@ func (c *ESClient) manualBulkRecordOp(index string, filters DocUpdateFilter, raw
 
 		} else if items.Hits.Total == 0 {
 			return 0, nil
-		}
-		ans, bulkErr := c.bulkUpdateUpdRecordScroll(index, items.Hits, rawOp)
-		totalUpdated += ans
-		if bulkErr != nil {
-			return totalUpdated, bulkErr
+
+		} else if len(items.Hits.Hits) > 0 {
+			if dryRun {
+				totalUpdated += c.logDryRunInfo(items.Hits)
+
+			} else {
+				ans, bulkErr := c.bulkUpdateUpdRecordScroll(index, items.Hits, rawOp)
+				totalUpdated += ans
+				if bulkErr != nil {
+					return totalUpdated, bulkErr
+				}
+			}
 		}
 		if items.ScrollID != "" {
 			for len(items.Hits.Hits) > 0 {
@@ -150,10 +167,15 @@ func (c *ESClient) manualBulkRecordOp(index string, filters DocUpdateFilter, raw
 					return totalUpdated, err
 				}
 				if len(items.Hits.Hits) > 0 {
-					ans, bulkErr = c.bulkUpdateUpdRecordScroll(index, items.Hits, rawOp)
-					totalUpdated += ans
-					if err != nil {
-						return totalUpdated, err
+					if dryRun {
+						totalUpdated += c.logDryRunInfo(items.Hits)
+
+					} else {
+						ans, bulkErr := c.bulkUpdateUpdRecordScroll(index, items.Hits, rawOp)
+						totalUpdated += ans
+						if bulkErr != nil {
+							return totalUpdated, err
+						}
 					}
 				}
 			}
@@ -163,21 +185,21 @@ func (c *ESClient) manualBulkRecordOp(index string, filters DocUpdateFilter, raw
 }
 
 // ManualBulkRecordUpdate updates matching records with provided object
-func (c *ESClient) ManualBulkRecordUpdate(index string, filters DocUpdateFilter, upd DocUpdRecord, scrollTTL string, srchChunkSize int) (int, error) {
+func (c *ESClient) ManualBulkRecordUpdate(index string, filters DocUpdateFilter, upd DocUpdRecord, scrollTTL string, srchChunkSize int, dryRun bool) (int, error) {
 
 	jsonData, err := createLogRecUpdQuery(upd)
 	if err != nil {
 		log.Fatalf("Failed to generate bulk update JSON (values): %s", err)
 	}
-	return c.manualBulkRecordOp(index, filters, jsonData, scrollTTL, srchChunkSize)
+	return c.manualBulkRecordOp(index, filters, jsonData, scrollTTL, srchChunkSize, dryRun)
 }
 
 // ManualBulkRecordKeyRemove removes a specified key from matching records.
-func (c *ESClient) ManualBulkRecordKeyRemove(index string, filters DocUpdateFilter, key string, scrollTTL string, srchChunkSize int) (int, error) {
+func (c *ESClient) ManualBulkRecordKeyRemove(index string, filters DocUpdateFilter, key string, scrollTTL string, srchChunkSize int, dryRun bool) (int, error) {
 
 	jsonData, err := createLogRecKeyRemoveQuery(key)
 	if err != nil {
 		log.Fatalf("Failed to generate bulk update JSON (values): %s", err)
 	}
-	return c.manualBulkRecordOp(index, filters, jsonData, scrollTTL, srchChunkSize)
+	return c.manualBulkRecordOp(index, filters, jsonData, scrollTTL, srchChunkSize, dryRun)
 }
