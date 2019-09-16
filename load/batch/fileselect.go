@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
+	"github.com/czcorpus/klogproc/fsop"
 )
 
 var (
@@ -62,35 +63,6 @@ func importTimeFromLine(lineStr string, timezoneStr string) (int64, error) {
 	return -1, err
 }
 
-// getFileMtime returns file's UNIX mtime (in secods).
-// In case of an error, -1 is returned
-func getFileMtime(filePath string) int64 {
-	f, err := os.Open(filePath)
-	if err != nil {
-		return -1
-	}
-	finfo, err := f.Stat()
-	if err == nil {
-		return finfo.ModTime().Unix()
-	}
-	return -1
-}
-
-// isDir tests whether a provided path represents
-// a directory. If not or in case of an IO error,
-// false is returned.
-func isDir(path string) bool {
-	f, err := os.Open(path)
-	if err != nil {
-		return false
-	}
-	finfo, err := f.Stat()
-	if err != nil {
-		return false
-	}
-	return finfo.Mode().IsDir()
-}
-
 // LogFileMatches tests whether the log file specified by filePath matches
 // in terms of its first record (whether it is older than the 'minTimestamp').
 // If strictMatch is false then in case of non matching file, also its mtime
@@ -113,7 +85,7 @@ func LogFileMatches(filePath string, minTimestamp int64, strictMatch bool, timez
 	}
 
 	if startTime < minTimestamp && !strictMatch {
-		startTime = getFileMtime(filePath)
+		startTime = fsop.GetFileMtime(filePath)
 	}
 
 	return startTime >= minTimestamp, nil
@@ -156,7 +128,7 @@ type LogFileProcFunc = func(conf *Conf, localTimezone string, minTimestamp int64
 func CreateLogFileProcFunc(processor LogItemProcessor, destChans ...chan conversion.OutputRecord) LogFileProcFunc {
 	return func(conf *Conf, localTimezone string, minTimestamp int64) {
 		var files []string
-		if isDir(conf.SrcPath) {
+		if fsop.IsDir(conf.SrcPath) {
 			files = getFilesInDir(conf.SrcPath, minTimestamp, !conf.PartiallyMatchingFiles, localTimezone)
 
 		} else {

@@ -27,6 +27,8 @@ import (
 	"github.com/czcorpus/klogproc/conversion"
 )
 
+// isEntryQuery returns true if the action is one of
+// those we consider "queries".
 func isEntryQuery(action string) bool {
 	ea := []string{"first", "wordlist", "wsketch", "thes", "wsdiff"}
 	for _, item := range ea {
@@ -37,6 +39,7 @@ func isEntryQuery(action string) bool {
 	return false
 }
 
+// OutputRecord represents a polished version of SkE's access log.
 type OutputRecord struct {
 	ID          string `json:"-"`
 	Type        string `json:"type"`
@@ -47,6 +50,7 @@ type OutputRecord struct {
 	Datetime    string `json:"datetime"`
 	time        time.Time
 	IPAddress   string                   `json:"ipAddress"`
+	UserAgent   string                   `json:"userAgent"`
 	UserID      string                   `json:"userId"`
 	IsAnonymous bool                     `json:"isAnonymous"`
 	IsQuery     bool                     `json:"isQuery"`
@@ -66,6 +70,7 @@ func (r *OutputRecord) SetLocation(countryName string, latitude float32, longitu
 	r.GeoIP.Timezone = timezone
 }
 
+// GetID returns an idempotent ID of the record.
 func (r *OutputRecord) GetID() string {
 	return r.ID
 }
@@ -90,12 +95,14 @@ func (r *OutputRecord) ToInfluxDB() (tags map[string]string, values map[string]i
 	return make(map[string]string), make(map[string]interface{})
 }
 
+// createID creates an idempotent ID of rec based on its properties.
 func createID(rec *OutputRecord) string {
 	str := rec.Type + rec.Corpus + rec.Subcorpus + strconv.FormatBool(rec.Limited) + rec.Action + rec.Datetime + rec.IPAddress + rec.UserID
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }
 
+// importCorpname imports corpname information out of URL-raw information.
 func importCorpname(rawCorpname string) (string, bool) {
 	items := strings.Split(rawCorpname, "/")
 	if len(items) > 1 && items[0] == "omezeni" {

@@ -20,14 +20,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
+	"github.com/czcorpus/klogproc/fsop"
 )
 
+// loadUserMap loads json-encoded [username]=>[user_id] map
 func loadUserMap(path string) (map[string]int, error) {
 	fr, err := os.OpenFile(path, os.O_RDONLY, 0644)
 	byteValue, err := ioutil.ReadAll(fr)
@@ -65,6 +68,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 		time:        logRecord.GetTime(),
 		Datetime:    logRecord.GetTime().Format(time.RFC3339),
 		IPAddress:   logRecord.Request.RemoteAddr,
+		UserAgent:   logRecord.Request.HTTPUserAgent,
 		IsAnonymous: userID == -1 || conversion.UserBelongsToList(userID, anonymousUsers),
 		IsQuery:     isEntryQuery(logRecord.Action),
 		UserID:      strconv.Itoa(userID),
@@ -78,14 +82,23 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 	return r, nil
 }
 
-// NewTransformer is a default constructor for the Transformer
+// NewTransformer is a default constructor for the Transformer.
+// It also loads user ID map from a configured file (if exists).
 func NewTransformer(customConfDir string) (*Transformer, error) {
-	var userMap map[string]int
+	ans := &Transformer{
+		userMap: make(map[string]int),
+	}
 	var err error
 	if customConfDir != "" {
-		userMap, err = loadUserMap(filepath.Join(customConfDir, "usermap.json"))
+		confPath := filepath.Join(customConfDir, "usermap.json")
+		if fsop.IsFile(confPath) {
+			log.Printf("INFO: loading custom user map %s", confPath)
+			userMap, err := loadUserMap(confPath)
+			if err != nil {
+				return ans, err
+			}
+			ans.userMap = userMap
+		}
 	}
-	return &Transformer{
-		userMap: userMap,
-	}, err
+	return ans, err
 }

@@ -68,8 +68,7 @@ func getProcTime(procTimeExpr string) (float32, error) {
 // LineParser is a parser for reading KonText application logs
 type LineParser struct{}
 
-// ParseLine parses a HTTP access log format line
-func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*InputRecord, error) {
+func (lp *LineParser) tokenize(s string) []string {
 	items := make([]string, 10)
 	currQuoted := make([]string, 0, 30)
 	var currQuotChar byte
@@ -103,8 +102,24 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 			}
 		}
 	}
+	return items
+}
 
-	urlPart := strings.Split(items[4], " ")[1]
+// ParseLine parses a HTTP access log format line
+// data example:
+//   0) 195.113.53.123
+//   1) -
+//   2) johndoe
+//   3) [16/Sep/2019:08:24:05 +0200]
+//   4) "GET /ske/css/images/ui-bg_highlight-hard_100_f2f5f7_1x100.png HTTP/2.0"
+//   5) 200
+//   6) 332
+//   7) "https://www.korpus.cz/ske/css/jquery-ui.min.css"
+//   8) "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/76.0.3809.100 Chrome/76.0.3809.100 Safari/537.36"
+//   9) rt=0.012
+func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*InputRecord, error) {
+	tokens := lp.tokenize(s)
+	urlPart := strings.Split(tokens[4], " ")[1]
 	parsedURL, err := url.Parse(urlPart)
 	if err != nil {
 		return nil, conversion.NewLineParsingError(lineNum, err.Error())
@@ -117,8 +132,8 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 	if action == "" {
 		return &InputRecord{isLoggable: false}, nil
 	}
-	procTime, err := getProcTime(items[9])
-	if err != nil && items[9] != "" {
+	procTime, err := getProcTime(tokens[9])
+	if err != nil && tokens[9] != "" {
 		return &InputRecord{isLoggable: false}, err
 	}
 
@@ -127,12 +142,12 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 		Action:     action,
 		Corpus:     args.Get("corpname"),
 		Subcorpus:  args.Get("usesubcorp"),
-		User:       items[2],
-		Datetime:   items[3],
+		User:       tokens[2],
+		Datetime:   tokens[3],
 		Request: Request{
-			HTTPUserAgent:  items[9],
-			HTTPRemoteAddr: items[0],
-			RemoteAddr:     items[0],
+			HTTPUserAgent:  tokens[8],
+			HTTPRemoteAddr: tokens[0],
+			RemoteAddr:     tokens[0],
 		},
 		ProcTime: procTime,
 	}

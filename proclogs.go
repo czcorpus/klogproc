@@ -61,7 +61,7 @@ func (clp *CNKLogProcessor) ProcItem(logRec conversion.InputRecord) conversion.O
 	if logRec.AgentIsLoggable() {
 		rec, err := clp.logTransformer.Transform(logRec, clp.appType, clp.anonymousUsers)
 		if err != nil {
-			log.Printf("ERROR: failed to transform item %s", logRec)
+			log.Printf("ERROR: failed to transform item %s: %s", logRec, err)
 			return nil
 		}
 		applyLocation(logRec, clp.geoIPDb, rec)
