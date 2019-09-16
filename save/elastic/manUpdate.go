@@ -24,6 +24,7 @@ import (
 
 // DocUpdateFilter specifies parameters of docupdate operation
 type DocUpdateFilter struct {
+	AppType   string `json:"appType"`
 	Disabled  bool   `json:"disabled"`
 	FromDate  string `json:"fromDate"`
 	ToDate    string `json:"toDate"`
