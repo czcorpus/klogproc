@@ -32,6 +32,7 @@ type Request struct {
 	RemoteAddr       string `json:"REMOTE_ADDR"`
 }
 
+// InputRecord represents a raw-parsed version of SkE's access log
 type InputRecord struct {
 	Action     string
 	Corpus     string
@@ -44,14 +45,19 @@ type InputRecord struct {
 	// TODO
 }
 
+// GetTime returns a normalized log date and time information
 func (r *InputRecord) GetTime() time.Time {
 	return conversion.ConvertAccessLogDatetimeString(r.Datetime)
 }
 
+// GetClientIP returns a normalized IP address info
 func (r *InputRecord) GetClientIP() net.IP {
 	return net.ParseIP(r.Request.RemoteAddr)
 }
 
+// AgentIsLoggable returns true if the record should be stored.
+// Otherwise (bots, static files access, some operations) it
+// returns false and klogproc ignores such record.
 func (r *InputRecord) AgentIsLoggable() bool {
 	return r.isLoggable
 }
