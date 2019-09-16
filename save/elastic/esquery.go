@@ -58,6 +58,14 @@ type userAgentMatchObj struct {
 	Match userAgentExpr `json:"match"`
 }
 
+type appTypeExpr struct {
+	AppType string `json:"type"`
+}
+
+type appTypeMatchObj struct {
+	Match appTypeExpr `json:"match"`
+}
+
 type boolObj struct {
 	Must []interface{} `json:"must"`
 }
@@ -139,20 +147,24 @@ func NewEmptyResult() Result {
 // CreateClientSrchQuery generates a JSON-encoded query for ElastiSearch to
 // find documents matching specified datetime range, optional IP
 // address and optional userAgent substring/pattern
-func CreateClientSrchQuery(fromDate string, toDate string, ipAddress string, userAgent string, chunkSize int) ([]byte, error) {
+func CreateClientSrchQuery(filter DocUpdateFilter, chunkSize int) ([]byte, error) {
 	if chunkSize < 1 {
 		return []byte{}, fmt.Errorf("Cannot load results of size < 1 (found %d)", chunkSize)
 	}
 	m := boolObj{Must: make([]interface{}, 1)}
-	dateInterval := datetimeRangeExpr{From: fromDate, To: toDate}
+	dateInterval := datetimeRangeExpr{From: filter.FromDate, To: filter.ToDate}
 	m.Must[0] = &rangeObj{Range: datetimeRangeQuery{Datetime: dateInterval}}
-	if ipAddress != "" {
-		ipAddrObj := iPAddressTermObj{Term: iPAddressExpr{IPAddress: ipAddress}}
+	if filter.IPAddress != "" {
+		ipAddrObj := iPAddressTermObj{Term: iPAddressExpr{IPAddress: filter.IPAddress}}
 		m.Must = append(m.Must, ipAddrObj)
 	}
-	if userAgent != "" {
-		userAgentObj := userAgentMatchObj{userAgentExpr{UserAgent: userAgent}}
+	if filter.UserAgent != "" {
+		userAgentObj := userAgentMatchObj{userAgentExpr{UserAgent: filter.UserAgent}}
 		m.Must = append(m.Must, userAgentObj)
+	}
+	if filter.AppType != "" {
+		appTypeObj := appTypeMatchObj{appTypeExpr{AppType: filter.AppType}}
+		m.Must = append(m.Must, appTypeObj)
 	}
 	q := srchQuery{Query: query{Bool: m}, From: 0, Size: chunkSize}
 	return q.ToJSONQuery()

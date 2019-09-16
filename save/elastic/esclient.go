@@ -187,8 +187,7 @@ func (c *ESClient) FetchScroll(scrollID string, ttl string) (Result, error) {
 // providing TTL value to specify how long the result scroll should be
 // available.
 func (c *ESClient) SearchRecords(filter DocUpdateFilter, ttl string, chunkSize int) (Result, error) {
-	encQuery, err := CreateClientSrchQuery(filter.FromDate, filter.ToDate, filter.IPAddress, filter.UserAgent,
-		chunkSize)
+	encQuery, err := CreateClientSrchQuery(filter, chunkSize)
 	if err == nil {
 		return c.search(encQuery, ttl)
 	}
