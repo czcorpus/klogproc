@@ -91,14 +91,14 @@ func validateConf(conf *Conf) {
 			log.Fatal("FATAL: ", err)
 		}
 	}
-
 }
 
-func updateRecords(conf *Conf) {
+func updateRecords(conf *Conf, dryRun bool) {
 	client := elastic.NewClient(&conf.ElasticSearch)
 	for _, updConf := range conf.RecUpdate.Filters {
 		totalUpdated, err := client.ManualBulkRecordUpdate(conf.ElasticSearch.Index, updConf,
-			conf.RecUpdate.Update, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize)
+			conf.RecUpdate.Update, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize,
+			dryRun)
 		if err == nil {
 			log.Printf("INFO: Updated %d items\n", totalUpdated)
 
@@ -108,11 +108,12 @@ func updateRecords(conf *Conf) {
 	}
 }
 
-func removeKeyFromRecords(conf *Conf) {
+func removeKeyFromRecords(conf *Conf, dryRun bool) {
 	client := elastic.NewClient(&conf.ElasticSearch)
 	for _, updConf := range conf.RecUpdate.Filters {
 		totalUpdated, err := client.ManualBulkRecordKeyRemove(conf.ElasticSearch.Index, updConf,
-			conf.RecUpdate.RemoveKey, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize)
+			conf.RecUpdate.RemoveKey, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize,
+			dryRun)
 		if err == nil {
 			log.Printf("INFO: Removed key %s from %d items\n", conf.RecUpdate.RemoveKey, totalUpdated)
 
@@ -174,6 +175,7 @@ func setup(confPath string) (*Conf, *os.File) {
 }
 
 func main() {
+	dryRun := flag.Bool("dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending KonText/Bonito logs to ElasticSearch\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\t%s\n\nOptions:\n",
 			filepath.Base(os.Args[0]), strings.Join([]string{actionBatch, actionTail, actionRedis, actionDocupdate, actionKeyremove, actionHelp}, ", "))
@@ -189,10 +191,10 @@ func main() {
 		help(flag.Arg(1))
 	case actionDocupdate:
 		conf, logf = setup(flag.Arg(1))
-		updateRecords(conf)
+		updateRecords(conf, *dryRun)
 	case actionKeyremove:
 		conf, logf = setup(flag.Arg(1))
-		removeKeyFromRecords(conf)
+		removeKeyFromRecords(conf, *dryRun)
 	case actionBatch, actionTail, actionRedis:
 		conf, logf = setup(flag.Arg(1))
 		log.Print(startingServiceMsg)
