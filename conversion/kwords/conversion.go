@@ -84,6 +84,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 		IPAddress:       logRecord.IPAddress,
 		UserID:          logRecord.UserID,
 		IsAnonymous:     userID == -1 || conversion.UserBelongsToList(userID, anonymousUsers),
+		IsQuery:         true,
 		NumFiles:        numFiles,
 		TargetInputType: logRecord.TargetInputType,
 		TargetLength:    targetLength,
