@@ -39,6 +39,7 @@ func createID(rec *OutputRecord) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// OutputRecord represents polished, export ready record from Kwords log
 type OutputRecord struct {
 	ID              string `json:"-"`
 	Type            string `json:"type"`
@@ -47,6 +48,7 @@ type OutputRecord struct {
 	IPAddress       string                   `json:"ipAddress"`
 	UserID          string                   `json:"userId"`
 	IsAnonymous     bool                     `json:"isAnonymous"`
+	IsQuery         bool                     `json:"isQuery"`
 	NumFiles        int                      `json:"numFiles"`
 	TargetInputType string                   `json:"targetInputType"`
 	TargetLength    int                      `json:"targetLength"`

@@ -34,6 +34,7 @@ func createID(rec *OutputRecord) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// OutputRecord represents polished, export ready record from Morfio log
 type OutputRecord struct {
 	ID              string `json:"-"`
 	Type            string `json:"type"`
@@ -42,6 +43,7 @@ type OutputRecord struct {
 	IPAddress       string                   `json:"ipAddress"`
 	UserID          string                   `json:"userId"`
 	IsAnonymous     bool                     `json:"isAnonymous"`
+	IsQuery         bool                     `json:"isQuery"`
 	KeyReq          string                   `json:"keyReq"`
 	KeyUsed         string                   `json:"keyUsed"`
 	Key             string                   `json:"key"`
