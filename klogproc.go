@@ -177,7 +177,7 @@ func setup(confPath string) (*Conf, *os.File) {
 func main() {
 	dryRun := flag.Bool("dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending KonText/Bonito logs to ElasticSearch\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\t%s\n\nOptions:\n",
+		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending CNC app logs to ElasticSearch & InfluxDB\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\t%s\n\nOptions:\n",
 			filepath.Base(os.Args[0]), strings.Join([]string{actionBatch, actionTail, actionRedis, actionDocupdate, actionKeyremove, actionHelp}, ", "))
 		flag.PrintDefaults()
 	}
