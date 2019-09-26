@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ske
+package wag
 
 import (
 	"strings"
@@ -22,17 +22,22 @@ import (
 	"github.com/czcorpus/klogproc/load/accesslog"
 )
 
-const (
-	actionMark    = "run.cgi/"
-	actionMarkLen = len("run.cgi/")
+var (
+	pathPrefixes = []string{"slovo-v-kostce", "word-at-a-glance", "wag", "wdg", "wdglance"}
 )
 
 func getAction(path string) string {
-	i := strings.Index(path, actionMark)
-	if i > -1 {
-		return path[i+actionMarkLen:]
+	items := strings.Split(strings.Trim(path, "/"), "/")
+	for _, prefix := range pathPrefixes {
+		if items[0] == prefix && len(items) > 1 {
+			return items[1]
+		}
 	}
-	return ""
+	return items[0]
+}
+
+func isLoggable(action string) bool {
+	return action == "search" || action == "word-forms" || action == "similar-freq-words"
 }
 
 // LineParser is a parser for reading KonText application logs
@@ -52,18 +57,20 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 	}
 
 	ans := &InputRecord{
-		isLoggable: true,
+		isLoggable: isLoggable(action),
 		Action:     action,
-		Corpus:     parsed.URLArgs.Get("corpname"),
-		Subcorpus:  parsed.URLArgs.Get("usesubcorp"),
-		User:       parsed.Username,
 		Datetime:   parsed.Datetime,
 		Request: Request{
 			HTTPUserAgent:  parsed.UserAgent,
 			HTTPRemoteAddr: parsed.IPAddress,
 			RemoteAddr:     parsed.IPAddress, // TODO the same stuff as above?
 		},
-		ProcTime: parsed.ProcTime,
+		ProcTime:  parsed.ProcTime,
+		QueryType: parsed.URLArgs.Get("queryType"),
+		Lang1:     parsed.URLArgs.Get("lang1"),
+		Lang2:     parsed.URLArgs.Get("lang2"),
+		Query1:    parsed.URLArgs.Get("q1"),
+		Query2:    parsed.URLArgs.Get("q2"),
 	}
 	return ans, nil
 }

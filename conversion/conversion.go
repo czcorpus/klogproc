@@ -41,6 +41,9 @@ const (
 
 	// AppTypeSke defines a universal storage identifier for Treq
 	AppTypeSke = "ske"
+
+	// AppTypeWag defines a universal storage identifier for Word at a Glance
+	AppTypeWag = "wag"
 )
 
 // LineParsingError informs that we failed to parse a line we

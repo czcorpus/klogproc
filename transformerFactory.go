@@ -24,6 +24,7 @@ import (
 	"github.com/czcorpus/klogproc/conversion/ske"
 	"github.com/czcorpus/klogproc/conversion/syd"
 	"github.com/czcorpus/klogproc/conversion/treq"
+	"github.com/czcorpus/klogproc/conversion/wag"
 )
 
 // ------------------------------------
@@ -113,14 +114,30 @@ type skeTransformer struct {
 	t *ske.Transformer
 }
 
-// Transform transforms KWords app log record types as general InputRecord
+// Transform transforms SkE app log record (= web access log) types as general InputRecord
 // In case of type mismatch, error is returned.
 func (s *skeTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
 	tRec, ok := logRec.(*ske.InputRecord)
 	if ok {
 		return s.t.Transform(tRec, recType, anonymousUsers)
 	}
-	return nil, fmt.Errorf("Invalid type for conversion by KWords transformer %T", logRec)
+	return nil, fmt.Errorf("Invalid type for conversion by SkE transformer %T", logRec)
+}
+
+// ------------------------------------
+
+type wagTransformer struct {
+	t *wag.Transformer
+}
+
+// Transform transforms WaG app log record types as general InputRecord
+// In case of type mismatch, error is returned.
+func (s *wagTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
+	tRec, ok := logRec.(*wag.InputRecord)
+	if ok {
+		return s.t.Transform(tRec, recType, anonymousUsers)
+	}
+	return nil, fmt.Errorf("Invalid type for conversion by WaG transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -142,6 +159,8 @@ func GetLogTransformer(appType string, version int, customConfDir string) (conve
 	case conversion.AppTypeSke:
 		t, err := ske.NewTransformer(customConfDir)
 		return &skeTransformer{t: t}, err
+	case conversion.AppTypeWag:
+		return &wagTransformer{t: &wag.Transformer{}}, nil
 	default:
 		return nil, fmt.Errorf("Cannot find log transformer for app type %s", appType)
 	}

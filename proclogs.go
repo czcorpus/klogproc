@@ -173,7 +173,7 @@ func processLogs(conf *Conf, action string) {
 			close(channelWriteES)
 			close(channelWriteInflux)
 			finishEvent <- true
-			log.Printf("INFO: Ignored %d non-loggable items (bots etc.)", processor.numNonLoggable)
+			log.Printf("INFO: Ignored %d non-loggable items (bots, static files etc.)", processor.numNonLoggable)
 
 		case actionBatch:
 			lt, err := GetLogTransformer(conf.LogFiles.AppType, conf.LogFiles.Version, conf.CustomConfDir)
