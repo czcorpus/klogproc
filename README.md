@@ -22,6 +22,8 @@ concurrently which makes it quite fast.
 | Morfio  | morfio      |
 | SyD     | syd         |
 | Treq    | treq        |
+| SkE     | ske         |
+| WaG     | wag         |
 
 The program supports three operation modes - *batch*, *tail*, *redis*
 
