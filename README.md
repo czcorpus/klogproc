@@ -17,12 +17,13 @@ concurrently which makes it quite fast.
 
 | Name    | config code |
 |---------|-------------|
+| Calc    | calc        |
 | KonText | kontext     |
 | Kwords  | kwords      |
 | Morfio  | morfio      |
+| SkE     | ske         |
 | SyD     | syd         |
 | Treq    | treq        |
-| SkE     | ske         |
 | WaG     | wag         |
 
 The program supports three operation modes - *batch*, *tail*, *redis*
