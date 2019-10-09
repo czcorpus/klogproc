@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/czcorpus/klogproc/conversion"
+	"github.com/czcorpus/klogproc/conversion/calc"
 	"github.com/czcorpus/klogproc/conversion/kontext"
 	"github.com/czcorpus/klogproc/conversion/kwords"
 	"github.com/czcorpus/klogproc/conversion/morfio"
@@ -25,6 +26,7 @@ import (
 	"github.com/czcorpus/klogproc/conversion/syd"
 	"github.com/czcorpus/klogproc/conversion/treq"
 	"github.com/czcorpus/klogproc/conversion/wag"
+	"github.com/czcorpus/klogproc/users"
 )
 
 // ------------------------------------
@@ -142,8 +144,24 @@ func (s *wagTransformer) Transform(logRec conversion.InputRecord, recType string
 
 // ------------------------------------
 
+type calcTransformer struct {
+	t *calc.Transformer
+}
+
+// Transform transforms WaG app log record types as general InputRecord
+// In case of type mismatch, error is returned.
+func (s *calcTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
+	tRec, ok := logRec.(*calc.InputRecord)
+	if ok {
+		return s.t.Transform(tRec, recType, anonymousUsers)
+	}
+	return nil, fmt.Errorf("Invalid type for conversion by Calc transformer %T", logRec)
+}
+
+// ------------------------------------
+
 // GetLogTransformer returns a type-safe transformer for a concrete app type
-func GetLogTransformer(appType string, version int, customConfDir string) (conversion.LogItemTransformer, error) {
+func GetLogTransformer(appType string, version int, userMap *users.UserMap) (conversion.LogItemTransformer, error) {
 
 	switch appType {
 	case conversion.AppTypeKontext:
@@ -157,10 +175,11 @@ func GetLogTransformer(appType string, version int, customConfDir string) (conve
 	case conversion.AppTypeKwords:
 		return &kwordsTransformer{t: &kwords.Transformer{}}, nil
 	case conversion.AppTypeSke:
-		t, err := ske.NewTransformer(customConfDir)
-		return &skeTransformer{t: t}, err
+		return &skeTransformer{t: ske.NewTransformer(userMap)}, nil
 	case conversion.AppTypeWag:
 		return &wagTransformer{t: &wag.Transformer{}}, nil
+	case conversion.AppTypeCalc:
+		return &calcTransformer{t: calc.NewTransformer(userMap)}, nil
 	default:
 		return nil, fmt.Errorf("Cannot find log transformer for app type %s", appType)
 	}

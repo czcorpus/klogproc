@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/czcorpus/klogproc/conversion"
+	"github.com/czcorpus/klogproc/conversion/calc"
 	"github.com/czcorpus/klogproc/conversion/kontext"
 	"github.com/czcorpus/klogproc/conversion/kwords"
 	"github.com/czcorpus/klogproc/conversion/morfio"
@@ -105,6 +106,16 @@ func (parser *wagLineParser) ParseLine(s string, lineNum int, localTimezone stri
 
 // ------------------------------------
 
+type calcLineParser struct {
+	lp *calc.LineParser
+}
+
+func (parser *calcLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum, localTimezone)
+}
+
+// ------------------------------------
+
 // NewLineParser creates a parser for individual lines of a respective appType
 func NewLineParser(appType string) (LineParser, error) {
 	switch appType {
@@ -122,6 +133,8 @@ func NewLineParser(appType string) (LineParser, error) {
 		return &skeLineParser{lp: &ske.LineParser{}}, nil
 	case conversion.AppTypeWag:
 		return &wagLineParser{lp: &wag.LineParser{}}, nil
+	case conversion.AppTypeCalc:
+		return &calcLineParser{lp: &calc.LineParser{}}, nil
 	default:
 		return nil, fmt.Errorf("Parser not found for application type %s", appType)
 	}
