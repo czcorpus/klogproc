@@ -19,13 +19,16 @@ package main
 import (
 	"fmt"
 	"log"
+	"path/filepath"
 	"sync"
 
 	"github.com/czcorpus/klogproc/conversion"
+	"github.com/czcorpus/klogproc/fsop"
 	"github.com/czcorpus/klogproc/load/batch"
 	"github.com/czcorpus/klogproc/load/sredis"
 	"github.com/czcorpus/klogproc/save/elastic"
 	"github.com/czcorpus/klogproc/save/influx"
+	"github.com/czcorpus/klogproc/users"
 	"github.com/oschwald/geoip2-golang"
 )
 
@@ -126,8 +129,13 @@ func retryRescuedItems(appType string, queue *sredis.RedisQueue, conf *elastic.C
 // precedence.
 func processLogs(conf *Conf, action string) {
 	geoDb, err := geoip2.Open(conf.GeoIPDbPath)
-	if err != nil {
-		log.Fatal("FATAL: ", err)
+	userMap := users.EmptyUserMap()
+	confPath := filepath.Join(conf.CustomConfDir, "usermap.json")
+	if fsop.IsFile(confPath) {
+		userMap, err = users.LoadUserMap(confPath)
+		if err != nil {
+			log.Fatal("FATAL: ", err)
+		}
 	}
 	defer geoDb.Close()
 
@@ -138,7 +146,7 @@ func processLogs(conf *Conf, action string) {
 			if !conf.UsesRedis() {
 				log.Fatal("FATAL: Redis not configured")
 			}
-			lt, err := GetLogTransformer(conf.LogRedis.AppType, conf.LogRedis.Version, conf.CustomConfDir)
+			lt, err := GetLogTransformer(conf.LogRedis.AppType, conf.LogRedis.Version, userMap)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -176,7 +184,7 @@ func processLogs(conf *Conf, action string) {
 			log.Printf("INFO: Ignored %d non-loggable items (bots, static files etc.)", processor.numNonLoggable)
 
 		case actionBatch:
-			lt, err := GetLogTransformer(conf.LogFiles.AppType, conf.LogFiles.Version, conf.CustomConfDir)
+			lt, err := GetLogTransformer(conf.LogFiles.AppType, conf.LogFiles.Version, userMap)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -205,7 +213,7 @@ func processLogs(conf *Conf, action string) {
 			log.Printf("INFO: Ignored %d non-loggable items (bots etc.)", processor.numNonLoggable)
 
 		case actionTail:
-			runTailAction(conf, geoDb, finishEvent)
+			runTailAction(conf, geoDb, userMap, finishEvent)
 		}
 	}()
 	<-finishEvent

@@ -14,14 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ske
+package calc
 
 import (
 	"fmt"
 	"strconv"
 	"time"
 
-	"github.com/czcorpus/klogproc/conversion"
 	"github.com/czcorpus/klogproc/users"
 )
 
@@ -33,36 +32,28 @@ type Transformer struct {
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymousUsers []int) (*OutputRecord, error) {
 	userID := -1
-	if logRecord.User != "-" && logRecord.User != "" {
-		uid := t.userMap.GetIdOf(logRecord.User)
+	if logRecord.User.User != "-" && logRecord.User.User != "" {
+		uid := t.userMap.GetIdOf(logRecord.User.User)
 		if uid < 0 {
-			return nil, fmt.Errorf("Failed to find user ID of [%s]", logRecord.User)
+			return nil, fmt.Errorf("Failed to find user ID of [%s]", logRecord.User.User)
 		}
 		userID = uid
 	}
-
-	corpname, isLimited := importCorpname(logRecord.Corpus)
-	r := &OutputRecord{
-		Type:        recType,
-		time:        logRecord.GetTime(),
-		Datetime:    logRecord.GetTime().Format(time.RFC3339),
-		IPAddress:   logRecord.Request.RemoteAddr,
-		UserAgent:   logRecord.Request.HTTPUserAgent,
-		IsAnonymous: userID == -1 || conversion.UserBelongsToList(userID, anonymousUsers),
-		IsQuery:     isEntryQuery(logRecord.Action),
-		UserID:      strconv.Itoa(userID),
-		Action:      logRecord.Action,
-		Corpus:      corpname,
-		Limited:     isLimited,
-		Subcorpus:   logRecord.Subcorpus,
-		ProcTime:    logRecord.ProcTime,
+	ans := &OutputRecord{
+		Type:      recType,
+		time:      logRecord.GetTime(),
+		Datetime:  logRecord.GetTime().Format(time.RFC3339),
+		IsQuery:   true,
+		IPAddress: logRecord.ClientIP,
+		User:      logRecord.User.User,
+		UserID:    strconv.Itoa(userID),
+		Lang:      logRecord.Lang,
+		UserAgent: logRecord.UserAgent,
 	}
-	r.ID = createID(r)
-	return r, nil
+	ans.ID = createID(ans)
+	return ans, nil
 }
 
-// NewTransformer is a default constructor for the Transformer.
-// It also loads user ID map from a configured file (if exists).
 func NewTransformer(userMap *users.UserMap) *Transformer {
 	return &Transformer{userMap: userMap}
 }

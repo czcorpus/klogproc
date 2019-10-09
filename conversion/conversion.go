@@ -44,6 +44,9 @@ const (
 
 	// AppTypeWag defines a universal storage identifier for Word at a Glance
 	AppTypeWag = "wag"
+
+	// AppTypeCalc defines a universal storage identifier for Calc
+	AppTypeCalc = "calc"
 )
 
 // LineParsingError informs that we failed to parse a line we

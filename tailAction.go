@@ -25,6 +25,7 @@ import (
 	"github.com/czcorpus/klogproc/load/tail"
 	"github.com/czcorpus/klogproc/save/elastic"
 	"github.com/czcorpus/klogproc/save/influx"
+	"github.com/czcorpus/klogproc/users"
 	"github.com/oschwald/geoip2-golang"
 )
 
@@ -106,12 +107,12 @@ func (tp *tailProcessor) CheckIntervalSecs() int {
 
 // -----
 
-func newTailProcessor(tailConf *tail.FileConf, conf *Conf, geoDB *geoip2.Reader) *tailProcessor {
+func newTailProcessor(tailConf *tail.FileConf, conf *Conf, geoDB *geoip2.Reader, userMap *users.UserMap) *tailProcessor {
 	lineParser, err := batch.NewLineParser(tailConf.AppType)
 	if err != nil {
 		log.Fatal("ERROR: Failed to initialize parser: ", err)
 	}
-	logTransformer, err := GetLogTransformer(tailConf.AppType, tailConf.Version, conf.CustomConfDir)
+	logTransformer, err := GetLogTransformer(tailConf.AppType, tailConf.Version, userMap)
 	if err != nil {
 		log.Fatal("ERROR: Failed to initialize transformer: ", err)
 	}
@@ -134,10 +135,10 @@ func newTailProcessor(tailConf *tail.FileConf, conf *Conf, geoDB *geoip2.Reader)
 
 // -----
 
-func runTailAction(conf *Conf, geoDB *geoip2.Reader, finishEvt chan bool) {
+func runTailAction(conf *Conf, geoDB *geoip2.Reader, userMap *users.UserMap, finishEvt chan bool) {
 	tailProcessors := make([]tail.FileTailProcessor, len(conf.LogTail.Files))
 	for i, f := range conf.LogTail.Files {
-		tailProcessors[i] = newTailProcessor(&f, conf, geoDB)
+		tailProcessors[i] = newTailProcessor(&f, conf, geoDB, userMap)
 
 	}
 	go tail.Run(&conf.LogTail, tailProcessors, finishEvt)
