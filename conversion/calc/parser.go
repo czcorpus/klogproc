@@ -46,7 +46,6 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 		}
 		tm = tm.Add(time.Minute * time.Duration(minsChng))
 		rec.TS = tm.Format("2006-01-02T15:04:05-07:00")
-		fmt.Println("tm2: ", rec.TS)
 	}
 	return rec, nil
 }
