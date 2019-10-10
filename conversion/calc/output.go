@@ -31,7 +31,7 @@ type OutputRecord struct {
 	Type      string `json:"type"`
 	time      time.Time
 	Datetime  string                   `json:"datetime"`
-	IPAddress string                   `json:"IPaddress"`
+	IPAddress string                   `json:"IPAddress"`
 	User      string                   `json:"user"`
 	UserID    string                   `json:"userId"`
 	Lang      string                   `json:"lang"`
