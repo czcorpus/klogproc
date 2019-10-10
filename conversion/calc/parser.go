@@ -18,6 +18,10 @@ package calc
 
 import (
 	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/czcorpus/klogproc/conversion"
 )
 
 // LineParser is a parser for reading KonText application logs
@@ -31,7 +35,18 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 		return rec, err
 	}
 	if rec.TS[len(rec.TS)-1] == 'Z' {
-		rec.TS = rec.TS[:len(rec.TS)-1] + "+01:00"
+		minsChng, err := conversion.TimezoneToInt(localTimezone)
+		if err != nil {
+			return rec, err
+		}
+		tm, err := time.Parse("2006-01-02T15:04:05-07:00", rec.TS[:len(rec.TS)-1]+localTimezone)
+		fmt.Println("tm1: ", rec.TS)
+		if err != nil {
+			return rec, err
+		}
+		tm = tm.Add(time.Minute * time.Duration(minsChng))
+		rec.TS = tm.Format("2006-01-02T15:04:05-07:00")
+		fmt.Println("tm2: ", rec.TS)
 	}
 	return rec, nil
 }

@@ -67,3 +67,25 @@ func TestUserBelongsToList(t *testing.T) {
 	assert.False(t, UserBelongsToList(137, []int{1, 2, 37, 38}))
 	assert.False(t, UserBelongsToList(0, []int{}))
 }
+
+func TestTimezoneToInt(t *testing.T) {
+	mins, err := TimezoneToInt("-03:30")
+	assert.Nil(t, err)
+	assert.Equal(t, -210, mins)
+
+	mins, err = TimezoneToInt("+02:00")
+	assert.Nil(t, err)
+	assert.Equal(t, 120, mins)
+
+	mins, err = TimezoneToInt("08:30")
+	assert.Error(t, err)
+
+	mins, err = TimezoneToInt("a08:30")
+	assert.Error(t, err)
+
+	mins, err = TimezoneToInt("+a:b")
+	assert.Error(t, err)
+
+	mins, err = TimezoneToInt("+12-30")
+	assert.Error(t, err)
+}
