@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -133,6 +134,31 @@ func UserBelongsToList(userID int, anonymousUsers []int) bool {
 		}
 	}
 	return false
+}
+
+// TimezoneToInt returns number of minutes to add/subtract to apply
+// to UTC to get actual local time reprezented by 'tz'.
+func TimezoneToInt(tz string) (int, error) {
+	sgn := 1
+	if tz[0] == '-' {
+		sgn = -1
+
+	} else if tz[0] != '+' {
+		return 0, fmt.Errorf("Cannot parse %s as timezone value", tz)
+	}
+	items := strings.Split(tz[1:], ":")
+	if len(items) != 2 {
+		return 0, fmt.Errorf("Cannot parse %s as timezone value", tz)
+	}
+	v1, err := strconv.Atoi(items[0])
+	if err != nil {
+		return 0, err
+	}
+	v2, err := strconv.Atoi(items[1])
+	if err != nil {
+		return 0, err
+	}
+	return sgn * (60*v1 + v2), nil
 }
 
 // ImportBool imports typical bool formats (as supported by Go) with
