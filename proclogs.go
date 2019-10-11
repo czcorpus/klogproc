@@ -155,6 +155,7 @@ func processLogs(conf *Conf, action string) {
 				chunkSize:      conf.ElasticSearch.PushChunkSize,
 				appType:        conf.LogRedis.AppType,
 				logTransformer: lt,
+				anonymousUsers: conf.AnonymousUsers,
 			}
 			channelWriteES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
 			channelWriteInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
@@ -193,6 +194,7 @@ func processLogs(conf *Conf, action string) {
 				chunkSize:      conf.ElasticSearch.PushChunkSize,
 				appType:        conf.LogFiles.AppType,
 				logTransformer: lt,
+				anonymousUsers: conf.AnonymousUsers,
 			}
 			channelWriteES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
 			channelWriteInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
