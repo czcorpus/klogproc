@@ -27,17 +27,18 @@ import (
 )
 
 type OutputRecord struct {
-	ID        string `json:"-"`
-	Type      string `json:"type"`
-	time      time.Time
-	Datetime  string                   `json:"datetime"`
-	IPAddress string                   `json:"IPAddress"`
-	User      string                   `json:"user"`
-	UserID    string                   `json:"userId"`
-	Lang      string                   `json:"lang"`
-	UserAgent string                   `json:"userAgent"`
-	GeoIP     conversion.GeoDataRecord `json:"geoip"`
-	IsQuery   bool                     `json:"isQuery"`
+	ID          string `json:"-"`
+	Type        string `json:"type"`
+	time        time.Time
+	Datetime    string                   `json:"datetime"`
+	IPAddress   string                   `json:"IPAddress"`
+	User        string                   `json:"user"`
+	UserID      string                   `json:"userId"`
+	IsAnonymous bool                     `json:"isAnonymous"`
+	Lang        string                   `json:"lang"`
+	UserAgent   string                   `json:"userAgent"`
+	GeoIP       conversion.GeoDataRecord `json:"geoip"`
+	IsQuery     bool                     `json:"isQuery"`
 }
 
 // SetLocation sets all the location related properties

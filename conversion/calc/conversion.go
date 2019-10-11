@@ -19,6 +19,8 @@ package calc
 import (
 	"strconv"
 	"time"
+
+	"github.com/czcorpus/klogproc/conversion"
 )
 
 // Transformer converts a source log object into a destination one
@@ -32,15 +34,16 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 		userID = anonymousUsers[0]
 	}
 	ans := &OutputRecord{
-		Type:      recType,
-		time:      logRecord.GetTime(),
-		Datetime:  logRecord.GetTime().Format(time.RFC3339),
-		IsQuery:   true,
-		IPAddress: logRecord.ClientIP,
-		User:      logRecord.User.User,
-		UserID:    strconv.Itoa(userID),
-		Lang:      logRecord.Lang,
-		UserAgent: logRecord.UserAgent,
+		Type:        recType,
+		time:        logRecord.GetTime(),
+		Datetime:    logRecord.GetTime().Format(time.RFC3339),
+		IsQuery:     true,
+		IPAddress:   logRecord.ClientIP,
+		User:        logRecord.User.User,
+		UserID:      strconv.Itoa(userID),
+		IsAnonymous: conversion.UserBelongsToList(userID, anonymousUsers),
+		Lang:        logRecord.Lang,
+		UserAgent:   logRecord.UserAgent,
 	}
 	ans.ID = createID(ans)
 	return ans, nil
