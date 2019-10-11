@@ -179,7 +179,7 @@ func GetLogTransformer(appType string, version int, userMap *users.UserMap) (con
 	case conversion.AppTypeWag:
 		return &wagTransformer{t: &wag.Transformer{}}, nil
 	case conversion.AppTypeCalc:
-		return &calcTransformer{t: calc.NewTransformer(userMap)}, nil
+		return &calcTransformer{t: calc.NewTransformer()}, nil
 	default:
 		return nil, fmt.Errorf("Cannot find log transformer for app type %s", appType)
 	}

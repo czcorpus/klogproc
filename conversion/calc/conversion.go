@@ -17,27 +17,19 @@
 package calc
 
 import (
-	"fmt"
 	"strconv"
 	"time"
-
-	"github.com/czcorpus/klogproc/users"
 )
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	userMap *users.UserMap
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymousUsers []int) (*OutputRecord, error) {
-	userID := -1
-	if logRecord.User.User != "-" && logRecord.User.User != "" {
-		uid := t.userMap.GetIdOf(logRecord.User.User)
-		if uid < 0 {
-			return nil, fmt.Errorf("Failed to find user ID of [%s]", logRecord.User.User)
-		}
-		userID = uid
+	userID := logRecord.User.ID
+	if userID == 0 && len(anonymousUsers) > 0 {
+		userID = anonymousUsers[0]
 	}
 	ans := &OutputRecord{
 		Type:      recType,
@@ -54,6 +46,6 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 	return ans, nil
 }
 
-func NewTransformer(userMap *users.UserMap) *Transformer {
-	return &Transformer{userMap: userMap}
+func NewTransformer() *Transformer {
+	return &Transformer{}
 }
