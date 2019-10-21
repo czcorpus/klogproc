@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package calc
+package shiny
 
 import (
 	"crypto/sha1"
@@ -26,8 +26,15 @@ import (
 	"github.com/czcorpus/klogproc/conversion"
 )
 
+// OutputRecord represents a log format as written
+// to an archive database.
 type OutputRecord struct {
-	ID          string `json:"-"`
+	ID string `json:"-"`
+
+	// Type here represents any application readable by this (= shiny) module
+	// and defined within respective factories. To add a new shiny-based app
+	// it should be enought to extend factories in parserFactory.go and
+	// transformerFactory.go.
 	Type        string `json:"type"`
 	time        time.Time
 	Datetime    string                   `json:"datetime"`

@@ -18,10 +18,10 @@ import (
 	"fmt"
 
 	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/conversion/calc"
 	"github.com/czcorpus/klogproc/conversion/kontext"
 	"github.com/czcorpus/klogproc/conversion/kwords"
 	"github.com/czcorpus/klogproc/conversion/morfio"
+	"github.com/czcorpus/klogproc/conversion/shiny"
 	"github.com/czcorpus/klogproc/conversion/ske"
 	"github.com/czcorpus/klogproc/conversion/syd"
 	"github.com/czcorpus/klogproc/conversion/treq"
@@ -144,18 +144,18 @@ func (s *wagTransformer) Transform(logRec conversion.InputRecord, recType string
 
 // ------------------------------------
 
-type calcTransformer struct {
-	t *calc.Transformer
+type shinyTransformer struct {
+	t *shiny.Transformer
 }
 
 // Transform transforms WaG app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *calcTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
-	tRec, ok := logRec.(*calc.InputRecord)
+func (s *shinyTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
+	tRec, ok := logRec.(*shiny.InputRecord)
 	if ok {
 		return s.t.Transform(tRec, recType, anonymousUsers)
 	}
-	return nil, fmt.Errorf("Invalid type for conversion by Calc transformer %T", logRec)
+	return nil, fmt.Errorf("Invalid type for conversion by Shiny transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -178,8 +178,8 @@ func GetLogTransformer(appType string, version int, userMap *users.UserMap) (con
 		return &skeTransformer{t: ske.NewTransformer(userMap)}, nil
 	case conversion.AppTypeWag:
 		return &wagTransformer{t: &wag.Transformer{}}, nil
-	case conversion.AppTypeCalc:
-		return &calcTransformer{t: calc.NewTransformer()}, nil
+	case conversion.AppTypeCalc, conversion.AppTypeLists:
+		return &shinyTransformer{t: shiny.NewTransformer()}, nil
 	default:
 		return nil, fmt.Errorf("Cannot find log transformer for app type %s", appType)
 	}

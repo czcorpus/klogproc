@@ -48,6 +48,9 @@ const (
 
 	// AppTypeCalc defines a universal storage identifier for Calc
 	AppTypeCalc = "calc"
+
+	// AppTypeLists defines a universal storage identifier for Lists
+	AppTypeLists = "lists"
 )
 
 // LineParsingError informs that we failed to parse a line we
