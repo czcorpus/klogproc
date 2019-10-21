@@ -20,10 +20,10 @@ import (
 	"fmt"
 
 	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/conversion/calc"
 	"github.com/czcorpus/klogproc/conversion/kontext"
 	"github.com/czcorpus/klogproc/conversion/kwords"
 	"github.com/czcorpus/klogproc/conversion/morfio"
+	"github.com/czcorpus/klogproc/conversion/shiny"
 	"github.com/czcorpus/klogproc/conversion/ske"
 	"github.com/czcorpus/klogproc/conversion/syd"
 	"github.com/czcorpus/klogproc/conversion/treq"
@@ -106,11 +106,11 @@ func (parser *wagLineParser) ParseLine(s string, lineNum int, localTimezone stri
 
 // ------------------------------------
 
-type calcLineParser struct {
-	lp *calc.LineParser
+type shinyLineParser struct {
+	lp *shiny.LineParser
 }
 
-func (parser *calcLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
+func (parser *shinyLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum, localTimezone)
 }
 
@@ -133,8 +133,8 @@ func NewLineParser(appType string) (LineParser, error) {
 		return &skeLineParser{lp: &ske.LineParser{}}, nil
 	case conversion.AppTypeWag:
 		return &wagLineParser{lp: &wag.LineParser{}}, nil
-	case conversion.AppTypeCalc:
-		return &calcLineParser{lp: &calc.LineParser{}}, nil
+	case conversion.AppTypeCalc, conversion.AppTypeLists:
+		return &shinyLineParser{lp: &shiny.LineParser{}}, nil
 	default:
 		return nil, fmt.Errorf("Parser not found for application type %s", appType)
 	}
