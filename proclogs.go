@@ -103,11 +103,11 @@ func retryRescuedItems(appType string, queue *sredis.RedisQueue, conf *elastic.C
 	for len(chunk) > 0 {
 		err := elastic.BulkWriteRequest(chunk, appType, conf)
 		if err != nil {
-			return fmt.Errorf("failed to reuse rescued data chunk")
+			return fmt.Errorf("failed to reuse rescued data chunk: %s", err)
 		}
 		fixed, err := iterator.RemoveVisitedItems()
 		if err != nil {
-			return fmt.Errorf("failed to reuse rescued data chunk")
+			return fmt.Errorf("failed to reuse rescued data chunk: %s", err)
 		}
 		log.Printf("INFO: Rescued %d bulk insert rows from the previous failed run(s)", fixed)
 		chunk = iterator.GetNextChunk()
