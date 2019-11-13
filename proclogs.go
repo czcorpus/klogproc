@@ -100,6 +100,7 @@ func processRedisLogs(conf *Conf, queue *sredis.RedisQueue, processor *CNKLogPro
 func retryRescuedItems(appType string, queue *sredis.RedisQueue, conf *elastic.ConnectionConf) error {
 	iterator := queue.GetRescuedChunksIterator()
 	chunk := iterator.GetNextChunk()
+	log.Printf("INFO: Found %d rescued items. I am going to re-insert them.")
 	for len(chunk) > 0 {
 		err := elastic.BulkWriteRequest(chunk, appType, conf)
 		if err != nil {
@@ -107,7 +108,7 @@ func retryRescuedItems(appType string, queue *sredis.RedisQueue, conf *elastic.C
 		}
 		fixed, err := iterator.RemoveVisitedItems()
 		if err != nil {
-			return fmt.Errorf("failed to reuse rescued data chunk: %s", err)
+			return fmt.Errorf("failed to remove rescued & applied data chunk: %s", err)
 		}
 		log.Printf("INFO: Rescued %d bulk insert rows from the previous failed run(s)", fixed)
 		chunk = iterator.GetNextChunk()
@@ -166,13 +167,14 @@ func processLogs(conf *Conf, action string) {
 				conf.LocalTimezone,
 			)
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
+
 			err = retryRescuedItems(conf.LogRedis.AppType, redisQueue, &conf.ElasticSearch)
 			if err != nil {
-				log.Fatalf("ERROR: %s. Please fix the problem before running the program again",
-					err)
+				log.Print("ERROR: %s", err)
 			}
+
 			processRedisLogs(conf, redisQueue, processor, channelWriteES, channelWriteInflux)
 			var wg sync.WaitGroup
 			wg.Add(2)

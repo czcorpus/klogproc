@@ -130,7 +130,8 @@ func (rrci *RedisRescuedChunkIterator) GetNextChunk() [][]byte {
 	for ; rrci.currPos < queueSize && curr != "\n"; rrci.currPos++ {
 		currSrch := rrci.db.LRange(rrci.dbKey, rrci.currPos, rrci.currPos).Val()
 		if len(currSrch) == 1 {
-			tmp = append(tmp, []byte(currSrch[0]))
+			curr = currSrch[0]
+			tmp = append(tmp, []byte(curr))
 		}
 	}
 	return tmp
