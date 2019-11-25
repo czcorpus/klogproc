@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/czcorpus/klogproc/clients"
 	"github.com/czcorpus/klogproc/conversion"
 	"github.com/czcorpus/klogproc/fsop"
 	"github.com/czcorpus/klogproc/load/batch"
@@ -46,6 +47,13 @@ func applyLocation(rec conversion.InputRecord, db *geoip2.Reader, outRec convers
 	}
 }
 
+// ClientAnalyzer represents an object which is able to recognize
+// bots etc. based on IP and/or user agent.
+type ClientAnalyzer interface {
+	AgentIsMonitor(rec conversion.InputRecord) bool
+	AgentIsBot(rec conversion.InputRecord) bool
+}
+
 // CNKLogProcessor imports parsed log records represented
 // as InputRecord instances
 type CNKLogProcessor struct {
@@ -56,12 +64,13 @@ type CNKLogProcessor struct {
 	currIdx        int
 	numNonLoggable int
 	logTransformer conversion.LogItemTransformer
+	clientAnalyzer ClientAnalyzer
 }
 
 // ProcItem transforms input log record into an output format.
 // In case an unsupported record is encountered, nil is returned.
 func (clp *CNKLogProcessor) ProcItem(logRec conversion.InputRecord) conversion.OutputRecord {
-	if logRec.AgentIsLoggable() {
+	if !clp.clientAnalyzer.AgentIsBot(logRec) && !clp.clientAnalyzer.AgentIsBot(logRec) {
 		rec, err := clp.logTransformer.Transform(logRec, clp.appType, clp.anonymousUsers)
 		if err != nil {
 			log.Printf("ERROR: failed to transform item %s: %s", logRec, err)
@@ -157,6 +166,7 @@ func processLogs(conf *Conf, action string) {
 				appType:        conf.LogRedis.AppType,
 				logTransformer: lt,
 				anonymousUsers: conf.AnonymousUsers,
+				clientAnalyzer: &clients.ClientTypeAnalyzer{},
 			}
 			channelWriteES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
 			channelWriteInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)

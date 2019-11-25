@@ -36,7 +36,7 @@ func getAction(path string) string {
 	return items[0]
 }
 
-func isLoggable(action string) bool {
+func isProcessable(action string) bool {
 	return action == "search" || action == "word-forms" || action == "similar-freq-words"
 }
 
@@ -49,17 +49,17 @@ type LineParser struct {
 func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*InputRecord, error) {
 	parsed, err := lp.parser.ParseLine(s, lineNum, localTimezone)
 	if err != nil {
-		return &InputRecord{isLoggable: false}, err
+		return &InputRecord{isProcessable: false}, err
 	}
 	action := getAction(parsed.Path)
 	if action == "" {
-		return &InputRecord{isLoggable: false}, nil
+		return &InputRecord{isProcessable: false}, nil
 	}
 
 	ans := &InputRecord{
-		isLoggable: isLoggable(action),
-		Action:     action,
-		Datetime:   parsed.Datetime,
+		isProcessable: isProcessable(action),
+		Action:        action,
+		Datetime:      parsed.Datetime,
 		Request: Request{
 			HTTPUserAgent:  parsed.UserAgent,
 			HTTPRemoteAddr: parsed.IPAddress,

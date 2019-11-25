@@ -76,7 +76,8 @@ func NewLineParsingError(lineNumber int, message string) LineParsingError {
 type InputRecord interface {
 	GetTime() time.Time
 	GetClientIP() net.IP
-	AgentIsLoggable() bool
+	GetUserAgent() string
+	IsProcessable() bool
 }
 
 // GeoDataRecord represents a full client geographical

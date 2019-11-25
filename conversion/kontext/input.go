@@ -117,50 +117,14 @@ func (rec *InputRecord) GetClientIP() net.IP {
 	return make([]byte, 0)
 }
 
-// AgentIsBot returns true if user agent information suggests
-// that the client is not human. The rules are currently
-// hardcoded and quite simple.
-func (rec *InputRecord) AgentIsBot() bool {
-	agentStr := strings.ToLower(rec.Request.HTTPUserAgent)
-	// TODO move this to some external file
-	return strings.Index(agentStr, "ahrefsbot") > -1 ||
-		strings.Index(agentStr, "applebot") > -1 ||
-		strings.Index(agentStr, "baiduspider") > -1 ||
-		strings.Index(agentStr, "bingbot") > -1 ||
-		strings.Index(agentStr, "blexbot") > -1 ||
-		strings.Index(agentStr, "dotbot") > -1 ||
-		strings.Index(agentStr, "duckduckbot") > -1 ||
-		strings.Index(agentStr, "exabot") > -1 ||
-		strings.Index(agentStr, "googlebot") > -1 ||
-		strings.Index(agentStr, "ia_archiver") > -1 ||
-		strings.Index(agentStr, "mail.ru_bot") > -1 ||
-		strings.Index(agentStr, "mauibot") > -1 ||
-		strings.Index(agentStr, "mediatoolkitbot") > -1 ||
-		strings.Index(agentStr, "megaindex.ru") > -1 ||
-		strings.Index(agentStr, "mj12bot") > -1 ||
-		strings.Index(agentStr, "semanticscholarbot") > -1 ||
-		strings.Index(agentStr, "semrushbot") > -1 ||
-		strings.Index(agentStr, "seokicks-robot") > -1 ||
-		strings.Index(agentStr, "seznambot") > -1 ||
-		strings.Index(agentStr, "yacybot") > -1 ||
-		strings.Index(agentStr, "yahoo") > -1 && strings.Index(agentStr, "slurp") > -1 ||
-		strings.Index(agentStr, "yandexbot") > -1
+// GetUserAgent returns a raw HTTP user agent info as provided by the client
+func (rec *InputRecord) GetUserAgent() string {
+	return rec.Request.HTTPUserAgent
 }
 
-// AgentIsMonitor returns true if user agent information
-// matches one of "bots" used by the Instatute Czech National Corpus
-// to monitor service availability. The rules are currently
-// hardcoded.
-func (rec *InputRecord) AgentIsMonitor() bool {
-	agentStr := strings.ToLower(rec.Request.HTTPUserAgent)
-	return strings.Index(agentStr, "python-urllib/2.7") > -1 ||
-		strings.Index(agentStr, "zabbix-test") > -1
-}
-
-// AgentIsLoggable returns true if the current record
-// is determined to be saved (we ignore bots, monitors etc.).
-func (rec *InputRecord) AgentIsLoggable() bool {
-	return !rec.AgentIsBot() && !rec.AgentIsMonitor()
+// IsProcessable returns true if there was no error in reading the record
+func (rec *InputRecord) IsProcessable() bool {
+	return true
 }
 
 // GetStringParam fetches a string parameter from

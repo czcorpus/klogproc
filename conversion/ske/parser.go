@@ -44,20 +44,20 @@ type LineParser struct {
 func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*InputRecord, error) {
 	parsed, err := lp.parser.ParseLine(s, lineNum, localTimezone)
 	if err != nil {
-		return &InputRecord{isLoggable: false}, err
+		return &InputRecord{isProcessable: false}, err
 	}
 	action := getAction(parsed.Path)
 	if action == "" {
-		return &InputRecord{isLoggable: false}, nil
+		return &InputRecord{isProcessable: false}, nil
 	}
 
 	ans := &InputRecord{
-		isLoggable: true,
-		Action:     action,
-		Corpus:     parsed.URLArgs.Get("corpname"),
-		Subcorpus:  parsed.URLArgs.Get("usesubcorp"),
-		User:       parsed.Username,
-		Datetime:   parsed.Datetime,
+		isProcessable: true,
+		Action:        action,
+		Corpus:        parsed.URLArgs.Get("corpname"),
+		Subcorpus:     parsed.URLArgs.Get("usesubcorp"),
+		User:          parsed.Username,
+		Datetime:      parsed.Datetime,
 		Request: Request{
 			HTTPUserAgent:  parsed.UserAgent,
 			HTTPRemoteAddr: parsed.IPAddress,
