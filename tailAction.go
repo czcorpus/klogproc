@@ -70,7 +70,12 @@ func (tp *tailProcessor) OnCheckStart() {
 func (tp *tailProcessor) OnEntry(item string) {
 	parsed, err := tp.lineParser.ParseLine(item, 0, tp.localTimezone)
 	if err != nil {
-		log.Printf("ERROR: %s", err)
+		switch tErr := err.(type) {
+		case conversion.LineParsingError:
+			log.Printf("INFO: file %s, %s", tp.filePath, tErr)
+		default:
+			log.Print("ERROR: ", tErr)
+		}
 		return
 	}
 	outRec, err := tp.logTransformer.Transform(parsed, tp.appType, tp.anonymousUsers)
@@ -135,11 +140,11 @@ func newTailProcessor(tailConf *tail.FileConf, conf *Conf, geoDB *geoip2.Reader,
 
 // -----
 
-func runTailAction(conf *Conf, geoDB *geoip2.Reader, userMap *users.UserMap, finishEvt chan bool) {
+func runTailAction(conf *Conf, geoDB *geoip2.Reader, userMap *users.UserMap, clientAnalyzer ClientAnalyzer, finishEvt chan bool) {
 	tailProcessors := make([]tail.FileTailProcessor, len(conf.LogTail.Files))
 	for i, f := range conf.LogTail.Files {
 		tailProcessors[i] = newTailProcessor(&f, conf, geoDB, userMap)
 
 	}
-	go tail.Run(&conf.LogTail, tailProcessors, finishEvt)
+	go tail.Run(&conf.LogTail, tailProcessors, clientAnalyzer, finishEvt)
 }

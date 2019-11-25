@@ -1,0 +1,132 @@
+{
+    "bots": [
+        {
+            "title": "Ahrefs Backlink Research Bot",
+            "match": ["ahrefsbot/"],
+            "example": "Mozilla/5.0 (compatible; AhrefsBot/5.2; +http://ahrefs.com/robot/)"
+        },
+        {
+            "title": "Applebot",
+            "match": ["applebot/"],
+            "example": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/600.2.5 (KHTML, like Gecko) Version/8.0.2 Safari/600.2.5 (Applebot/0.1)"
+        },
+        {
+            "title": "Baidu Spider",
+            "match": ["baiduspider/"],
+            "example": "Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)"
+        },
+        {
+            "title": "BingBot",
+            "match": ["bingbot/"],
+            "example": "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)"
+        },
+        {
+            "title": "BlexBot",
+            "match": ["blexbot/"],
+            "example": "Mozilla/5.0 (compatible; BLEXBot/1.0; +http://webmeup-crawler.com/)"
+        },
+        {
+            "title": "DotNetDotComDotOrg Crawler",
+            "match": ["dotbot/"],
+            "example": "Mozilla/5.0 (compatible; DotBot/1.1; http://www.dotnetdotcom.org/, crawler@dotnetdotcom.org)"
+        },
+        {
+            "title": "DuckDuckBot (old)",
+            "match": ["duckduckbot"],
+            "example": null
+        },
+        {
+            "title": "DuckDuckBot/1.1",
+            "match": ["duckduckgo-favicons-bot/"],
+            "example": "Mozilla/5.0 (compatible; DuckDuckGo-Favicons-Bot/1.0; +http://duckduckgo.com)"
+        },
+        {
+            "title": "Exabot",
+            "match": ["exabot/"],
+            "example": "Mozilla/5.0 (compatible; Exabot/3.0; +http://www.exabot.com/go/robot)"
+        },
+        {
+            "title": "Googlebot",
+            "match": ["googlebot/"],
+            "example": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+        },
+        {
+            "title": "Alexa crawler",
+            "match": ["ia_archiver"],
+            "example": "ia_archiver"
+        },
+        {
+            "title": "Mail.Ru Bot",
+            "match": ["mail.ru_bot/"],
+            "example": "Mozilla/5.0 (compatible; Mail.RU/2.0); Mozilla/5.0 (compatible; Linux x86_64; Mail.RU_Bot/2.0; +http://go.mail.ru/help/robots)"
+        },
+        {
+            "title": "Mauibot",
+            "match": ["mauibot "],
+            "example": "MauiBot (crawler.feedback+wc@gmail.com)"
+        },
+        {
+            "title": "Mediatoolkitbot",
+            "match": ["mediatoolkitbot "],
+            "example": "Mediatoolkitbot (complaints@mediatoolkit.com)"
+        },
+        {
+            "title": "MegaIndex.ru",
+            "match": ["megaindex.ru/"],
+            "example": "Mozilla/5.0 (compatible; MegaIndex.ru/2.0; +http://megaindex.com/crawler)"
+        },
+        {
+            "title": "MJ12bot/v1.3.3",
+            "match": ["mj12bot"],
+            "example": "Mozilla/5.0 (compatible; MJ12bot/v1.3.3; http://www.majestic12.co.uk/bot.php?+)"
+        },
+        {
+            "title": "Semantic Scholar Bot",
+            "match": ["semanticscholarbot "],
+            "example": "Mozilla/5.0 (compatible) SemanticScholarBot (+https://www.semanticscholar.org/crawler)"
+        },
+        {
+            "title": "SEMrushBot",
+            "match": ["semrushbot-"],
+            "example": "SemrushBot-SA"
+        },
+        {
+            "title": "SEO Kicks Robot",
+            "match": ["seokicks-robot"],
+            "example": "Mozilla/5.0 (compatible; SEOkicks-Robot; +http://www.seokicks.de/robot.html)"
+        },
+        {
+            "title": "Seznam Bot",
+            "match": ["seznambot/"],
+            "example": "Mozilla/5.0 (compatible; SeznamBot/3.2; +http://napoveda.seznam.cz/en/seznambot-intro/)"
+        },
+        {
+            "title": "YaCy-Bot",
+            "match": ["yacybot "],
+            "example": "yacybot (-global; amd64 Linux 3.16.0-4-amd64; java 1.7.0_121; Europe/de) http://yacy.net/bot.html"
+        },
+        {
+            "title": "Yahoo! Slurp",
+            "match": ["yahoo", "slurp"],
+            "example": "Mozilla/5.0 (compatible; Yahoo!-AdCrawler; http://help.yahoo.com/yahoo_adcrawler); Mozilla/5.0 (compatible; Yahoo! Slurp/3.0; Mozilla/5.0 (compatible; Yahoo! Slurp; http://help.yahoo.com/help/us/ysearch/slurp)"
+        }
+
+    ],
+    "monitors": [
+        {
+            "title": "CNC python 2.x scripts",
+            "match": ["python-urllib/2.7"],
+            "example": null
+        },
+        {
+            "title": "CNC zabbix",
+            "match": ["zabbix-test"],
+            "example": null
+        },
+        {
+            "title": "Influx Telegraf",
+            "match": ["telegraf"],
+            "example": null
+        }
+    ]
+}

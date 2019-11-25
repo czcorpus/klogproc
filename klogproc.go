@@ -60,6 +60,10 @@ type Conf struct {
 	RecUpdate      elastic.DocUpdConf     `json:"recordUpdate"`
 	ElasticSearch  elastic.ConnectionConf `json:"elasticSearch"`
 	InfluxDB       influx.ConnectionConf  `json:"influxDb"`
+
+	// BotDefsPath is either a local filesystem path or http resource path
+	// where a list of bots to ignore etc. is defined
+	BotDefsPath string `json:"botDefsPath"`
 }
 
 // UsesRedis tests whether the config contains Redis
