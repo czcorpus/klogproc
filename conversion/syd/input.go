@@ -42,6 +42,12 @@ func (r *InputRecord) GetClientIP() net.IP {
 	return net.ParseIP(r.IPAddress)
 }
 
-func (r *InputRecord) AgentIsLoggable() bool {
+// GetUserAgent returns a raw HTTP user agent info as provided by the client
+func (rec *InputRecord) GetUserAgent() string {
+	return ""
+}
+
+// IsProcessable returns true if there was no error in reading the record
+func (rec *InputRecord) IsProcessable() bool {
 	return true
 }

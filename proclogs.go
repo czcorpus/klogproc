@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/czcorpus/klogproc/conversion"
+	"github.com/czcorpus/klogproc/ctype"
 	"github.com/czcorpus/klogproc/fsop"
 	"github.com/czcorpus/klogproc/load/batch"
 	"github.com/czcorpus/klogproc/load/sredis"
@@ -46,6 +47,14 @@ func applyLocation(rec conversion.InputRecord, db *geoip2.Reader, outRec convers
 	}
 }
 
+// ClientAnalyzer represents an object which is able to recognize
+// bots etc. based on IP and/or user agent.
+type ClientAnalyzer interface {
+	AgentIsMonitor(rec conversion.InputRecord) bool
+	AgentIsBot(rec conversion.InputRecord) bool
+	HasBlacklistedIP(rec conversion.InputRecord) bool
+}
+
 // CNKLogProcessor imports parsed log records represented
 // as InputRecord instances
 type CNKLogProcessor struct {
@@ -56,12 +65,23 @@ type CNKLogProcessor struct {
 	currIdx        int
 	numNonLoggable int
 	logTransformer conversion.LogItemTransformer
+	clientAnalyzer ClientAnalyzer
+}
+
+func (clp *CNKLogProcessor) recordIsLoggable(logRec conversion.InputRecord) bool {
+	isBlacklisted := false
+	if clp.clientAnalyzer.HasBlacklistedIP(logRec) {
+		isBlacklisted = true
+		log.Printf("INFO: Found blacklisted IP %s", logRec.GetClientIP().String())
+	}
+	return !clp.clientAnalyzer.AgentIsBot(logRec) && !clp.clientAnalyzer.AgentIsMonitor(logRec) &&
+		!isBlacklisted && logRec.IsProcessable()
 }
 
 // ProcItem transforms input log record into an output format.
 // In case an unsupported record is encountered, nil is returned.
 func (clp *CNKLogProcessor) ProcItem(logRec conversion.InputRecord) conversion.OutputRecord {
-	if logRec.AgentIsLoggable() {
+	if clp.recordIsLoggable(logRec) {
 		rec, err := clp.logTransformer.Transform(logRec, clp.appType, clp.anonymousUsers)
 		if err != nil {
 			log.Printf("ERROR: failed to transform item %s: %s", logRec, err)
@@ -140,6 +160,19 @@ func processLogs(conf *Conf, action string) {
 	}
 	defer geoDb.Close()
 
+	var clientTypeDetector ClientAnalyzer
+	if conf.BotDefsPath != "" {
+		clientTypeDetector, err = ctype.LoadFromResource(conf.BotDefsPath)
+		if err != nil {
+			log.Fatal("FATAL: ", err)
+		}
+		log.Printf("INFO: using bot definitions from resource %s", conf.BotDefsPath)
+
+	} else {
+		clientTypeDetector = &ctype.LegacyClientTypeAnalyzer{}
+		log.Print("WARNING: no bots configuration provided (botDefsPath), using legacy analyzer")
+	}
+
 	finishEvent := make(chan bool)
 	go func() {
 		switch action {
@@ -157,6 +190,7 @@ func processLogs(conf *Conf, action string) {
 				appType:        conf.LogRedis.AppType,
 				logTransformer: lt,
 				anonymousUsers: conf.AnonymousUsers,
+				clientAnalyzer: clientTypeDetector,
 			}
 			channelWriteES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
 			channelWriteInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
@@ -184,7 +218,7 @@ func processLogs(conf *Conf, action string) {
 			close(channelWriteES)
 			close(channelWriteInflux)
 			finishEvent <- true
-			log.Printf("INFO: Ignored %d non-loggable items (bots, static files etc.)", processor.numNonLoggable)
+			log.Printf("INFO: Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)
 
 		case actionBatch:
 			lt, err := GetLogTransformer(conf.LogFiles.AppType, conf.LogFiles.Version, userMap)
@@ -197,6 +231,7 @@ func processLogs(conf *Conf, action string) {
 				appType:        conf.LogFiles.AppType,
 				logTransformer: lt,
 				anonymousUsers: conf.AnonymousUsers,
+				clientAnalyzer: clientTypeDetector,
 			}
 			channelWriteES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
 			channelWriteInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
@@ -214,10 +249,10 @@ func processLogs(conf *Conf, action string) {
 			close(channelWriteInflux)
 			wg.Wait()
 			finishEvent <- true
-			log.Printf("INFO: Ignored %d non-loggable items (bots etc.)", processor.numNonLoggable)
+			log.Printf("INFO: Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)
 
 		case actionTail:
-			runTailAction(conf, geoDb, userMap, finishEvent)
+			runTailAction(conf, geoDb, userMap, clientTypeDetector, finishEvent)
 		}
 	}()
 	<-finishEvent

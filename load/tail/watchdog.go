@@ -23,6 +23,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/czcorpus/klogproc/conversion"
 )
 
 const (
@@ -57,8 +59,16 @@ type FileTailProcessor interface {
 	OnQuit()
 }
 
+// ClientAnalyzer represents an object which is able to recognize
+// bots etc. based on IP and/or user agent.
+type ClientAnalyzer interface {
+	AgentIsMonitor(rec conversion.InputRecord) bool
+	AgentIsBot(rec conversion.InputRecord) bool
+	HasBlacklistedIP(rec conversion.InputRecord) bool
+}
+
 // Run starts the process of (multiple) log watching
-func Run(conf *Conf, processors []FileTailProcessor, finishEvent chan<- bool) {
+func Run(conf *Conf, processors []FileTailProcessor, clientAnalyzer ClientAnalyzer, finishEvent chan<- bool) {
 	tickerInterval := time.Duration(conf.IntervalSecs)
 	if tickerInterval == 0 {
 		log.Printf("WARNING: intervalSecs for tail mode not set, using default %ds", defaultTickerIntervalSecs)

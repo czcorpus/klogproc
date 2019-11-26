@@ -34,14 +34,14 @@ type Request struct {
 
 // InputRecord represents a raw-parsed version of SkE's access log
 type InputRecord struct {
-	Action     string
-	Corpus     string
-	Subcorpus  string
-	Datetime   string
-	User       string
-	Request    Request
-	isLoggable bool
-	ProcTime   float32
+	Action        string
+	Corpus        string
+	Subcorpus     string
+	Datetime      string
+	User          string
+	Request       Request
+	ProcTime      float32
+	isProcessable bool
 	// TODO
 }
 
@@ -55,9 +55,12 @@ func (r *InputRecord) GetClientIP() net.IP {
 	return net.ParseIP(r.Request.RemoteAddr)
 }
 
-// AgentIsLoggable returns true if the record should be stored.
-// Otherwise (bots, static files access, some operations) it
-// returns false and klogproc ignores such record.
-func (r *InputRecord) AgentIsLoggable() bool {
-	return r.isLoggable
+// GetUserAgent returns a raw HTTP user agent info as provided by the client
+func (rec *InputRecord) GetUserAgent() string {
+	return rec.Request.HTTPUserAgent
+}
+
+// IsProcessable returns true if there was no error in reading the record
+func (rec *InputRecord) IsProcessable() bool {
+	return rec.isProcessable
 }
