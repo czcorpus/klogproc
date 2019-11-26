@@ -61,3 +61,9 @@ func (cta *LegacyClientTypeAnalyzer) AgentIsBot(rec conversion.InputRecord) bool
 		strings.Index(agentStr, "yahoo") > -1 && strings.Index(agentStr, "slurp") > -1 ||
 		strings.Index(agentStr, "yandexbot") > -1
 }
+
+// HasBlacklistedIP in the legacy analyzer cannot use blacklists
+// so it always returns false
+func (cta *LegacyClientTypeAnalyzer) HasBlacklistedIP(rec conversion.InputRecord) bool {
+	return false
+}

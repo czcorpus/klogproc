@@ -52,6 +52,7 @@ func applyLocation(rec conversion.InputRecord, db *geoip2.Reader, outRec convers
 type ClientAnalyzer interface {
 	AgentIsMonitor(rec conversion.InputRecord) bool
 	AgentIsBot(rec conversion.InputRecord) bool
+	HasBlacklistedIP(rec conversion.InputRecord) bool
 }
 
 // CNKLogProcessor imports parsed log records represented
@@ -68,8 +69,13 @@ type CNKLogProcessor struct {
 }
 
 func (clp *CNKLogProcessor) recordIsLoggable(logRec conversion.InputRecord) bool {
+	isBlacklisted := false
+	if clp.clientAnalyzer.HasBlacklistedIP(logRec) {
+		isBlacklisted = true
+		log.Printf("INFO: Found blacklisted IP %s", logRec.GetClientIP().String())
+	}
 	return !clp.clientAnalyzer.AgentIsBot(logRec) && !clp.clientAnalyzer.AgentIsMonitor(logRec) &&
-		logRec.IsProcessable()
+		!isBlacklisted && logRec.IsProcessable()
 }
 
 // ProcItem transforms input log record into an output format.

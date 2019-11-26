@@ -64,6 +64,7 @@ type FileTailProcessor interface {
 type ClientAnalyzer interface {
 	AgentIsMonitor(rec conversion.InputRecord) bool
 	AgentIsBot(rec conversion.InputRecord) bool
+	HasBlacklistedIP(rec conversion.InputRecord) bool
 }
 
 // Run starts the process of (multiple) log watching

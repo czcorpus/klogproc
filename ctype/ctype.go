@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 
@@ -45,7 +46,7 @@ func searchMatchingDef(rec conversion.InputRecord, defs []BotInfo) bool {
 	for _, item := range defs {
 		match := true
 		for _, m := range item.Match {
-			match = match && strings.Index(rec.GetUserAgent(), m) > -1
+			match = match && strings.Index(strings.ToLower(rec.GetUserAgent()), m) > -1
 			if !match {
 				break
 			}
@@ -73,16 +74,39 @@ func loadFromHTTP(url string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+func importIPList(data []string) ([]net.IP, error) {
+	ans := make([]net.IP, len(data))
+	for i, ips := range data {
+		ip := net.ParseIP(ips)
+		if ip == nil {
+			return ans, fmt.Errorf("Cannot parse configured IP %s", ips)
+		}
+		ans[i] = ip
+	}
+	return ans, nil
+}
+
 type ClientTypeAnalyzer struct {
-	data *BotsAndMonitors
+	bots        []BotInfo
+	monitors    []BotInfo
+	iPBlacklist []net.IP
 }
 
 func (cta *ClientTypeAnalyzer) AgentIsMonitor(rec conversion.InputRecord) bool {
-	return searchMatchingDef(rec, cta.data.Monitors)
+	return searchMatchingDef(rec, cta.monitors)
 }
 
 func (cta *ClientTypeAnalyzer) AgentIsBot(rec conversion.InputRecord) bool {
-	return searchMatchingDef(rec, cta.data.Bots)
+	return searchMatchingDef(rec, cta.bots)
+}
+
+func (cta *ClientTypeAnalyzer) HasBlacklistedIP(rec conversion.InputRecord) bool {
+	for _, ip := range cta.iPBlacklist {
+		if rec.GetClientIP().Equal(ip) {
+			return true
+		}
+	}
+	return false
 }
 
 func LoadFromResource(path string) (*ClientTypeAnalyzer, error) {
@@ -102,6 +126,20 @@ func LoadFromResource(path string) (*ClientTypeAnalyzer, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("INFO: bot defs: %d, monitors defs: %d", len(conf.Bots), len(conf.Monitors))
-	return &ClientTypeAnalyzer{data: conf}, nil
+	for i, mList := range conf.Bots {
+		for j, m := range mList.Match {
+			conf.Bots[i].Match[j] = strings.ToLower(m)
+		}
+	}
+	for i, mList := range conf.Monitors {
+		for j, m := range mList.Match {
+			conf.Monitors[i].Match[j] = strings.ToLower(m)
+		}
+	}
+	listIP, err := importIPList(conf.IPBlacklist)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("INFO: bot defs: %d, monitors defs: %d, blacklisted IPs: %d", len(conf.Bots), len(conf.Monitors), len(listIP))
+	return &ClientTypeAnalyzer{bots: conf.Bots, monitors: conf.Monitors, iPBlacklist: listIP}, nil
 }
