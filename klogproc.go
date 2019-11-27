@@ -15,23 +15,16 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"path/filepath"
 	"strings"
 
-	"github.com/czcorpus/klogproc/load/batch"
-	"github.com/czcorpus/klogproc/load/celery"
-	"github.com/czcorpus/klogproc/load/sredis"
-	"github.com/czcorpus/klogproc/load/tail"
-
 	"os"
 
+	"github.com/czcorpus/klogproc/config"
 	"github.com/czcorpus/klogproc/save/elastic"
-	"github.com/czcorpus/klogproc/save/influx"
 )
 
 const (
@@ -46,58 +39,7 @@ const (
 	startingServiceMsg = "INFO: ######################## Starting klogproc ########################"
 )
 
-// Conf describes klogproc's configuration
-type Conf struct {
-	LogRedis       sredis.RedisConf       `json:"logRedis"`
-	LogFiles       batch.Conf             `json:"logFiles"`
-	LogTail        tail.Conf              `json:"logTail"`
-	CeleryStatus   celery.Conf            `json:"celeryStatus"`
-	GeoIPDbPath    string                 `json:"geoIpDbPath"`
-	LocalTimezone  string                 `json:"localTimezone"`
-	AnonymousUsers []int                  `json:"anonymousUsers"`
-	LogPath        string                 `json:"logPath"`
-	CustomConfDir  string                 `json:"customConfDir"`
-	RecUpdate      elastic.DocUpdConf     `json:"recordUpdate"`
-	ElasticSearch  elastic.ConnectionConf `json:"elasticSearch"`
-	InfluxDB       influx.ConnectionConf  `json:"influxDb"`
-
-	// BotDefsPath is either a local filesystem path or http resource path
-	// where a list of bots to ignore etc. is defined
-	BotDefsPath string `json:"botDefsPath"`
-}
-
-// UsesRedis tests whether the config contains Redis
-// configuration. The function is happy once it finds
-// a non empty address. Other values are not checked here
-// (it is up to the client module to validate that).
-func (c *Conf) UsesRedis() bool {
-	return c.LogRedis.Address != ""
-}
-
-// HasInfluxOut tests whether an InfluxDB
-// output is confgured
-func (c *Conf) HasInfluxOut() bool {
-	return c.InfluxDB.Server != ""
-}
-
-// TODO test additional important items
-func validateConf(conf *Conf) {
-	var err error
-	if conf.ElasticSearch.IsConfigured() {
-		err = conf.ElasticSearch.Validate()
-		if err != nil {
-			log.Fatal("FATAL: ", err)
-		}
-	}
-	if conf.InfluxDB.IsConfigured() {
-		err = conf.InfluxDB.Validate()
-		if err != nil {
-			log.Fatal("FATAL: ", err)
-		}
-	}
-}
-
-func updateRecords(conf *Conf, options *ProcessOptions) {
+func updateRecords(conf *config.Main, options *ProcessOptions) {
 	client := elastic.NewClient(&conf.ElasticSearch)
 	for _, updConf := range conf.RecUpdate.Filters {
 		totalUpdated, err := client.ManualBulkRecordUpdate(conf.ElasticSearch.Index, updConf,
@@ -112,7 +54,7 @@ func updateRecords(conf *Conf, options *ProcessOptions) {
 	}
 }
 
-func removeKeyFromRecords(conf *Conf, options *ProcessOptions) {
+func removeKeyFromRecords(conf *config.Main, options *ProcessOptions) {
 	client := elastic.NewClient(&conf.ElasticSearch)
 	for _, updConf := range conf.RecUpdate.Filters {
 		totalUpdated, err := client.ManualBulkRecordKeyRemove(conf.ElasticSearch.Index, updConf,
@@ -147,25 +89,9 @@ func help(topic string) {
 	fmt.Println()
 }
 
-func loadConfig(path string) *Conf {
-	if path == "" {
-		log.Fatal("Config path not specified")
-	}
-	rawData, err := ioutil.ReadFile(flag.Arg(1))
-	if err != nil {
-		log.Fatal(err)
-	}
-	var conf Conf
-	json.Unmarshal(rawData, &conf)
-	if conf.LocalTimezone == "" {
-		conf.LocalTimezone = "+02:00" // add Czech timezone by default
-	}
-	return &conf
-}
-
-func setup(confPath string) (*Conf, *os.File) {
-	conf := loadConfig(confPath)
-	validateConf(conf)
+func setup(confPath string) (*config.Main, *os.File) {
+	conf := config.Load(confPath)
+	config.Validate(conf)
 
 	if conf.LogPath != "" {
 		logf, err := os.OpenFile(conf.LogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -190,7 +116,7 @@ func main() {
 	}
 	flag.Parse()
 
-	var conf *Conf
+	var conf *config.Main
 	var logf *os.File
 	action := flag.Arg(0)
 
