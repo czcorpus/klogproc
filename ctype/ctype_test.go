@@ -31,13 +31,11 @@ func TestAgentIsBot(t *testing.T) {
 		},
 	}
 	analyzer := &ClientTypeAnalyzer{
-		data: &BotsAndMonitors{
-			bots: []BotInfo{
-				BotInfo{
-					title:   "",
-					match:   []string{"Googlebot/", "Mozilla/5.0"},
-					example: "",
-				},
+		bots: []BotInfo{
+			BotInfo{
+				Title:   "",
+				Match:   []string{"googlebot/", "mozilla/5.0"},
+				Example: "",
 			},
 		},
 	}
@@ -52,13 +50,11 @@ func TestAgentIsBotMustMatchAll(t *testing.T) {
 		},
 	}
 	analyzer := &ClientTypeAnalyzer{
-		data: &BotsAndMonitors{
-			bots: []BotInfo{
-				BotInfo{
-					title:   "",
-					match:   []string{"Googlebot/", "Mozilla/6.0"},
-					example: "",
-				},
+		bots: []BotInfo{
+			BotInfo{
+				Title:   "",
+				Match:   []string{"googlebot/", "mozilla/6.0"},
+				Example: "",
 			},
 		},
 	}
