@@ -20,6 +20,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/czcorpus/klogproc/config"
 	"github.com/czcorpus/klogproc/conversion"
 	"github.com/czcorpus/klogproc/load/batch"
 	"github.com/czcorpus/klogproc/load/tail"
@@ -45,7 +46,7 @@ type tailProcessor struct {
 	filePath          string
 	version           int
 	checkIntervalSecs int
-	conf              *Conf
+	conf              *config.Main
 	lineParser        batch.LineParser
 	logTransformer    conversion.LogItemTransformer
 	geoDB             *geoip2.Reader
@@ -112,7 +113,7 @@ func (tp *tailProcessor) CheckIntervalSecs() int {
 
 // -----
 
-func newTailProcessor(tailConf *tail.FileConf, conf *Conf, geoDB *geoip2.Reader, userMap *users.UserMap) *tailProcessor {
+func newTailProcessor(tailConf *tail.FileConf, conf *config.Main, geoDB *geoip2.Reader, userMap *users.UserMap) *tailProcessor {
 	lineParser, err := batch.NewLineParser(tailConf.AppType)
 	if err != nil {
 		log.Fatal("ERROR: Failed to initialize parser: ", err)
@@ -140,7 +141,7 @@ func newTailProcessor(tailConf *tail.FileConf, conf *Conf, geoDB *geoip2.Reader,
 
 // -----
 
-func runTailAction(conf *Conf, geoDB *geoip2.Reader, userMap *users.UserMap, clientAnalyzer ClientAnalyzer, finishEvt chan bool) {
+func runTailAction(conf *config.Main, geoDB *geoip2.Reader, userMap *users.UserMap, clientAnalyzer ClientAnalyzer, finishEvt chan bool) {
 	tailProcessors := make([]tail.FileTailProcessor, len(conf.LogTail.Files))
 	for i, f := range conf.LogTail.Files {
 		tailProcessors[i] = newTailProcessor(&f, conf, geoDB, userMap)

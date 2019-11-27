@@ -17,10 +17,11 @@
 package main
 
 import (
+	"github.com/czcorpus/klogproc/config"
 	"github.com/czcorpus/klogproc/load/celery"
 )
 
-func processCeleryStatus(conf *Conf) {
+func processCeleryStatus(conf *config.Main) {
 	finishEvent := make(chan bool)
 	go celery.Run(&conf.CeleryStatus, finishEvent, &conf.InfluxDB, &conf.ElasticSearch, &notifyFailedChunks{})
 	<-finishEvent

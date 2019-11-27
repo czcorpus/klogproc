@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/czcorpus/klogproc/config"
 	"github.com/czcorpus/klogproc/conversion"
 	"github.com/czcorpus/klogproc/ctype"
 	"github.com/czcorpus/klogproc/fsop"
@@ -105,7 +106,7 @@ func (clp *CNKLogProcessor) GetAppType() string {
 	return clp.appType
 }
 
-func processRedisLogs(conf *Conf, queue *sredis.RedisQueue, processor *CNKLogProcessor, destChans ...chan<- conversion.OutputRecord) {
+func processRedisLogs(conf *config.Main, queue *sredis.RedisQueue, processor *CNKLogProcessor, destChans ...chan<- conversion.OutputRecord) {
 	for _, item := range queue.GetItems() {
 		rec := processor.ProcItem(item)
 		if rec != nil {
@@ -153,7 +154,7 @@ func retryRescuedItems(appType string, queue *sredis.RedisQueue, conf *elastic.C
 // or from a directory of files (in such case it keeps a worklog containing
 // last loaded value). In case both locations are configured, Redis has
 // precedence.
-func processLogs(conf *Conf, action string, options *ProcessOptions) {
+func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 	geoDb, err := geoip2.Open(conf.GeoIPDbPath)
 	userMap := users.EmptyUserMap()
 	confPath := filepath.Join(conf.CustomConfDir, "usermap.json")
