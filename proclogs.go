@@ -55,6 +55,11 @@ type ClientAnalyzer interface {
 	HasBlacklistedIP(rec conversion.InputRecord) bool
 }
 
+type ProcessOptions struct {
+	worklogReset bool
+	dryRun       bool
+}
+
 // CNKLogProcessor imports parsed log records represented
 // as InputRecord instances
 type CNKLogProcessor struct {
@@ -148,7 +153,7 @@ func retryRescuedItems(appType string, queue *sredis.RedisQueue, conf *elastic.C
 // or from a directory of files (in such case it keeps a worklog containing
 // last loaded value). In case both locations are configured, Redis has
 // precedence.
-func processLogs(conf *Conf, action string) {
+func processLogs(conf *Conf, action string, options *ProcessOptions) {
 	geoDb, err := geoip2.Open(conf.GeoIPDbPath)
 	userMap := users.EmptyUserMap()
 	confPath := filepath.Join(conf.CustomConfDir, "usermap.json")
@@ -237,6 +242,13 @@ func processLogs(conf *Conf, action string) {
 			channelWriteInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
 			worklog := batch.NewWorklog(conf.LogFiles.WorklogPath)
 			log.Printf("INFO: using worklog %s", conf.LogFiles.WorklogPath)
+			if options.worklogReset {
+				err := worklog.Reset()
+				log.Print("truncated worklog %v, with err: %s", worklog, err)
+				if err != nil {
+					log.Fatal("FATAL: unable to initialize worklog: %s", err)
+				}
+			}
 			defer worklog.Save()
 
 			var wg sync.WaitGroup

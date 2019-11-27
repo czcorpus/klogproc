@@ -26,6 +26,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -58,7 +59,10 @@ func (w *Worklog) GetLastRecord() int64 {
 		lastLine := ""
 		if reader != nil {
 			for reader.Scan() {
-				lastLine = reader.Text()
+				tmp := strings.TrimSpace(reader.Text())
+				if tmp[0] != '#' {
+					lastLine = tmp
+				}
 			}
 		}
 		if lastLine != "" {
@@ -92,6 +96,10 @@ func (w *Worklog) RescueFailedChunks(data [][]byte) error {
 	// TODO we do nothing here but we should move
 	// status pointer before this broken chunk
 	return nil
+}
+
+func (w *Worklog) Reset() error {
+	return os.Truncate(w.filePath, 0)
 }
 
 // NewWorklog creates an instance of Worklog with

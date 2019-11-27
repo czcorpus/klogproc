@@ -97,12 +97,12 @@ func validateConf(conf *Conf) {
 	}
 }
 
-func updateRecords(conf *Conf, dryRun bool) {
+func updateRecords(conf *Conf, options *ProcessOptions) {
 	client := elastic.NewClient(&conf.ElasticSearch)
 	for _, updConf := range conf.RecUpdate.Filters {
 		totalUpdated, err := client.ManualBulkRecordUpdate(conf.ElasticSearch.Index, updConf,
 			conf.RecUpdate.Update, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize,
-			dryRun)
+			options.dryRun)
 		if err == nil {
 			log.Printf("INFO: Updated %d items\n", totalUpdated)
 
@@ -112,12 +112,12 @@ func updateRecords(conf *Conf, dryRun bool) {
 	}
 }
 
-func removeKeyFromRecords(conf *Conf, dryRun bool) {
+func removeKeyFromRecords(conf *Conf, options *ProcessOptions) {
 	client := elastic.NewClient(&conf.ElasticSearch)
 	for _, updConf := range conf.RecUpdate.Filters {
 		totalUpdated, err := client.ManualBulkRecordKeyRemove(conf.ElasticSearch.Index, updConf,
 			conf.RecUpdate.RemoveKey, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize,
-			dryRun)
+			options.dryRun)
 		if err == nil {
 			log.Printf("INFO: Removed key %s from %d items\n", conf.RecUpdate.RemoveKey, totalUpdated)
 
@@ -179,13 +179,17 @@ func setup(confPath string) (*Conf, *os.File) {
 }
 
 func main() {
-	dryRun := flag.Bool("dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
+	procOpts := new(ProcessOptions)
+	flag.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
+	flag.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
+
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending CNC app logs to ElasticSearch & InfluxDB\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\t%s\n\nOptions:\n",
 			filepath.Base(os.Args[0]), strings.Join([]string{actionBatch, actionTail, actionRedis, actionDocupdate, actionKeyremove, actionHelp}, ", "))
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+
 	var conf *Conf
 	var logf *os.File
 	action := flag.Arg(0)
@@ -195,14 +199,14 @@ func main() {
 		help(flag.Arg(1))
 	case actionDocupdate:
 		conf, logf = setup(flag.Arg(1))
-		updateRecords(conf, *dryRun)
+		updateRecords(conf, procOpts)
 	case actionKeyremove:
 		conf, logf = setup(flag.Arg(1))
-		removeKeyFromRecords(conf, *dryRun)
+		removeKeyFromRecords(conf, procOpts)
 	case actionBatch, actionTail, actionRedis:
 		conf, logf = setup(flag.Arg(1))
 		log.Print(startingServiceMsg)
-		processLogs(conf, action)
+		processLogs(conf, action, procOpts)
 	case actionCelery:
 		conf, logf = setup(flag.Arg(1))
 		log.Print(startingServiceMsg)
