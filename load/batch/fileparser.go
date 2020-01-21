@@ -32,7 +32,7 @@ import (
 
 // newParser creates a new instance of the Parser.
 // localTimezone has format: "(-|+)[0-9]{2}:[0-9]{2}"
-func newParser(path string, localTimezone string, appType string) *Parser {
+func newParser(path string, localTimezone string, appType string, appErrRegister conversion.AppErrorRegister) *Parser {
 	f, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -41,7 +41,7 @@ func newParser(path string, localTimezone string, appType string) *Parser {
 		panic(err)
 	}
 	sc := bufio.NewScanner(f)
-	lineParser, err := NewLineParser(appType)
+	lineParser, err := NewLineParser(appType, appErrRegister)
 	if err != nil {
 		panic(err) // TODO
 	}

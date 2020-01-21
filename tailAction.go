@@ -22,6 +22,8 @@ import (
 
 	"github.com/czcorpus/klogproc/config"
 	"github.com/czcorpus/klogproc/conversion"
+	"github.com/czcorpus/klogproc/email"
+	"github.com/czcorpus/klogproc/load/alarm"
 	"github.com/czcorpus/klogproc/load/batch"
 	"github.com/czcorpus/klogproc/load/tail"
 	"github.com/czcorpus/klogproc/save/elastic"
@@ -57,6 +59,7 @@ type tailProcessor struct {
 	elasticChunkSize  int
 	influxChunkSize   int
 	outSync           sync.WaitGroup
+	alarm             conversion.AppErrorRegister
 }
 
 func (tp *tailProcessor) OnCheckStart() {
@@ -93,10 +96,11 @@ func (tp *tailProcessor) OnCheckStop() {
 	close(tp.dataForES)
 	close(tp.dataForInflux)
 	tp.outSync.Wait()
+	tp.alarm.Evaluate()
 }
 
 func (tp *tailProcessor) OnQuit() {
-
+	tp.alarm.Reset()
 }
 
 func (tp *tailProcessor) AppType() string {
@@ -113,14 +117,35 @@ func (tp *tailProcessor) CheckIntervalSecs() int {
 
 // -----
 
+func newProcAlarm(tailConf *tail.FileConf, conf *tail.Conf, mailConf *config.Email) (conversion.AppErrorRegister, error) {
+	if conf.NumErrorsAlarm > 0 && conf.ErrCountTimeRangeSecs > 0 {
+		notifier, err := email.NewEmailNotifier(mailConf)
+		if err != nil {
+			return nil, err
+		}
+		return alarm.NewTailProcAlarm(
+			conf.NumErrorsAlarm,
+			conf.ErrCountTimeRangeSecs,
+			tailConf,
+			notifier,
+		), nil
+	}
+	log.Print("WARNING: logged errors counting alarm not set")
+	return &alarm.NullAlarm{}, nil
+}
+
 func newTailProcessor(tailConf *tail.FileConf, conf *config.Main, geoDB *geoip2.Reader, userMap *users.UserMap) *tailProcessor {
-	lineParser, err := batch.NewLineParser(tailConf.AppType)
+	procAlarm, err := newProcAlarm(tailConf, &conf.LogTail, &conf.EmailNotification)
 	if err != nil {
-		log.Fatal("ERROR: Failed to initialize parser: ", err)
+		log.Fatal("FATAL: Failed to initialize alarm: ", err)
+	}
+	lineParser, err := batch.NewLineParser(tailConf.AppType, procAlarm)
+	if err != nil {
+		log.Fatal("FATAL: Failed to initialize parser: ", err)
 	}
 	logTransformer, err := GetLogTransformer(tailConf.AppType, tailConf.Version, userMap)
 	if err != nil {
-		log.Fatal("ERROR: Failed to initialize transformer: ", err)
+		log.Fatal("FATAL: Failed to initialize transformer: ", err)
 	}
 
 	return &tailProcessor{
@@ -136,6 +161,7 @@ func newTailProcessor(tailConf *tail.FileConf, conf *config.Main, geoDB *geoip2.
 		anonymousUsers:    conf.AnonymousUsers,
 		elasticChunkSize:  conf.ElasticSearch.PushChunkSize,
 		influxChunkSize:   conf.InfluxDB.PushChunkSize,
+		alarm:             procAlarm,
 	}
 }
 

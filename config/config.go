@@ -32,20 +32,28 @@ import (
 	"github.com/czcorpus/klogproc/save/influx"
 )
 
+// Email configures e-mail client for sending misc. notifications and alarms
+type Email struct {
+	NotificationEmails []string `json:"notificationEmails"`
+	SMTPServer         string   `json:"smtpServer"`
+	Sender             string   `json:"sender"`
+}
+
 // Main describes klogproc's configuration
 type Main struct {
-	LogRedis       sredis.RedisConf       `json:"logRedis"`
-	LogFiles       batch.Conf             `json:"logFiles"`
-	LogTail        tail.Conf              `json:"logTail"`
-	CeleryStatus   celery.Conf            `json:"celeryStatus"`
-	GeoIPDbPath    string                 `json:"geoIpDbPath"`
-	LocalTimezone  string                 `json:"localTimezone"`
-	AnonymousUsers []int                  `json:"anonymousUsers"`
-	LogPath        string                 `json:"logPath"`
-	CustomConfDir  string                 `json:"customConfDir"`
-	RecUpdate      elastic.DocUpdConf     `json:"recordUpdate"`
-	ElasticSearch  elastic.ConnectionConf `json:"elasticSearch"`
-	InfluxDB       influx.ConnectionConf  `json:"influxDb"`
+	LogRedis          sredis.RedisConf       `json:"logRedis"`
+	LogFiles          batch.Conf             `json:"logFiles"`
+	LogTail           tail.Conf              `json:"logTail"`
+	CeleryStatus      celery.Conf            `json:"celeryStatus"`
+	GeoIPDbPath       string                 `json:"geoIpDbPath"`
+	LocalTimezone     string                 `json:"localTimezone"`
+	AnonymousUsers    []int                  `json:"anonymousUsers"`
+	LogPath           string                 `json:"logPath"`
+	CustomConfDir     string                 `json:"customConfDir"`
+	RecUpdate         elastic.DocUpdConf     `json:"recordUpdate"`
+	ElasticSearch     elastic.ConnectionConf `json:"elasticSearch"`
+	InfluxDB          influx.ConnectionConf  `json:"influxDb"`
+	EmailNotification Email                  `json:"emailNotification"`
 
 	// BotDefsPath is either a local filesystem path or http resource path
 	// where a list of bots to ignore etc. is defined

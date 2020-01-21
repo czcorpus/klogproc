@@ -39,11 +39,21 @@ type FileConf struct {
 	Version int    `json:"version"`
 }
 
+func (fc *FileConf) GetPath() string {
+	return fc.Path
+}
+
+func (fc *FileConf) GetAppType() string {
+	return fc.AppType
+}
+
 // Conf wraps all the configuration for the 'tail' function
 type Conf struct {
-	IntervalSecs int        `json:"intervalSecs"`
-	WorklogPath  string     `json:"worklogPath"`
-	Files        []FileConf `json:"files"`
+	IntervalSecs          int        `json:"intervalSecs"`
+	WorklogPath           string     `json:"worklogPath"`
+	Files                 []FileConf `json:"files"`
+	NumErrorsAlarm        int        `json:"numErrorsAlarm"`
+	ErrCountTimeRangeSecs int        `json:"errCountTimeRangeSecs"`
 }
 
 // FileTailProcessor specifies an object which is able to utilize all
