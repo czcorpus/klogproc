@@ -15,10 +15,14 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
+	"strings"
 
 	"github.com/czcorpus/klogproc/load/batch"
 	"github.com/czcorpus/klogproc/load/celery"
@@ -28,20 +32,28 @@ import (
 	"github.com/czcorpus/klogproc/save/influx"
 )
 
+// Email configures e-mail client for sending misc. notifications and alarms
+type Email struct {
+	NotificationEmails []string `json:"notificationEmails"`
+	SMTPServer         string   `json:"smtpServer"`
+	Sender             string   `json:"sender"`
+}
+
 // Main describes klogproc's configuration
 type Main struct {
-	LogRedis       sredis.RedisConf       `json:"logRedis"`
-	LogFiles       batch.Conf             `json:"logFiles"`
-	LogTail        tail.Conf              `json:"logTail"`
-	CeleryStatus   celery.Conf            `json:"celeryStatus"`
-	GeoIPDbPath    string                 `json:"geoIpDbPath"`
-	LocalTimezone  string                 `json:"localTimezone"`
-	AnonymousUsers []int                  `json:"anonymousUsers"`
-	LogPath        string                 `json:"logPath"`
-	CustomConfDir  string                 `json:"customConfDir"`
-	RecUpdate      elastic.DocUpdConf     `json:"recordUpdate"`
-	ElasticSearch  elastic.ConnectionConf `json:"elasticSearch"`
-	InfluxDB       influx.ConnectionConf  `json:"influxDb"`
+	LogRedis          sredis.RedisConf       `json:"logRedis"`
+	LogFiles          batch.Conf             `json:"logFiles"`
+	LogTail           tail.Conf              `json:"logTail"`
+	CeleryStatus      celery.Conf            `json:"celeryStatus"`
+	GeoIPDbPath       string                 `json:"geoIpDbPath"`
+	LocalTimezone     string                 `json:"localTimezone"`
+	AnonymousUsers    []int                  `json:"anonymousUsers"`
+	LogPath           string                 `json:"logPath"`
+	CustomConfDir     string                 `json:"customConfDir"`
+	RecUpdate         elastic.DocUpdConf     `json:"recordUpdate"`
+	ElasticSearch     elastic.ConnectionConf `json:"elasticSearch"`
+	InfluxDB          influx.ConnectionConf  `json:"influxDb"`
+	EmailNotification Email                  `json:"emailNotification"`
 
 	// BotDefsPath is either a local filesystem path or http resource path
 	// where a list of bots to ignore etc. is defined
@@ -62,6 +74,7 @@ func (c *Main) HasInfluxOut() bool {
 	return c.InfluxDB.Server != ""
 }
 
+// Validate checks for some essential config properties
 // TODO test additional important items
 func Validate(conf *Main) {
 	var err error
@@ -79,13 +92,11 @@ func Validate(conf *Main) {
 	}
 }
 
+// Load loads main configuration (either from a local fs or via http(s))
 func Load(path string) *Main {
-	if path == "" {
-		log.Fatal("Config path not specified")
-	}
-	rawData, err := ioutil.ReadFile(flag.Arg(1))
+	rawData, err := LoadSupportedResource(flag.Arg(1))
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("FATAL: ", err)
 	}
 	var conf Main
 	json.Unmarshal(rawData, &conf)
@@ -93,4 +104,49 @@ func Load(path string) *Main {
 		conf.LocalTimezone = "+02:00" // add Czech timezone by default
 	}
 	return &conf
+}
+
+func loadHTTPResource(url string) ([]byte, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("Configuration resource loading error: %s (url: %s)", resp.Status, url)
+	}
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// LoadSupportedResource loads raw byte data for Klogproc configuration.
+// Allowed formats are:
+// 1) http://..., https://...
+// 2) file:/localhost/..., file:///...
+// 3) /abs/fs/path, rel/fs/path
+func LoadSupportedResource(uri string) ([]byte, error) {
+	if uri == "" {
+		return nil, fmt.Errorf("No resource (http, file) specified")
+	}
+	var rawData []byte
+	var err error
+	if strings.HasPrefix(uri, "http://") || strings.HasPrefix(uri, "https://") {
+		rawData, err = loadHTTPResource(uri)
+
+	} else if strings.HasPrefix(uri, "file:/localhost/") {
+		rawData, err = ioutil.ReadFile(uri[len("file:/localhost/")-1:])
+
+	} else if strings.HasPrefix(uri, "file:///") {
+		rawData, err = ioutil.ReadFile(uri[len("file:///")-1:])
+
+	} else { // we assume a common fs path
+		rawData, err = ioutil.ReadFile(uri)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return rawData, nil
 }

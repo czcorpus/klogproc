@@ -17,16 +17,13 @@
 package ctype
 
 import (
-	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
-	"net/http"
 	"strings"
 
+	"github.com/czcorpus/klogproc/config"
 	"github.com/czcorpus/klogproc/conversion"
 )
 
@@ -56,22 +53,6 @@ func searchMatchingDef(rec conversion.InputRecord, defs []BotInfo) bool {
 		}
 	}
 	return false
-}
-
-func loadFromHTTP(url string) ([]byte, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("Resource loading error: %s", resp.Status)
-	}
-	buf := new(bytes.Buffer)
-	_, err = buf.ReadFrom(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
 }
 
 func importIPList(data []string) ([]net.IP, error) {
@@ -110,17 +91,7 @@ func (cta *ClientTypeAnalyzer) HasBlacklistedIP(rec conversion.InputRecord) bool
 }
 
 func LoadFromResource(path string) (*ClientTypeAnalyzer, error) {
-	var rawData []byte
-	var err error
-	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
-		rawData, err = loadFromHTTP(path)
-
-	} else {
-		rawData, err = ioutil.ReadFile(flag.Arg(1))
-	}
-	if err != nil {
-		return nil, err
-	}
+	rawData, err := config.LoadSupportedResource(path)
 	conf := new(BotsAndMonitors)
 	err = json.Unmarshal(rawData, conf)
 	if err != nil {

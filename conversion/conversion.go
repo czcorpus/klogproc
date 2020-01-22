@@ -129,6 +129,23 @@ type LogItemTransformer interface {
 	Transform(logRec InputRecord, recType string, anonymousUsers []int) (OutputRecord, error)
 }
 
+// AppErrorRegister describes a type which reacts to logged errors
+// (i.e. errors reported by respective applications we watch - not log
+// processing errors).
+type AppErrorRegister interface {
+
+	// OnError is called whenever a respective parser encounters a reported error
+	OnError()
+
+	// Evaluate asks for the current status evaluation and reaction
+	// (e.g. an alarm may notify users)
+	Evaluate()
+
+	// Reset() should clear internal data (e.g. counters) so it can
+	// start again.
+	Reset()
+}
+
 // UserBelongsToList tests whether a provided user can be
 // found in a provided array of users.
 func UserBelongsToList(userID int, anonymousUsers []int) bool {

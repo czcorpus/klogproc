@@ -127,6 +127,11 @@
             "title": "Influx Telegraf",
             "match": ["telegraf"],
             "example": null
+        },
+        {
+            "title": "Default Go http client",
+            "match": ["Go-http-client/"],
+            "example": "Go-http-client/1.1"
         }
     ]
 }

@@ -31,6 +31,7 @@ import (
 
 	"github.com/czcorpus/klogproc/conversion"
 	"github.com/czcorpus/klogproc/fsop"
+	"github.com/czcorpus/klogproc/load/alarm"
 )
 
 var (
@@ -45,6 +46,7 @@ type Conf struct {
 	WorklogPath            string `json:"worklogPath"`
 	AppType                string `json:"appType"`
 	Version                int    `json:"version"`
+	NumErrorsAlarm         int    `json:"numErrorsAlarm"`
 }
 
 // importTimeFromLine import a datetime information from the beginning
@@ -135,9 +137,18 @@ func CreateLogFileProcFunc(processor LogItemProcessor, destChans ...chan convers
 			files = []string{conf.SrcPath}
 		}
 		log.Printf("Found %d file(s) to process in %s", len(files), conf.SrcPath)
+		var procAlarm conversion.AppErrorRegister
+		if conf.NumErrorsAlarm > 0 {
+			procAlarm = &alarm.BatchProcAlarm{}
+
+		} else {
+			procAlarm = &alarm.NullAlarm{}
+		}
 		for _, file := range files {
-			p := newParser(file, localTimezone, processor.GetAppType())
+			p := newParser(file, localTimezone, processor.GetAppType(), procAlarm)
 			p.Parse(minTimestamp, processor, destChans...)
 		}
+		procAlarm.Evaluate()
+		procAlarm.Reset()
 	}
 }
