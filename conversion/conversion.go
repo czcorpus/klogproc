@@ -28,6 +28,9 @@ const (
 	// AppTypeKontext defines a universal storage identifier for KonText
 	AppTypeKontext = "kontext"
 
+	// AppTypeKontextAPI defines a universal storage identifier for KonText API instance
+	AppTypeKontextAPI = "kontext-api"
+
 	// AppTypeSyd defines a universal storage identifier for SyD
 	AppTypeSyd = "syd"
 

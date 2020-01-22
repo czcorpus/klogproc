@@ -119,7 +119,7 @@ func (parser *shinyLineParser) ParseLine(s string, lineNum int, localTimezone st
 // NewLineParser creates a parser for individual lines of a respective appType
 func NewLineParser(appType string, appErrRegister conversion.AppErrorRegister) (LineParser, error) {
 	switch appType {
-	case conversion.AppTypeKontext:
+	case conversion.AppTypeKontext, conversion.AppTypeKontextAPI:
 		return &kontextLineParser{lp: kontext.NewLineParser(appErrRegister)}, nil
 	case conversion.AppTypeSyd:
 		return &sydLineParser{lp: &syd.LineParser{}}, nil
