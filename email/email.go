@@ -57,7 +57,10 @@ func (den *DefaultEmailNotifier) SendNotification(subject, message string) error
 
 	client.Mail(den.conf.Sender)
 	for _, rcpt := range den.recipients {
-		client.Rcpt(rcpt.Address)
+		err = client.Rcpt(rcpt.Address)
+		if err != nil {
+			return err
+		}
 	}
 
 	wc, err := client.Data()
