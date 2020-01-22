@@ -164,7 +164,7 @@ func (s *shinyTransformer) Transform(logRec conversion.InputRecord, recType stri
 func GetLogTransformer(appType string, version int, userMap *users.UserMap) (conversion.LogItemTransformer, error) {
 
 	switch appType {
-	case conversion.AppTypeKontext:
+	case conversion.AppTypeKontext, conversion.AppTypeKontextAPI:
 		return &konTextTransformer{t: &kontext.Transformer{}}, nil
 	case conversion.AppTypeSyd:
 		return &sydTransformer{t: syd.NewTransformer(version)}, nil
