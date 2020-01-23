@@ -54,10 +54,10 @@ func (den *DefaultEmailNotifier) SendNotification(subject, message string) error
 		return err
 	}
 	defer client.Close()
-
 	client.Mail(den.conf.Sender)
 	for _, rcpt := range den.recipients {
 		err = client.Rcpt(rcpt.Address)
+
 		if err != nil {
 			return err
 		}
@@ -106,5 +106,5 @@ func NewEmailNotifier(conf *config.Email) (*DefaultEmailNotifier, error) {
 		}
 	}
 	log.Printf("INFO: creating e-mail sender with recipient(s) %s", strings.Join(conf.NotificationEmails, ", "))
-	return &DefaultEmailNotifier{conf: conf}, nil
+	return &DefaultEmailNotifier{conf: conf, recipients: recipients}, nil
 }
