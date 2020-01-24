@@ -134,8 +134,8 @@ func newProcAlarm(tailConf *tail.FileConf, conf *tail.Conf, mailConf *config.Ema
 	return &alarm.NullAlarm{}, nil
 }
 
-func newTailProcessor(tailConf *tail.FileConf, conf *config.Main, geoDB *geoip2.Reader, userMap *users.UserMap) *tailProcessor {
-	procAlarm, err := newProcAlarm(tailConf, &conf.LogTail, &conf.EmailNotification)
+func newTailProcessor(tailConf tail.FileConf, conf config.Main, geoDB *geoip2.Reader, userMap *users.UserMap) *tailProcessor {
+	procAlarm, err := newProcAlarm(&tailConf, &conf.LogTail, &conf.EmailNotification)
 	if err != nil {
 		log.Fatal("FATAL: Failed to initialize alarm: ", err)
 	}
@@ -153,7 +153,7 @@ func newTailProcessor(tailConf *tail.FileConf, conf *config.Main, geoDB *geoip2.
 		filePath:          tailConf.Path,
 		version:           tailConf.Version,
 		checkIntervalSecs: conf.LogTail.IntervalSecs, // TODO maybe per-app type here ??
-		conf:              conf,
+		conf:              &conf,
 		lineParser:        lineParser,
 		logTransformer:    logTransformer,
 		geoDB:             geoDB,
@@ -170,7 +170,7 @@ func newTailProcessor(tailConf *tail.FileConf, conf *config.Main, geoDB *geoip2.
 func runTailAction(conf *config.Main, geoDB *geoip2.Reader, userMap *users.UserMap, clientAnalyzer ClientAnalyzer, finishEvt chan bool) {
 	tailProcessors := make([]tail.FileTailProcessor, len(conf.LogTail.Files))
 	for i, f := range conf.LogTail.Files {
-		tailProcessors[i] = newTailProcessor(&f, conf, geoDB, userMap)
+		tailProcessors[i] = newTailProcessor(f, *conf, geoDB, userMap)
 
 	}
 	go tail.Run(&conf.LogTail, tailProcessors, clientAnalyzer, finishEvt)
