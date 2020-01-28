@@ -33,27 +33,12 @@ type tailFileDescriber interface {
 	GetAppType() string
 }
 
-// findRange returns min and max value out of provided itemList
-func findRange(itemList []int64) (int64, int64) {
-	min := itemList[0]
-	max := itemList[0]
-	for i := 1; i < len(itemList); i++ {
-		if itemList[i] < min {
-			min = itemList[i]
-		}
-		if itemList[i] > max {
-			max = itemList[i]
-		}
-	}
-	return min, max
-}
-
 // NullAlarm is used in case no alarm is defined
 // for a task.
 type NullAlarm struct {
 }
 
-func (na *NullAlarm) OnError() {}
+func (na *NullAlarm) OnError(message string) {}
 
 func (na *NullAlarm) Evaluate() {}
 

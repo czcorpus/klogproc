@@ -138,7 +138,7 @@ type LogItemTransformer interface {
 type AppErrorRegister interface {
 
 	// OnError is called whenever a respective parser encounters a reported error
-	OnError()
+	OnError(message string)
 
 	// Evaluate asks for the current status evaluation and reaction
 	// (e.g. an alarm may notify users)

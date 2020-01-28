@@ -61,7 +61,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 
 	} else {
 		if tp == "ERROR" {
-			lp.appErrorRegister.OnError()
+			lp.appErrorRegister.OnError(s)
 		}
 		return nil, conversion.NewLineParsingError(lineNum, fmt.Sprintf("ignored non-query entry"))
 	}

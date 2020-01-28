@@ -28,7 +28,7 @@ type BatchProcAlarm struct {
 	numErr int
 }
 
-func (bpa *BatchProcAlarm) OnError() {
+func (bpa *BatchProcAlarm) OnError(message string) {
 	bpa.numErr++
 }
 
