@@ -19,6 +19,7 @@ package kontext
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/czcorpus/klogproc/conversion"
 )
@@ -60,7 +61,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 		return nil, fmt.Errorf("Failed to process QUERY entry: %s", s)
 
 	} else {
-		if tp == "ERROR" {
+		if tp == "ERROR" && strings.Index(s, "ERROR: syntax error") == -1 {
 			lp.appErrorRegister.OnError(s)
 		}
 		return nil, conversion.NewLineParsingError(lineNum, fmt.Sprintf("ignored non-query entry"))
