@@ -38,7 +38,6 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 
 	items := strings.Split(s, "\t")
 	var err error
-	fmt.Printf("ITEMS: [%v] ", items[3])
 
 	if len(items) >= 10 && items[3] == "L" {
 		return &InputRecord{
