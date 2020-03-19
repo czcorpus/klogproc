@@ -62,6 +62,9 @@ func (lp *LineParser) tokenize(s string) []string {
 	var currQuotChar byte
 	parsedPos := 0
 	for _, item := range strings.Split(s, " ") {
+		if len(item) == 0 {
+			continue
+		}
 		if currQuotChar == 0 {
 			closeChar := testOpenQuot(item[0])
 			if closeChar != 0 && item[len(item)-1] != closeChar {
