@@ -56,10 +56,14 @@ const (
 	AppTypeLists = "lists"
 )
 
-// LineParsingError informs that we failed to parse a line we
-// actually wanted to parse. This means no need to stop whole
-// parsing but still it may be important to inform user about
-// that.
+// LineParsingError informs that we failed to parse a line as
+// an standard log record. In general, this may or may not mean
+// that the line actually contains a broken (= non parseable) string.
+// So it is ok to perform additional processing based on the format of
+// the logged data in such cases.
+// E.g. KonText produces JSON lines for normal operations but in
+// case an error occurs, it just dumps a standard Python error
+// message along with stack trace (multi-line).
 type LineParsingError struct {
 	LineNumber int
 	Message    string

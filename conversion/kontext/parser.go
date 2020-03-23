@@ -50,6 +50,11 @@ type LineParser struct {
 	appErrorRegister conversion.AppErrorRegister
 }
 
+func (lp *LineParser) isIgnoredError(s string) bool {
+	return strings.Index(s, "] ERROR: syntax error") > -1 ||
+		strings.Index(s, "] ERROR: regexopt: at position") > -1
+}
+
 // ParseLine parses a query log line - i.e. it expects
 // that the line contains user interaction log
 func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*InputRecord, error) {
@@ -61,7 +66,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 		return nil, fmt.Errorf("Failed to process QUERY entry: %s", s)
 
 	} else {
-		if tp == "ERROR" && strings.Index(s, "ERROR: syntax error") == -1 {
+		if tp == "ERROR" && !lp.isIgnoredError(s) {
 			lp.appErrorRegister.OnError(s)
 		}
 		return nil, conversion.NewLineParsingError(lineNum, fmt.Sprintf("ignored non-query entry"))
