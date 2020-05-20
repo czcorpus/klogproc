@@ -47,8 +47,11 @@ type actionArgs struct {
 }
 
 func getAction(path string) actionArgs {
-	items := strings.Split(strings.Trim(path, "/"), "/")
 	ans := actionArgs{}
+	items := strings.Split(strings.Trim(path, "/"), "/")
+	if len(items) == 0 {
+		return ans
+	}
 	var action string
 	for _, prefix := range pathPrefixes {
 		if len(items) > 1 && items[0] == prefix {
