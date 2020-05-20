@@ -41,6 +41,9 @@ func isCloseQuot(c byte) bool {
 }
 
 func getProcTime(procTimeExpr string) (float32, error) {
+	if procTimeExpr == "" {
+		return -1, nil
+	}
 	srch := strings.Index(procTimeExpr, "rt=")
 	if srch == 0 {
 		pts := strings.Trim(procTimeExpr[3:], "\"")
