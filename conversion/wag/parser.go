@@ -66,10 +66,12 @@ func getAction(path string) actionArgs {
 	switch ans.action {
 	case actionSearch:
 		ans.lang1 = items[0]
+		ans.queries = []string{items[1]}
 	case actionTranslate:
 		langItems := strings.Split(items[0], "--")
 		ans.lang1 = langItems[0]
 		ans.lang2 = langItems[1]
+		ans.queries = []string{items[1]}
 	case actionCompare:
 		ans.lang1 = items[0]
 		ans.queries = strings.Split(items[1], "--")
