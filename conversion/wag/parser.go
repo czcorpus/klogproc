@@ -17,6 +17,7 @@
 package wag
 
 import (
+	"log"
 	"strings"
 
 	"github.com/czcorpus/klogproc/load/accesslog"
@@ -61,6 +62,7 @@ func getAction(path string) actionArgs {
 	}
 	if action == "" {
 		action = items[0]
+		items = items[1:]
 	}
 	if !isProcessable(action) {
 		return ans
@@ -68,8 +70,13 @@ func getAction(path string) actionArgs {
 	ans.action = action
 	switch ans.action {
 	case actionSearch:
-		ans.lang1 = items[0]
-		ans.queries = []string{items[1]}
+		if len(items) >= 2 {
+			ans.lang1 = items[0]
+			ans.queries = []string{items[1]}
+
+		} else {
+			log.Print("WARNING: ignoring legacy search action: ", path)
+		}
 	case actionTranslate:
 		langItems := strings.Split(items[0], "--")
 		ans.lang1 = langItems[0]
