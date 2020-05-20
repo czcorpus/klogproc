@@ -21,7 +21,7 @@ import (
 )
 
 func isQuery(action string) bool {
-	return action == "search"
+	return action == actionSearch || action == actionCompare || action == actionTranslate
 }
 
 // Transformer converts a source log object into a destination one
@@ -32,20 +32,20 @@ type Transformer struct {
 func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymousUsers []int) (*OutputRecord, error) {
 
 	r := &OutputRecord{
-		Type:        recType,
-		time:        logRecord.GetTime(),
-		Datetime:    logRecord.GetTime().Format(time.RFC3339),
-		IPAddress:   logRecord.Request.RemoteAddr,
-		UserAgent:   logRecord.Request.HTTPUserAgent,
-		IsAnonymous: true, // currently we
-		IsQuery:     isQuery(logRecord.Action),
-		QueryType:   logRecord.QueryType,
-		Lang1:       logRecord.Lang1,
-		Lang2:       logRecord.Lang2,
-		Query1:      logRecord.Query1,
-		Query2:      logRecord.Query2,
-		Action:      logRecord.Action,
-		ProcTime:    logRecord.ProcTime,
+		Type:                recType,
+		time:                logRecord.GetTime(),
+		Datetime:            logRecord.GetTime().Format(time.RFC3339),
+		IPAddress:           logRecord.Request.RemoteAddr,
+		UserAgent:           logRecord.Request.HTTPUserAgent,
+		IsAnonymous:         true, // currently we
+		IsQuery:             isQuery(logRecord.Action),
+		HasPosSpecification: logRecord.HasPosSpecification,
+		QueryType:           logRecord.QueryType,
+		Lang1:               logRecord.Lang1,
+		Lang2:               logRecord.Lang2,
+		Queries:             logRecord.Queries,
+		Action:              logRecord.Action,
+		ProcTime:            logRecord.ProcTime,
 	}
 	r.ID = createID(r)
 	return r, nil

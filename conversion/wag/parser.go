@@ -22,22 +22,67 @@ import (
 	"github.com/czcorpus/klogproc/load/accesslog"
 )
 
-var (
-	pathPrefixes = []string{"slovo-v-kostce", "word-at-a-glance", "wag", "wdg", "wdglance"}
+const (
+	actionSearch           = "search"
+	actionTranslate        = "translate"
+	actionCompare          = "compare"
+	actionWordForms        = "word-forms"
+	actionSimilarFreqWords = "similar-freq-words"
+	actionSetTheme         = "set-theme"
+	actionTelemetry        = "telemetry"
+	actionSetUILang        = "set-ui-lang"
+	actionGetLemmas        = "get-lemmas"
+	actionEmbedded         = "embedded"
 )
 
-func getAction(path string) string {
+var (
+	pathPrefixes = []string{"slovo-v-kostce", "word-at-a-glance", "wag", "wag-beta", "wdg", "wdglance"}
+)
+
+type actionArgs struct {
+	action  string
+	queries []string
+	lang1   string
+	lang2   string
+}
+
+func getAction(path string) actionArgs {
 	items := strings.Split(strings.Trim(path, "/"), "/")
+	ans := actionArgs{}
+	var action string
 	for _, prefix := range pathPrefixes {
-		if items[0] == prefix && len(items) > 1 {
-			return items[1]
+		if len(items) > 1 && items[0] == prefix {
+			action = items[1]
+			items = items[2:]
 		}
 	}
-	return items[0]
+	if action == "" {
+		action = items[0]
+	}
+	if !isProcessable(action) {
+		return ans
+	}
+	ans.action = action
+	switch ans.action {
+	case actionSearch:
+		ans.lang1 = items[0]
+	case actionTranslate:
+		langItems := strings.Split(items[0], "--")
+		ans.lang1 = langItems[0]
+		ans.lang2 = langItems[1]
+	case actionCompare:
+		ans.lang1 = items[0]
+		ans.queries = strings.Split(items[1], "--")
+	}
+	return ans
 }
 
 func isProcessable(action string) bool {
-	return action == "search" || action == "word-forms" || action == "similar-freq-words"
+	return action == actionSearch || action == actionTranslate ||
+		action == actionCompare || action == actionWordForms ||
+		action == actionSimilarFreqWords || action == actionSetTheme ||
+		action == actionTelemetry || action == actionSetUILang ||
+		action == actionGetLemmas || action == actionEmbedded
 }
 
 // LineParser is a parser for reading KonText application logs
@@ -52,25 +97,25 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 		return &InputRecord{isProcessable: false}, err
 	}
 	action := getAction(parsed.Path)
-	if action == "" {
+	if action.action == "" {
 		return &InputRecord{isProcessable: false}, nil
 	}
 
 	ans := &InputRecord{
-		isProcessable: isProcessable(action),
-		Action:        action,
+		isProcessable: true,
+		Action:        action.action,
 		Datetime:      parsed.Datetime,
 		Request: Request{
 			HTTPUserAgent:  parsed.UserAgent,
 			HTTPRemoteAddr: parsed.IPAddress,
 			RemoteAddr:     parsed.IPAddress, // TODO the same stuff as above?
 		},
-		ProcTime:  parsed.ProcTime,
-		QueryType: parsed.URLArgs.Get("queryType"),
-		Lang1:     parsed.URLArgs.Get("lang1"),
-		Lang2:     parsed.URLArgs.Get("lang2"),
-		Query1:    parsed.URLArgs.Get("q1"),
-		Query2:    parsed.URLArgs.Get("q2"),
+		ProcTime:            parsed.ProcTime,
+		QueryType:           action.action, // for legacy reasons (otherwise it is redundant)
+		Lang1:               action.lang1,
+		Lang2:               action.lang2,
+		Queries:             action.queries,
+		HasPosSpecification: parsed.URLArgs.Get("pos") != "" || parsed.URLArgs.Get("lemma") != "",
 	}
 	return ans, nil
 }

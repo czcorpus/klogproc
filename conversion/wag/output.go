@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
@@ -28,23 +29,23 @@ import (
 
 // OutputRecord represents a polished version of WaG's access log.
 type OutputRecord struct {
-	ID          string `json:"-"`
-	Type        string `json:"type"`
-	Action      string `json:"action"`
-	Datetime    string `json:"datetime"`
-	time        time.Time
-	IPAddress   string                   `json:"ipAddress"`
-	UserAgent   string                   `json:"userAgent"`
-	UserID      string                   `json:"userId"`
-	IsAnonymous bool                     `json:"isAnonymous"`
-	IsQuery     bool                     `json:"isQuery"`
-	QueryType   string                   `json:"queryType"`
-	Lang1       string                   `json:"lang1"`
-	Lang2       string                   `json:"lang2"`
-	Query1      string                   `json:"query1"`
-	Query2      string                   `json:"query2"`
-	GeoIP       conversion.GeoDataRecord `json:"geoip"`
-	ProcTime    float32                  `json:"procTime"`
+	ID                  string `json:"-"`
+	Type                string `json:"type"`
+	Action              string `json:"action"`
+	Datetime            string `json:"datetime"`
+	time                time.Time
+	IPAddress           string                   `json:"ipAddress"`
+	UserAgent           string                   `json:"userAgent"`
+	UserID              string                   `json:"userId"`
+	IsAnonymous         bool                     `json:"isAnonymous"`
+	IsQuery             bool                     `json:"isQuery"`
+	HasPosSpecification bool                     `json:"hasPosSpecification"`
+	QueryType           string                   `json:"queryType"`
+	Lang1               string                   `json:"lang1"`
+	Lang2               string                   `json:"lang2"`
+	Queries             []string                 `json:"queries"`
+	GeoIP               conversion.GeoDataRecord `json:"geoip"`
+	ProcTime            float32                  `json:"procTime"`
 }
 
 // SetLocation sets all the location related properties
@@ -86,7 +87,7 @@ func (r *OutputRecord) ToInfluxDB() (tags map[string]string, values map[string]i
 // createID creates an idempotent ID of rec based on its properties.
 func createID(rec *OutputRecord) string {
 	str := rec.Type + rec.Action + strconv.FormatBool(rec.IsAnonymous) + rec.Datetime + rec.IPAddress + rec.UserID +
-		rec.QueryType + rec.Query1 + rec.Query2 + rec.Lang1 + rec.Lang2
+		rec.QueryType + strings.Join(rec.Queries, "--") + rec.Lang1 + rec.Lang2
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }

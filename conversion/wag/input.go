@@ -34,16 +34,16 @@ type Request struct {
 
 // InputRecord represents a raw-parsed version of SkE's access log
 type InputRecord struct {
-	Action        string
-	QueryType     string
-	Lang1         string
-	Lang2         string
-	Query1        string
-	Query2        string
-	Datetime      string
-	Request       Request
-	ProcTime      float32
-	isProcessable bool
+	Action              string
+	QueryType           string
+	Lang1               string
+	Lang2               string
+	Queries             []string
+	Datetime            string
+	Request             Request
+	ProcTime            float32
+	isProcessable       bool
+	HasPosSpecification bool
 }
 
 // GetTime returns a normalized log date and time information
