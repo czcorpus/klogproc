@@ -113,6 +113,8 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 		return &InputRecord{isProcessable: false}, nil
 	}
 
+	lcUA := strings.ToLower(parsed.UserAgent)
+
 	ans := &InputRecord{
 		isProcessable: true,
 		Action:        action.action,
@@ -128,6 +130,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 		Lang2:               action.lang2,
 		Queries:             action.queries,
 		HasPosSpecification: parsed.URLArgs.Get("pos") != "" || parsed.URLArgs.Get("lemma") != "",
+		IsMobileClient:      strings.Contains(lcUA, "mobile") || strings.Contains(lcUA, "iphone") || strings.Contains(lcUA, "tablet") || strings.Contains(lcUA, "android"),
 	}
 	return ans, nil
 }
