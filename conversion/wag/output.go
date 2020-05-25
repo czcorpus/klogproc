@@ -39,6 +39,7 @@ type OutputRecord struct {
 	UserID              string                   `json:"userId"`
 	IsAnonymous         bool                     `json:"isAnonymous"`
 	IsQuery             bool                     `json:"isQuery"`
+	IsMobileClient      bool                     `json:"isMobileClient"`
 	HasPosSpecification bool                     `json:"hasPosSpecification"`
 	QueryType           string                   `json:"queryType"`
 	Lang1               string                   `json:"lang1"`

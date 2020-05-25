@@ -43,6 +43,7 @@ type InputRecord struct {
 	Request             Request
 	ProcTime            float32
 	isProcessable       bool
+	IsMobileClient      bool
 	HasPosSpecification bool
 }
 

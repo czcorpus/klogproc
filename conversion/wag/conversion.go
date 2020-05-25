@@ -39,6 +39,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 		UserAgent:           logRecord.Request.HTTPUserAgent,
 		IsAnonymous:         true, // currently we
 		IsQuery:             isQuery(logRecord.Action),
+		IsMobileClient:      logRecord.IsMobileClient,
 		HasPosSpecification: logRecord.HasPosSpecification,
 		QueryType:           logRecord.QueryType,
 		Lang1:               logRecord.Lang1,
