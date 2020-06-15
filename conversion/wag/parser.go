@@ -80,8 +80,18 @@ func getAction(path string) actionArgs {
 	case actionTranslate:
 		langItems := strings.Split(items[0], "--")
 		ans.lang1 = langItems[0]
-		ans.lang2 = langItems[1]
-		ans.queries = []string{items[1]}
+		if len(langItems) > 1 {
+			ans.lang2 = langItems[1]
+
+		} else {
+			log.Print("WARNING: missing second lang info: ", path)
+		}
+		if len(items) > 1 {
+			ans.queries = []string{items[1]}
+
+		} else {
+			log.Print("WARNING: missing query: ", path)
+		}
 	case actionCompare:
 		ans.lang1 = items[0]
 		ans.queries = strings.Split(items[1], "--")
