@@ -18,6 +18,7 @@ package conversion
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -25,35 +26,39 @@ import (
 )
 
 const (
+
+	// AppTypeCalc defines a universal storage identifier for Calc
+	AppTypeCalc = "calc"
+
 	// AppTypeKontext defines a universal storage identifier for KonText
 	AppTypeKontext = "kontext"
 
 	// AppTypeKontextAPI defines a universal storage identifier for KonText API instance
 	AppTypeKontextAPI = "kontext-api"
 
-	// AppTypeSyd defines a universal storage identifier for SyD
-	AppTypeSyd = "syd"
-
-	// AppTypeMorfio defines a universal storage identifier for Morfio
-	AppTypeMorfio = "morfio"
+	// AppTypeKorpusDB defines a universal storage identifier for KorpusDB
+	AppTypeKorpusDB = "korpus-db"
 
 	// AppTypeKwords defines a universal storage identifier for Kwords
 	AppTypeKwords = "kwords"
 
-	// AppTypeTreq defines a universal storage identifier for Treq
-	AppTypeTreq = "treq"
+	// AppTypeLists defines a universal storage identifier for Lists
+	AppTypeLists = "lists"
+
+	// AppTypeMorfio defines a universal storage identifier for Morfio
+	AppTypeMorfio = "morfio"
 
 	// AppTypeSke defines a universal storage identifier for Treq
 	AppTypeSke = "ske"
 
+	// AppTypeSyd defines a universal storage identifier for SyD
+	AppTypeSyd = "syd"
+
+	// AppTypeTreq defines a universal storage identifier for Treq
+	AppTypeTreq = "treq"
+
 	// AppTypeWag defines a universal storage identifier for Word at a Glance
 	AppTypeWag = "wag"
-
-	// AppTypeCalc defines a universal storage identifier for Calc
-	AppTypeCalc = "calc"
-
-	// AppTypeLists defines a universal storage identifier for Lists
-	AppTypeLists = "lists"
 )
 
 // LineParsingError informs that we failed to parse a line as
@@ -211,15 +216,28 @@ func ImportBool(v, keyName string) (bool, error) {
 // ConvertDatetimeString imports ISO 8601 datetime string. In case
 // of a parsing error, "zero" time instance is created.
 func ConvertDatetimeString(datetime string) time.Time {
-	if t, err := time.Parse("2006-01-02T15:04:05-07:00", datetime); err == nil {
+	t, err := time.Parse("2006-01-02T15:04:05-07:00", datetime)
+	if err == nil {
 		return t
 	}
+	log.Print("WARNING: ", err)
+	return time.Time{}
+}
+
+func ConvertDatetimeStringWithMillisNoTZ(datetime string) time.Time {
+	t, err := time.Parse("2006-01-02T15:04:05.000000", datetime)
+	if err == nil {
+		return t
+	}
+	log.Print("WARNING: ", err)
 	return time.Time{}
 }
 
 func ConvertAccessLogDatetimeString(datetime string) time.Time {
-	if t, err := time.Parse("02/Jan/2006:15:04:05 -0700", datetime); err == nil {
+	t, err := time.Parse("02/Jan/2006:15:04:05 -0700", datetime)
+	if err == nil {
 		return t
 	}
+	log.Print("WARNING: ", err)
 	return time.Time{}
 }
