@@ -43,8 +43,7 @@ func updateRecords(conf *config.Main, options *ProcessOptions) {
 	client := elastic.NewClient(&conf.ElasticSearch)
 	for _, updConf := range conf.RecUpdate.Filters {
 		totalUpdated, err := client.ManualBulkRecordUpdate(conf.ElasticSearch.Index, updConf,
-			conf.RecUpdate.Update, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize,
-			options.dryRun)
+			conf.RecUpdate.Update, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize)
 		if err == nil {
 			log.Printf("INFO: Updated %d items\n", totalUpdated)
 
@@ -58,8 +57,7 @@ func removeKeyFromRecords(conf *config.Main, options *ProcessOptions) {
 	client := elastic.NewClient(&conf.ElasticSearch)
 	for _, updConf := range conf.RecUpdate.Filters {
 		totalUpdated, err := client.ManualBulkRecordKeyRemove(conf.ElasticSearch.Index, updConf,
-			conf.RecUpdate.RemoveKey, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize,
-			options.dryRun)
+			conf.RecUpdate.RemoveKey, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize)
 		if err == nil {
 			log.Printf("INFO: Removed key %s from %d items\n", conf.RecUpdate.RemoveKey, totalUpdated)
 
