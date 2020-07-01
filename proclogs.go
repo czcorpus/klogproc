@@ -28,6 +28,7 @@ import (
 	"github.com/czcorpus/klogproc/fsop"
 	"github.com/czcorpus/klogproc/load/batch"
 	"github.com/czcorpus/klogproc/load/sredis"
+	"github.com/czcorpus/klogproc/save"
 	"github.com/czcorpus/klogproc/save/elastic"
 	"github.com/czcorpus/klogproc/save/influx"
 	"github.com/czcorpus/klogproc/users"
@@ -212,7 +213,7 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 
 			err = retryRescuedItems(conf.LogRedis.AppType, redisQueue, &conf.ElasticSearch)
 			if err != nil {
-				log.Print("ERROR: %s", err)
+				log.Printf("ERROR: %s", err)
 			}
 
 			processRedisLogs(conf, redisQueue, processor, channelWriteES, channelWriteInflux)
@@ -254,8 +255,15 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 
 			var wg sync.WaitGroup
 			wg.Add(2)
-			go elastic.RunWriteConsumer(conf.LogFiles.AppType, &conf.ElasticSearch, channelWriteES, &wg, worklog)
-			go influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux, &wg)
+
+			if options.dryRun {
+				go save.RunWriteConsumer(channelWriteES, channelWriteInflux, &wg)
+				log.Print("WARNING: using dry-run mode, output goes to stdout")
+
+			} else {
+				go elastic.RunWriteConsumer(conf.LogFiles.AppType, &conf.ElasticSearch, channelWriteES, &wg, worklog)
+				go influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux, &wg)
+			}
 			proc := batch.CreateLogFileProcFunc(processor, channelWriteES, channelWriteInflux)
 			proc(&conf.LogFiles, conf.LocalTimezone, worklog.GetLastRecord())
 			close(channelWriteES)
