@@ -21,6 +21,7 @@ import (
 
 	"github.com/czcorpus/klogproc/conversion"
 	"github.com/czcorpus/klogproc/conversion/kontext"
+	"github.com/czcorpus/klogproc/conversion/korpusdb"
 	"github.com/czcorpus/klogproc/conversion/kwords"
 	"github.com/czcorpus/klogproc/conversion/morfio"
 	"github.com/czcorpus/klogproc/conversion/shiny"
@@ -40,6 +41,56 @@ type kontextLineParser struct {
 
 // ParseLine parses a passed line of a respective log
 func (parser *kontextLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum, localTimezone)
+}
+
+// ------------------------------------
+
+type kwordsLineParser struct {
+	lp *kwords.LineParser
+}
+
+func (parser *kwordsLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum, localTimezone)
+}
+
+// ------------------------------------
+
+type korpusDBLineParser struct {
+	lp *korpusdb.LineParser
+}
+
+func (parser *korpusDBLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum, localTimezone)
+}
+
+// ------------------------------------
+
+type morfioLineParser struct {
+	lp *morfio.LineParser
+}
+
+func (parser *morfioLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum, localTimezone)
+}
+
+// ------------------------------------
+
+type shinyLineParser struct {
+	lp *shiny.LineParser
+}
+
+func (parser *shinyLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum, localTimezone)
+}
+
+// ------------------------------------
+
+type skeLineParser struct {
+	lp *ske.LineParser
+}
+
+func (parser *skeLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum, localTimezone)
 }
 
@@ -66,36 +117,6 @@ func (parser *treqLineParser) ParseLine(s string, lineNum int, localTimezone str
 
 // ------------------------------------
 
-type morfioLineParser struct {
-	lp *morfio.LineParser
-}
-
-func (parser *morfioLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
-	return parser.lp.ParseLine(s, lineNum, localTimezone)
-}
-
-// ------------------------------------
-
-type kwordsLineParser struct {
-	lp *kwords.LineParser
-}
-
-func (parser *kwordsLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
-	return parser.lp.ParseLine(s, lineNum, localTimezone)
-}
-
-// ------------------------------------
-
-type skeLineParser struct {
-	lp *ske.LineParser
-}
-
-func (parser *skeLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
-	return parser.lp.ParseLine(s, lineNum, localTimezone)
-}
-
-// ------------------------------------
-
 type wagLineParser struct {
 	lp *wag.LineParser
 }
@@ -106,35 +127,27 @@ func (parser *wagLineParser) ParseLine(s string, lineNum int, localTimezone stri
 
 // ------------------------------------
 
-type shinyLineParser struct {
-	lp *shiny.LineParser
-}
-
-func (parser *shinyLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
-	return parser.lp.ParseLine(s, lineNum, localTimezone)
-}
-
-// ------------------------------------
-
 // NewLineParser creates a parser for individual lines of a respective appType
 func NewLineParser(appType string, appErrRegister conversion.AppErrorRegister) (LineParser, error) {
 	switch appType {
+	case conversion.AppTypeCalc, conversion.AppTypeLists:
+		return &shinyLineParser{lp: &shiny.LineParser{}}, nil
 	case conversion.AppTypeKontext, conversion.AppTypeKontextAPI:
 		return &kontextLineParser{lp: kontext.NewLineParser(appErrRegister)}, nil
+	case conversion.AppTypeKwords:
+		return &kwordsLineParser{lp: &kwords.LineParser{}}, nil
+	case conversion.AppTypeKorpusDB:
+		return &korpusDBLineParser{lp: &korpusdb.LineParser{}}, nil
+	case conversion.AppTypeMorfio:
+		return &morfioLineParser{lp: &morfio.LineParser{}}, nil
+	case conversion.AppTypeSke:
+		return &skeLineParser{lp: &ske.LineParser{}}, nil
 	case conversion.AppTypeSyd:
 		return &sydLineParser{lp: &syd.LineParser{}}, nil
 	case conversion.AppTypeTreq:
 		return &treqLineParser{lp: &treq.LineParser{}}, nil
-	case conversion.AppTypeMorfio:
-		return &morfioLineParser{lp: &morfio.LineParser{}}, nil
-	case conversion.AppTypeKwords:
-		return &kwordsLineParser{lp: &kwords.LineParser{}}, nil
-	case conversion.AppTypeSke:
-		return &skeLineParser{lp: &ske.LineParser{}}, nil
 	case conversion.AppTypeWag:
 		return &wagLineParser{lp: &wag.LineParser{}}, nil
-	case conversion.AppTypeCalc, conversion.AppTypeLists:
-		return &shinyLineParser{lp: &shiny.LineParser{}}, nil
 	default:
 		return nil, fmt.Errorf("Parser not found for application type %s", appType)
 	}

@@ -244,10 +244,10 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 			worklog := batch.NewWorklog(conf.LogFiles.WorklogPath)
 			log.Printf("INFO: using worklog %s", conf.LogFiles.WorklogPath)
 			if options.worklogReset {
+				log.Printf("truncated worklog %v", worklog)
 				err := worklog.Reset()
-				log.Print("truncated worklog %v, with err: %s", worklog, err)
 				if err != nil {
-					log.Fatal("FATAL: unable to initialize worklog: %s", err)
+					log.Fatalf("FATAL: unable to initialize worklog: %s", err)
 				}
 			}
 			defer worklog.Save()

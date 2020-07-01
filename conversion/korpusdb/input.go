@@ -1,5 +1,5 @@
-// Copyright 2019 Tomas Machalek <tomas.machalek@gmail.com>
-// Copyright 2019 Institute of the Czech National Corpus,
+// Copyright 2020 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2020 Institute of the Czech National Corpus,
 //                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kwords
+package korpusdb
 
 import (
 	"net"
@@ -23,29 +23,45 @@ import (
 	"github.com/czcorpus/klogproc/conversion"
 )
 
-// InputRecord is a Kwords parsed log record
+type QueryFeat struct {
+	Type  string      `json:"type"`
+	Value interface{} `json:"value"`
+	CI    bool        `json:"ci"`
+}
+
+type Query struct {
+	Type  string      `json:"type"`
+	Feats []QueryFeat `json:"feats"`
+}
+
+type Pagination struct {
+	From int `json:"from"`
+	Size int `json:"size"`
+}
+
+type Request struct {
+	Feats []string                 `json:"feats"`
+	Query Query                    `json:"query"`
+	Page  Pagination               `json:"page"`
+	Sort  []map[string]interface{} `json:"sort"`
+}
+
+// InputRecord is a KorpusDB parsed log record
 type InputRecord struct {
-	Datetime        string
-	IPAddress       string
-	UserID          string
-	NumFiles        string
-	TargetInputType string
-	TargetLength    string
-	Corpus          string
-	RefLength       string
-	Pronouns        string
-	Prep            string
-	Con             string
-	Num             string
-	CaseInsensitive string
+	TS      string  `json:"ts"`
+	Path    string  `json:"path"`
+	Method  string  `json:"method"`
+	UserID  string  `json:"userid"`
+	IP      string  `json:"ip"`
+	Request Request `json:"request"`
 }
 
 func (rec *InputRecord) GetTime() time.Time {
-	return conversion.ConvertDatetimeString(rec.Datetime)
+	return conversion.ConvertDatetimeStringWithMillisNoTZ(rec.TS)
 }
 
 func (rec *InputRecord) GetClientIP() net.IP {
-	return net.ParseIP(rec.IPAddress)
+	return net.ParseIP(rec.IP)
 }
 
 // GetUserAgent returns a raw HTTP user agent info as provided by the client
