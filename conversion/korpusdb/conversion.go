@@ -53,7 +53,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 		userID = uid
 	}
 
-	out := OutputRecord{
+	out := &OutputRecord{
 		Type:        conversion.AppTypeKorpusDB,
 		time:        logRecord.GetTime(),
 		IPAddress:   logRecord.IP,
@@ -63,5 +63,6 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 		IsQuery:     testIsQuery(logRecord),
 		QueryType:   getQueryType(logRecord),
 	}
-	return &out, nil
+	out.ID = createID(out)
+	return out, nil
 }
