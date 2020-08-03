@@ -17,11 +17,19 @@
 package korpusdb
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
 )
+
+func createID(rec *OutputRecord) string {
+	str := rec.Type + rec.Datetime + rec.IPAddress + rec.UserID + rec.QueryType
+	sum := sha1.Sum([]byte(str))
+	return hex.EncodeToString(sum[:])
+}
 
 // OutputRecord represents polished, export ready record from KorpusDB log
 type OutputRecord struct {
