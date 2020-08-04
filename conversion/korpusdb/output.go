@@ -20,13 +20,15 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"strconv"
 	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
 )
 
 func createID(rec *OutputRecord) string {
-	str := rec.Type + rec.Datetime + rec.IPAddress + rec.UserID + rec.QueryType
+	str := rec.Type + rec.Path + rec.Datetime + rec.IPAddress + rec.UserID + rec.QueryType +
+		strconv.Itoa(rec.Page.From) + strconv.Itoa(rec.Page.Size)
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }
@@ -36,6 +38,8 @@ type OutputRecord struct {
 	ID          string `json:"-"`
 	Type        string `json:"type"`
 	time        time.Time
+	Path        string                   `json:"path"`
+	Page        Pagination               `json:"page"`
 	Datetime    string                   `json:"datetime"`
 	IPAddress   string                   `json:"ipAddress"`
 	UserID      string                   `json:"userId"`

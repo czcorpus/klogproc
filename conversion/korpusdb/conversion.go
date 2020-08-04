@@ -56,6 +56,8 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 	out := &OutputRecord{
 		Type:        conversion.AppTypeKorpusDB,
 		time:        logRecord.GetTime(),
+		Path:        logRecord.Path,
+		Page:        logRecord.Request.Page,
 		IPAddress:   logRecord.IP,
 		Datetime:    logRecord.TS,
 		UserID:      logRecord.UserID,
