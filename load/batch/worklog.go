@@ -109,5 +109,13 @@ func (w *Worklog) Reset() error {
 // NewWorklog creates an instance of Worklog with
 // defined path. No file access attempts are made.
 func NewWorklog(path string) *Worklog {
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		f, err := os.Create(path)
+		if err != nil {
+			log.Fatal("FATAL: cannot create worklog -", err)
+		}
+		f.Close()
+	}
 	return &Worklog{filePath: path}
 }
