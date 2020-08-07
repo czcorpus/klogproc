@@ -36,8 +36,8 @@ func testOpenQuot(c byte) byte {
 	}
 }
 
-func isCloseQuot(c byte) bool {
-	return c == '"' || c == ']'
+func isCloseQuot(start, c byte) bool {
+	return start == '"' && c == '"' || start == '[' && c == ']'
 }
 
 func getProcTime(procTimeExpr string) (float32, error) {
@@ -84,14 +84,14 @@ func (lp *LineParser) tokenize(s string) []string {
 			}
 
 		} else {
-			if isCloseQuot(item[len(item)-1]) {
+			if isCloseQuot(currQuotChar, item[len(item)-1]) {
 				currQuoted = append(currQuoted, item[:len(item)-1])
 				items[parsedPos] = strings.Join(currQuoted, " ")
 				currQuotChar = 0
 				parsedPos++
 				currQuoted = make([]string, 0, 30)
 
-			} else if !isCloseQuot(item[0]) && !isCloseQuot(item[len(item)-1]) {
+			} else if !isCloseQuot(currQuotChar, item[0]) && !isCloseQuot(currQuotChar, item[len(item)-1]) {
 				currQuoted = append(currQuoted, item)
 			}
 		}
@@ -128,23 +128,29 @@ type ParsedAccessLog struct {
 //   9) rt=0.012
 func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*ParsedAccessLog, error) {
 	ans := &ParsedAccessLog{}
-	var err error
 	tokens := lp.tokenize(s)
 
 	ans.IPAddress = tokens[0]
 	ans.Username = tokens[2]
 	ans.Datetime = tokens[3]
 	urlBlock := strings.Split(tokens[4], " ")
-	ans.HTTPMethod = urlBlock[0]
-	ans.HTTPVersion = urlBlock[2]
-	parsedURL, err := url.Parse(urlBlock[1])
-	if err != nil {
-		return nil, conversion.NewLineParsingError(lineNum, err.Error())
+
+	var err error
+	var parsedURL *url.URL
+	if len(urlBlock) == 3 {
+		ans.HTTPMethod = urlBlock[0]
+		ans.HTTPVersion = urlBlock[2]
+		parsedURL, err = url.Parse(urlBlock[1])
+		if err != nil {
+			return nil, conversion.NewLineParsingError(lineNum, err.Error())
+		}
 	}
-	ans.Path = parsedURL.Path
-	ans.URLArgs, err = url.ParseQuery(parsedURL.RawQuery)
-	if err != nil {
-		return nil, conversion.NewLineParsingError(lineNum, err.Error())
+	if parsedURL != nil {
+		ans.Path = parsedURL.Path
+		ans.URLArgs, err = url.ParseQuery(parsedURL.RawQuery)
+		if err != nil {
+			return nil, conversion.NewLineParsingError(lineNum, err.Error())
+		}
 	}
 	ans.Referrer = tokens[7]
 	ans.UserAgent = tokens[8]
