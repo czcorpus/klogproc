@@ -1,5 +1,5 @@
-// Copyright 2019 Tomas Machalek <tomas.machalek@gmail.com>
-// Copyright 2019 Institute of the Czech National Corpus,
+// Copyright 2020 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2020 Institute of the Czech National Corpus,
 //                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ske
+package mapka
 
 import (
 	"strings"
@@ -22,20 +22,11 @@ import (
 	"github.com/czcorpus/klogproc/load/accesslog"
 )
 
-const (
-	actionMark    = "run.cgi/"
-	actionMarkLen = len("run.cgi/")
-)
-
 func getAction(path string) string {
-	i := strings.Index(path, actionMark)
-	if i > -1 {
-		return path[i+actionMarkLen:]
-	}
-	return ""
+	return path
 }
 
-// LineParser is a parser for reading SkE application logs
+// LineParser is a parser for reading Mapka application logs
 type LineParser struct {
 	parser accesslog.LineParser
 }
@@ -52,11 +43,8 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 	}
 
 	ans := &InputRecord{
-		isProcessable: true,
+		isProcessable: strings.HasPrefix(parsed.Path, "/mapka"),
 		Action:        action,
-		Corpus:        parsed.URLArgs.Get("corpname"),
-		Subcorpus:     parsed.URLArgs.Get("usesubcorp"),
-		User:          parsed.Username,
 		Datetime:      parsed.Datetime,
 		Request: Request{
 			HTTPUserAgent:  parsed.UserAgent,

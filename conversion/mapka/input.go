@@ -1,5 +1,5 @@
-// Copyright 2019 Tomas Machalek <tomas.machalek@gmail.com>
-// Copyright 2019 Institute of the Czech National Corpus,
+// Copyright 2020 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2020 Institute of the Czech National Corpus,
 //                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ske
+package mapka
 
 import (
 	"net"
@@ -32,17 +32,13 @@ type Request struct {
 	RemoteAddr       string `json:"REMOTE_ADDR"`
 }
 
-// InputRecord represents a raw-parsed version of SkE's access log
+// InputRecord represents a raw-parsed version of MAPKA's access log
 type InputRecord struct {
 	Action        string
-	Corpus        string
-	Subcorpus     string
 	Datetime      string
-	User          string
 	Request       Request
 	ProcTime      float32
 	isProcessable bool
-	// TODO
 }
 
 // GetTime returns a normalized log date and time information
