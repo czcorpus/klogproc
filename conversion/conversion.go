@@ -45,6 +45,9 @@ const (
 	// AppTypeLists defines a universal storage identifier for Lists
 	AppTypeLists = "lists"
 
+	// AppTypeMapka defines a universal storage identifier for Mapka
+	AppTypeMapka = "mapka"
+
 	// AppTypeMorfio defines a universal storage identifier for Morfio
 	AppTypeMorfio = "morfio"
 

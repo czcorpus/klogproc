@@ -1,5 +1,5 @@
-// Copyright 2019 Tomas Machalek <tomas.machalek@gmail.com>
-// Copyright 2019 Institute of the Czech National Corpus,
+// Copyright 2020 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2020 Institute of the Czech National Corpus,
 //                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package wag
+package mapka
 
 import (
 	"net"
@@ -32,19 +32,21 @@ type Request struct {
 	RemoteAddr       string `json:"REMOTE_ADDR"`
 }
 
-// InputRecord represents a raw-parsed version of SkE's access log
+// RequestParams is a mix of some significant params of watched requests
+type RequestParams struct {
+	CardType   string `json:"cardType"`
+	CardFolder string `json:"cardFolder"`
+}
+
+// InputRecord represents a raw-parsed version of MAPKA's access log
 type InputRecord struct {
-	Action              string
-	QueryType           string
-	Lang1               string
-	Lang2               string
-	Queries             []string
-	Datetime            string
-	Request             Request
-	ProcTime            float32
-	isProcessable       bool
-	IsMobileClient      bool
-	HasPosSpecification bool
+	Action        string
+	Path          string
+	Datetime      string
+	Request       *Request
+	Params        *RequestParams `json:"params"`
+	ProcTime      float32
+	isProcessable bool
 }
 
 // GetTime returns a normalized log date and time information

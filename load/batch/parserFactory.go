@@ -23,6 +23,7 @@ import (
 	"github.com/czcorpus/klogproc/conversion/kontext"
 	"github.com/czcorpus/klogproc/conversion/korpusdb"
 	"github.com/czcorpus/klogproc/conversion/kwords"
+	"github.com/czcorpus/klogproc/conversion/mapka"
 	"github.com/czcorpus/klogproc/conversion/morfio"
 	"github.com/czcorpus/klogproc/conversion/shiny"
 	"github.com/czcorpus/klogproc/conversion/ske"
@@ -61,6 +62,16 @@ type korpusDBLineParser struct {
 }
 
 func (parser *korpusDBLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum, localTimezone)
+}
+
+// ------------------------------------
+
+type mapkaLineParser struct {
+	lp *mapka.LineParser
+}
+
+func (parser *mapkaLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum, localTimezone)
 }
 
@@ -138,6 +149,8 @@ func NewLineParser(appType string, appErrRegister conversion.AppErrorRegister) (
 		return &kwordsLineParser{lp: &kwords.LineParser{}}, nil
 	case conversion.AppTypeKorpusDB:
 		return &korpusDBLineParser{lp: &korpusdb.LineParser{}}, nil
+	case conversion.AppTypeMapka:
+		return &mapkaLineParser{lp: &mapka.LineParser{}}, nil
 	case conversion.AppTypeMorfio:
 		return &morfioLineParser{lp: &morfio.LineParser{}}, nil
 	case conversion.AppTypeSke:

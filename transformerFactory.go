@@ -21,6 +21,7 @@ import (
 	"github.com/czcorpus/klogproc/conversion/kontext"
 	"github.com/czcorpus/klogproc/conversion/korpusdb"
 	"github.com/czcorpus/klogproc/conversion/kwords"
+	"github.com/czcorpus/klogproc/conversion/mapka"
 	"github.com/czcorpus/klogproc/conversion/morfio"
 	"github.com/czcorpus/klogproc/conversion/shiny"
 	"github.com/czcorpus/klogproc/conversion/ske"
@@ -77,6 +78,22 @@ func (s *korpusDBTransformer) Transform(logRec conversion.InputRecord, recType s
 		return s.t.Transform(tRec, recType, anonymousUsers)
 	}
 	return nil, fmt.Errorf("Invalid type for conversion by KonText transformer %T", logRec)
+}
+
+// ------------------------------------
+
+type mapkaTransformer struct {
+	t *mapka.Transformer
+}
+
+// Transform transforms Mapka app log record types as general InputRecord
+// In case of type mismatch, error is returned.
+func (s *mapkaTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
+	tRec, ok := logRec.(*mapka.InputRecord)
+	if ok {
+		return s.t.Transform(tRec, recType, anonymousUsers)
+	}
+	return nil, fmt.Errorf("Invalid type for conversion by Mapka transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -188,6 +205,8 @@ func GetLogTransformer(appType string, version int, userMap *users.UserMap) (con
 		return &kwordsTransformer{t: &kwords.Transformer{}}, nil
 	case conversion.AppTypeKorpusDB:
 		return &korpusDBTransformer{t: &korpusdb.Transformer{}}, nil
+	case conversion.AppTypeMapka:
+		return &mapkaTransformer{t: &mapka.Transformer{}}, nil
 	case conversion.AppTypeMorfio:
 		return &morfioTransformer{t: &morfio.Transformer{}}, nil
 	case conversion.AppTypeSke:

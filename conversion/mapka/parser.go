@@ -1,5 +1,5 @@
-// Copyright 2019 Tomas Machalek <tomas.machalek@gmail.com>
-// Copyright 2019 Institute of the Czech National Corpus,
+// Copyright 2020 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2020 Institute of the Czech National Corpus,
 //                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ske
+package mapka
 
 import (
 	"strings"
@@ -22,20 +22,29 @@ import (
 	"github.com/czcorpus/klogproc/load/accesslog"
 )
 
-const (
-	actionMark    = "run.cgi/"
-	actionMarkLen = len("run.cgi/")
-)
+func getAction(path string) (string, *RequestParams) {
+	if strings.HasPrefix(path, "/mapka") {
+		elms := strings.Split(strings.Trim(path, "/"), "/")
+		params := RequestParams{}
+		if len(elms) > 1 {
+			if elms[1] == "text" {
+				if len(elms) >= 4 {
+					params.CardType = elms[2]
+					params.CardFolder = elms[3]
+				}
+				return elms[1], &params
 
-func getAction(path string) string {
-	i := strings.Index(path, actionMark)
-	if i > -1 {
-		return path[i+actionMarkLen:]
+			} else if elms[1] == "overlay" {
+				return elms[1], &params
+			}
+			return "", nil
+		}
+		return "index", &params
 	}
-	return ""
+	return "", nil
 }
 
-// LineParser is a parser for reading SkE application logs
+// LineParser is a parser for reading Mapka application logs
 type LineParser struct {
 	parser accesslog.LineParser
 }
@@ -46,23 +55,22 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 	if err != nil {
 		return &InputRecord{isProcessable: false}, err
 	}
-	action := getAction(parsed.Path)
+
+	action, params := getAction(parsed.Path)
 	if action == "" {
 		return &InputRecord{isProcessable: false}, nil
 	}
-
 	ans := &InputRecord{
-		isProcessable: true,
+		isProcessable: strings.HasPrefix(parsed.Path, "/mapka"),
 		Action:        action,
-		Corpus:        parsed.URLArgs.Get("corpname"),
-		Subcorpus:     parsed.URLArgs.Get("usesubcorp"),
-		User:          parsed.Username,
+		Path:          parsed.Path,
 		Datetime:      parsed.Datetime,
-		Request: Request{
+		Request: &Request{
 			HTTPUserAgent:  parsed.UserAgent,
 			HTTPRemoteAddr: parsed.IPAddress,
 			RemoteAddr:     parsed.IPAddress, // TODO the same stuff as above?
 		},
+		Params:   params,
 		ProcTime: parsed.ProcTime,
 	}
 	return ans, nil
