@@ -22,8 +22,26 @@ import (
 	"github.com/czcorpus/klogproc/load/accesslog"
 )
 
-func getAction(path string) string {
-	return path
+func getAction(path string) (string, *RequestParams) {
+	if strings.HasPrefix(path, "/mapka") {
+		elms := strings.Split(strings.Trim(path, "/"), "/")
+		params := RequestParams{}
+		if len(elms) > 1 {
+			if elms[1] == "text" {
+				if len(elms) >= 4 {
+					params.CardType = elms[2]
+					params.CardFolder = elms[3]
+				}
+				return elms[1], &params
+
+			} else if elms[1] == "overlay" {
+				return elms[1], &params
+			}
+			return "", nil
+		}
+		return "index", &params
+	}
+	return "", nil
 }
 
 // LineParser is a parser for reading Mapka application logs
@@ -37,20 +55,22 @@ func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*I
 	if err != nil {
 		return &InputRecord{isProcessable: false}, err
 	}
-	action := getAction(parsed.Path)
+
+	action, params := getAction(parsed.Path)
 	if action == "" {
 		return &InputRecord{isProcessable: false}, nil
 	}
-
 	ans := &InputRecord{
 		isProcessable: strings.HasPrefix(parsed.Path, "/mapka"),
 		Action:        action,
+		Path:          parsed.Path,
 		Datetime:      parsed.Datetime,
-		Request: Request{
+		Request: &Request{
 			HTTPUserAgent:  parsed.UserAgent,
 			HTTPRemoteAddr: parsed.IPAddress,
 			RemoteAddr:     parsed.IPAddress, // TODO the same stuff as above?
 		},
+		Params:   params,
 		ProcTime: parsed.ProcTime,
 	}
 	return ans, nil

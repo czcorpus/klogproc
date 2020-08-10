@@ -31,6 +31,7 @@ type OutputRecord struct {
 	ID          string `json:"-"`
 	Type        string `json:"type"`
 	Action      string `json:"action"`
+	Path        string `json:"path"`
 	Datetime    string `json:"datetime"`
 	time        time.Time
 	IPAddress   string                   `json:"ipAddress"`
@@ -38,6 +39,7 @@ type OutputRecord struct {
 	UserID      string                   `json:"userId"`
 	IsAnonymous bool                     `json:"isAnonymous"`
 	IsQuery     bool                     `json:"isQuery"`
+	Params      *RequestParams           `json:"params"`
 	GeoIP       conversion.GeoDataRecord `json:"geoip"`
 	ProcTime    float32                  `json:"procTime"`
 }
@@ -80,7 +82,7 @@ func (r *OutputRecord) ToInfluxDB() (tags map[string]string, values map[string]i
 
 // createID creates an idempotent ID of rec based on its properties.
 func createID(rec *OutputRecord) string {
-	str := rec.Type + rec.Action + rec.Datetime + rec.IPAddress + rec.UserID
+	str := rec.Type + rec.Path + rec.Datetime + rec.IPAddress + rec.UserID
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }

@@ -42,6 +42,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 		IsQuery:     false, // TODO
 		UserID:      strconv.Itoa(userID),
 		Action:      logRecord.Action,
+		Path:        logRecord.Path,
 		ProcTime:    logRecord.ProcTime,
 	}
 	r.ID = createID(r)

@@ -32,18 +32,29 @@ type Request struct {
 	RemoteAddr       string `json:"REMOTE_ADDR"`
 }
 
+// RequestParams is a mix of some significant params of watched requests
+type RequestParams struct {
+	CardType   string `json:"cardType"`
+	CardFolder string `json:"cardFolder"`
+}
+
 // InputRecord represents a raw-parsed version of MAPKA's access log
 type InputRecord struct {
 	Action        string
+	Path          string
 	Datetime      string
-	Request       Request
+	Request       *Request
+	Params        *RequestParams `json:"params"`
 	ProcTime      float32
 	isProcessable bool
 }
 
 // GetTime returns a normalized log date and time information
 func (r *InputRecord) GetTime() time.Time {
-	return conversion.ConvertAccessLogDatetimeString(r.Datetime)
+	if r.isProcessable {
+		return conversion.ConvertAccessLogDatetimeString(r.Datetime)
+	}
+	return time.Time{}
 }
 
 // GetClientIP returns a normalized IP address info
