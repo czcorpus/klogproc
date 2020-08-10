@@ -17,16 +17,17 @@ concurrently which makes it quite fast.
 
 | Name     | config code | note                          |
 |----------|-------------|-------------------------------|
-| Calc     | calc        | (Shiny app with custom log)   |
+| Calc     | calc        | a Shiny app with a custom log   |
 | KonText  | kontext     |                               |
 | KorpusDB | korpus-db   | 
 | Kwords   | kwords      |                               |
-| Lists    | lists       | (Shiny app with custom log)   |
+| Lists    | lists       | a Shiny app with a custom log   |
+| Mapka    | mapka       | using Apache access log       |
 | Morfio   | morfio      |                               |
-| SkE      | ske         | Using Nginx/Apache access log |
-| SyD      | syd         |                               |
-| Treq     | treq        |                               |
-| WaG      | wag         | currently without user cred.  |
+| SkE      | ske         | using Nginx/Apache access log |
+| SyD      | syd         | a custom app log              |
+| Treq     | treq        | a custom app log              |
+| WaG      | wag         | web access log, currently without user cred.  |
 
 The program supports three operation modes - *batch*, *tail*, *redis*
 
@@ -141,7 +142,7 @@ the configuration contains the *majorVersion* key which specifies how *klogproc*
 
 This version supports multiple data types ("mappings") per index which was also
 the default approach how CNC applications were stored - single index, multiple document
-types (each per application). In this case, the configuration directive *elasticSearch.index*
+types (one per application). In this case, the configuration directive *elasticSearch.index*
 specifies directly the index name *klogproc* works with. Individual document types
 can be distinguished either via ES internal *_type* property or via normal property *type*
 which is created by *klogproc*.
