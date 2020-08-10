@@ -127,7 +127,7 @@ func processRedisLogs(conf *config.Main, queue *sredis.RedisQueue, processor *CN
 func retryRescuedItems(appType string, queue *sredis.RedisQueue, conf *elastic.ConnectionConf) error {
 	iterator := queue.GetRescuedChunksIterator()
 	chunk := iterator.GetNextChunk()
-	log.Printf("INFO: Found %d rescued items. I am going to re-insert them.")
+	log.Printf("INFO: Found %d rescued items. I am going to re-insert them.", len(chunk))
 	for len(chunk) > 0 {
 		err := elastic.BulkWriteRequest(chunk, appType, conf)
 		if err != nil {
