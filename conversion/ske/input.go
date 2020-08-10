@@ -47,7 +47,10 @@ type InputRecord struct {
 
 // GetTime returns a normalized log date and time information
 func (r *InputRecord) GetTime() time.Time {
-	return conversion.ConvertAccessLogDatetimeString(r.Datetime)
+	if r.isProcessable {
+		return conversion.ConvertAccessLogDatetimeString(r.Datetime)
+	}
+	return time.Time{}
 }
 
 // GetClientIP returns a normalized IP address info

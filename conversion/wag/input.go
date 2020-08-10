@@ -49,7 +49,10 @@ type InputRecord struct {
 
 // GetTime returns a normalized log date and time information
 func (r *InputRecord) GetTime() time.Time {
-	return conversion.ConvertAccessLogDatetimeString(r.Datetime)
+	if r.isProcessable {
+		return conversion.ConvertAccessLogDatetimeString(r.Datetime)
+	}
+	return time.Time{}
 }
 
 // GetClientIP returns a normalized IP address info
@@ -58,11 +61,11 @@ func (r *InputRecord) GetClientIP() net.IP {
 }
 
 // GetUserAgent returns a raw HTTP user agent info as provided by the client
-func (rec *InputRecord) GetUserAgent() string {
-	return rec.Request.HTTPUserAgent
+func (r *InputRecord) GetUserAgent() string {
+	return r.Request.HTTPUserAgent
 }
 
 // IsProcessable returns true if there was no error in reading the record
-func (rec *InputRecord) IsProcessable() bool {
-	return rec.isProcessable
+func (r *InputRecord) IsProcessable() bool {
+	return r.isProcessable
 }
