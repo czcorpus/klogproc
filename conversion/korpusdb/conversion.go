@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
 )
@@ -47,7 +48,7 @@ func testIsQuery(rec *InputRecord) bool {
 type Transformer struct{}
 
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymousUsers []int) (*OutputRecord, error) {
+func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
 
 	userID := -1
 	if logRecord.UserID != "" { // null is converted into an empty string
@@ -64,7 +65,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 		Path:        logRecord.Path,
 		Page:        logRecord.Request.Page,
 		IPAddress:   logRecord.IP,
-		Datetime:    logRecord.TS,
+		Datetime:    logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
 		UserID:      logRecord.UserID,
 		ClientFlag:  logRecord.Request.ClientFlag,
 		IsAnonymous: userID == -1 || conversion.UserBelongsToList(userID, anonymousUsers),

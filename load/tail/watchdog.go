@@ -37,6 +37,7 @@ type FileConf struct {
 	Path    string `json:"path"`
 	AppType string `json:"appType"`
 	Version int    `json:"version"`
+	TZShift int    `json:"tzShift"`
 }
 
 func (fc *FileConf) GetPath() string {

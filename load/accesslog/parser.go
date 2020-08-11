@@ -126,7 +126,7 @@ type ParsedAccessLog struct {
 //   7) "https://www.korpus.cz/ske/css/jquery-ui.min.css"
 //   8) "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/76.0.3809.100 Chrome/76.0.3809.100 Safari/537.36"
 //   9) rt=0.012
-func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*ParsedAccessLog, error) {
+func (lp *LineParser) ParseLine(s string, lineNum int) (*ParsedAccessLog, error) {
 	ans := &ParsedAccessLog{}
 	tokens := lp.tokenize(s)
 

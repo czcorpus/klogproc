@@ -47,6 +47,7 @@ type Conf struct {
 	AppType                string `json:"appType"`
 	Version                int    `json:"version"`
 	NumErrorsAlarm         int    `json:"numErrorsAlarm"`
+	TZShift                int    `json:"tzShift"`
 }
 
 // importTimeFromLine import a datetime information from the beginning
@@ -54,12 +55,13 @@ type Conf struct {
 // it must be passed here to produce proper datetime.
 //
 // In case of an error, -1 is returned along with the error
-func importTimeFromLine(lineStr string, timezoneStr string) (int64, error) {
+// tzShift is in minutes
+func importTimeFromLine(lineStr string, tzShiftMin int) (int64, error) {
 	srch := datetimePattern.FindStringSubmatch(lineStr)
 	var err error
 	if len(srch) > 0 {
-		if t, err := time.Parse("2006-01-02 15:04:05-07:00", srch[1]+timezoneStr); err == nil {
-			return t.Unix(), nil
+		if t, err := time.Parse("2006-01-02 15:04:05", srch[1]); err == nil {
+			return t.Unix() + int64(tzShiftMin*60), nil
 		}
 	}
 	return -1, err
@@ -73,7 +75,7 @@ func importTimeFromLine(lineStr string, timezoneStr string) (int64, error) {
 // The function expects that the first line on any log file contains proper
 // log record which should be OK (KonText also writes multi-line error dumps
 // to the log but it always starts with a proper datetime information).
-func LogFileMatches(filePath string, minTimestamp int64, strictMatch bool, timezoneStr string) (bool, error) {
+func LogFileMatches(filePath string, minTimestamp int64, strictMatch bool, tzShiftMin int) (bool, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return false, err
@@ -81,7 +83,7 @@ func LogFileMatches(filePath string, minTimestamp int64, strictMatch bool, timez
 	rd := bufio.NewScanner(f)
 	rd.Scan()
 	line := rd.Text()
-	startTime, err := importTimeFromLine(line, timezoneStr)
+	startTime, err := importTimeFromLine(line, tzShiftMin)
 	if err != nil {
 		return false, err
 	}
@@ -94,7 +96,7 @@ func LogFileMatches(filePath string, minTimestamp int64, strictMatch bool, timez
 }
 
 // getFilesInDir lists all the matching log files
-func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, timezoneStr string) []string {
+func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, tzShiftMin int) []string {
 	tmp, err := ioutil.ReadDir(dirPath)
 	var ans []string
 	if err == nil {
@@ -102,7 +104,7 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, timezon
 		i := 0
 		for _, item := range tmp {
 			logPath := path.Join(dirPath, item.Name())
-			matches, merr := LogFileMatches(logPath, minTimestamp, strictMatch, timezoneStr)
+			matches, merr := LogFileMatches(logPath, minTimestamp, strictMatch, tzShiftMin)
 			if merr != nil {
 				log.Println("ERROR: Failed to check log file ", logPath)
 
@@ -118,20 +120,20 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, timezon
 
 // LogItemProcessor is an object handling individual
 type LogItemProcessor interface {
-	ProcItem(logRec conversion.InputRecord) conversion.OutputRecord
+	ProcItem(logRec conversion.InputRecord, tzShiftMin int) conversion.OutputRecord
 	GetAppType() string
 }
 
 // LogFileProcFunc is a function for batch/tail processing of file-based logs
-type LogFileProcFunc = func(conf *Conf, localTimezone string, minTimestamp int64)
+type LogFileProcFunc = func(conf *Conf, minTimestamp int64)
 
 // CreateLogFileProcFunc joins a defined log transformer and output channels to and
 // returns a customized function for file/directory processing.
 func CreateLogFileProcFunc(processor LogItemProcessor, destChans ...chan conversion.OutputRecord) LogFileProcFunc {
-	return func(conf *Conf, localTimezone string, minTimestamp int64) {
+	return func(conf *Conf, minTimestamp int64) {
 		var files []string
 		if fsop.IsDir(conf.SrcPath) {
-			files = getFilesInDir(conf.SrcPath, minTimestamp, !conf.PartiallyMatchingFiles, localTimezone)
+			files = getFilesInDir(conf.SrcPath, minTimestamp, !conf.PartiallyMatchingFiles, conf.TZShift)
 
 		} else {
 			files = []string{conf.SrcPath}
@@ -145,7 +147,7 @@ func CreateLogFileProcFunc(processor LogItemProcessor, destChans ...chan convers
 			procAlarm = &alarm.NullAlarm{}
 		}
 		for _, file := range files {
-			p := newParser(file, localTimezone, processor.GetAppType(), procAlarm)
+			p := newParser(file, conf.TZShift, processor.GetAppType(), procAlarm)
 			p.Parse(minTimestamp, processor, destChans...)
 		}
 		procAlarm.Evaluate()

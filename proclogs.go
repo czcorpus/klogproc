@@ -87,9 +87,9 @@ func (clp *CNKLogProcessor) recordIsLoggable(logRec conversion.InputRecord) bool
 
 // ProcItem transforms input log record into an output format.
 // In case an unsupported record is encountered, nil is returned.
-func (clp *CNKLogProcessor) ProcItem(logRec conversion.InputRecord) conversion.OutputRecord {
+func (clp *CNKLogProcessor) ProcItem(logRec conversion.InputRecord, tzShiftMin int) conversion.OutputRecord {
 	if clp.recordIsLoggable(logRec) {
-		rec, err := clp.logTransformer.Transform(logRec, clp.appType, clp.anonymousUsers)
+		rec, err := clp.logTransformer.Transform(logRec, clp.appType, tzShiftMin, clp.anonymousUsers)
 		if err != nil {
 			log.Printf("ERROR: failed to transform item %s: %s", logRec, err)
 			return nil
@@ -109,7 +109,7 @@ func (clp *CNKLogProcessor) GetAppType() string {
 
 func processRedisLogs(conf *config.Main, queue *sredis.RedisQueue, processor *CNKLogProcessor, destChans ...chan<- conversion.OutputRecord) {
 	for _, item := range queue.GetItems() {
-		rec := processor.ProcItem(item)
+		rec := processor.ProcItem(item, conf.LogRedis.TZShift)
 		if rec != nil {
 			for _, ch := range destChans {
 				ch <- rec
@@ -205,7 +205,7 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 				conf.LogRedis.Address,
 				conf.LogRedis.Database,
 				conf.LogRedis.QueueKey,
-				conf.LocalTimezone,
+				0, // TODO
 			)
 			if err != nil {
 				log.Fatal(err)
@@ -265,7 +265,7 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 				go influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux, &wg)
 			}
 			proc := batch.CreateLogFileProcFunc(processor, channelWriteES, channelWriteInflux)
-			proc(&conf.LogFiles, conf.LocalTimezone, worklog.GetLastRecord())
+			proc(&conf.LogFiles, worklog.GetLastRecord())
 			close(channelWriteES)
 			close(channelWriteInflux)
 			wg.Wait()

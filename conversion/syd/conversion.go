@@ -19,6 +19,7 @@ package syd
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
 )
@@ -31,7 +32,7 @@ type Transformer struct {
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymousUsers []int) (*OutputRecord, error) {
+func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
 	var userID *int
 	if logRecord.UserID != "-" {
 		uid, err := strconv.Atoi(logRecord.UserID)
@@ -43,7 +44,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 
 	r := &OutputRecord{
 		Type:        recType,
-		Datetime:    logRecord.Datetime,
+		Datetime:    logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
 		time:        logRecord.GetTime(),
 		IPAddress:   logRecord.IPAddress,
 		UserID:      userID,

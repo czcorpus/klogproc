@@ -31,8 +31,8 @@ import (
 )
 
 // newParser creates a new instance of the Parser.
-// localTimezone has format: "(-|+)[0-9]{2}:[0-9]{2}"
-func newParser(path string, localTimezone string, appType string, appErrRegister conversion.AppErrorRegister) *Parser {
+// tzShift can be used to correct an incorrectly stored datetime
+func newParser(path string, tzShift int, appType string, appErrRegister conversion.AppErrorRegister) *Parser {
 	f, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -46,29 +46,29 @@ func newParser(path string, localTimezone string, appType string, appErrRegister
 		panic(err) // TODO
 	}
 	return &Parser{
-		recType:       appType,
-		fr:            sc,
-		localTimezone: localTimezone,
-		fileName:      filepath.Base(f.Name()),
-		lineParser:    lineParser,
+		recType:    appType,
+		fr:         sc,
+		tzShift:    tzShift,
+		fileName:   filepath.Base(f.Name()),
+		lineParser: lineParser,
 	}
 }
 
 // LineParser represents an object able to parse an individual
 // line from a specific application log.
 type LineParser interface {
-	ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error)
+	ParseLine(s string, lineNum int) (conversion.InputRecord, error)
 }
 
 // Parser parses a single file represented by fr Scanner.
 // Because KonText does not log (at least currently) a timezone info,
 // this information is also required to process the log properly.
 type Parser struct {
-	fr            *bufio.Scanner
-	fileName      string
-	localTimezone string
-	lineParser    LineParser
-	recType       string
+	fr         *bufio.Scanner
+	fileName   string
+	tzShift    int
+	lineParser LineParser
+	recType    string
 }
 
 // Parse runs the parsing process based on provided minimum accepted record
@@ -76,10 +76,10 @@ type Parser struct {
 // provided LogInterceptor).
 func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, outputs ...chan conversion.OutputRecord) {
 	for i := 0; p.fr.Scan(); i++ {
-		rec, err := p.lineParser.ParseLine(p.fr.Text(), i, p.localTimezone)
+		rec, err := p.lineParser.ParseLine(p.fr.Text(), i)
 		if err == nil {
 			if rec.GetTime().Unix() >= fromTimestamp {
-				outRec := proc.ProcItem(rec)
+				outRec := proc.ProcItem(rec, p.tzShift)
 				if outRec != nil {
 					for _, output := range outputs {
 						output <- outRec

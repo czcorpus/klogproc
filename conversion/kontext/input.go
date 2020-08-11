@@ -31,26 +31,23 @@ var (
 	datetimeRegexp = regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2})(\\s|T)([012]\\d:[0-5]\\d:[0-5]\\d(\\.\\d+))")
 )
 
-func importDatetimeString(dateStr string, localTimezone string) (string, error) {
+func importDatetimeString(dateStr string) (string, error) {
 	srch := datetimeRegexp.FindStringSubmatch(dateStr)
-	if !strings.HasPrefix(localTimezone, "+") && !strings.HasPrefix(localTimezone, "-") {
-		localTimezone = "+" + localTimezone
-	}
 	if len(srch) > 0 {
-		return fmt.Sprintf("%sT%s%s", srch[1], srch[3], localTimezone), nil
+		return fmt.Sprintf("%sT%s", srch[1], srch[3]), nil
 	}
 	return "", fmt.Errorf("Failed to import datetime \"%s\"", dateStr)
 }
 
 // ImportJSONLog parses original JSON record with some
 // additional value corrections.
-func ImportJSONLog(jsonLine []byte, localTimezone string) (*InputRecord, error) {
+func ImportJSONLog(jsonLine []byte) (*InputRecord, error) {
 	var record InputRecord
 	err := json.Unmarshal(jsonLine, &record)
 	if err != nil {
 		return nil, err
 	}
-	dt, err := importDatetimeString(record.Date, localTimezone)
+	dt, err := importDatetimeString(record.Date)
 	if err != nil {
 		return nil, err
 	}

@@ -41,8 +41,8 @@ type kontextLineParser struct {
 }
 
 // ParseLine parses a passed line of a respective log
-func (parser *kontextLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
-	return parser.lp.ParseLine(s, lineNum, localTimezone)
+func (parser *kontextLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
 }
 
 // ------------------------------------
@@ -51,8 +51,8 @@ type kwordsLineParser struct {
 	lp *kwords.LineParser
 }
 
-func (parser *kwordsLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
-	return parser.lp.ParseLine(s, lineNum, localTimezone)
+func (parser *kwordsLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
 }
 
 // ------------------------------------
@@ -61,8 +61,8 @@ type korpusDBLineParser struct {
 	lp *korpusdb.LineParser
 }
 
-func (parser *korpusDBLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
-	return parser.lp.ParseLine(s, lineNum, localTimezone)
+func (parser *korpusDBLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
 }
 
 // ------------------------------------
@@ -71,8 +71,8 @@ type mapkaLineParser struct {
 	lp *mapka.LineParser
 }
 
-func (parser *mapkaLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
-	return parser.lp.ParseLine(s, lineNum, localTimezone)
+func (parser *mapkaLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
 }
 
 // ------------------------------------
@@ -81,8 +81,8 @@ type morfioLineParser struct {
 	lp *morfio.LineParser
 }
 
-func (parser *morfioLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
-	return parser.lp.ParseLine(s, lineNum, localTimezone)
+func (parser *morfioLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
 }
 
 // ------------------------------------
@@ -91,8 +91,8 @@ type shinyLineParser struct {
 	lp *shiny.LineParser
 }
 
-func (parser *shinyLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
-	return parser.lp.ParseLine(s, lineNum, localTimezone)
+func (parser *shinyLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
 }
 
 // ------------------------------------
@@ -101,8 +101,8 @@ type skeLineParser struct {
 	lp *ske.LineParser
 }
 
-func (parser *skeLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
-	return parser.lp.ParseLine(s, lineNum, localTimezone)
+func (parser *skeLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
 }
 
 // ------------------------------------
@@ -112,8 +112,8 @@ type sydLineParser struct {
 }
 
 // ParseLine parses a passed line of a respective log
-func (parser *sydLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
-	return parser.lp.ParseLine(s, lineNum, localTimezone)
+func (parser *sydLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
 }
 
 // ------------------------------------
@@ -122,8 +122,8 @@ type treqLineParser struct {
 	lp *treq.LineParser
 }
 
-func (parser *treqLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
-	return parser.lp.ParseLine(s, lineNum, localTimezone)
+func (parser *treqLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
 }
 
 // ------------------------------------
@@ -132,8 +132,8 @@ type wagLineParser struct {
 	lp *wag.LineParser
 }
 
-func (parser *wagLineParser) ParseLine(s string, lineNum int, localTimezone string) (conversion.InputRecord, error) {
-	return parser.lp.ParseLine(s, lineNum, localTimezone)
+func (parser *wagLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
 }
 
 // ------------------------------------

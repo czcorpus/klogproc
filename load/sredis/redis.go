@@ -32,6 +32,7 @@ type RedisConf struct {
 	QueueKey string `json:"queueKey"`
 	AppType  string `json:"appType"`
 	Version  int    `json:"version"`
+	TZShift  int    `json:"tzShift"`
 }
 
 // RedisQueue provides access to Redis database containing
@@ -40,11 +41,11 @@ type RedisQueue struct {
 	db             *redis.Client
 	queueKey       string
 	failedItemsKey string
-	localTimezone  string
+	tzShift        int
 }
 
 // OpenRedisQueue creates a client for Redis
-func OpenRedisQueue(address string, database int, queueKey string, localTimezone string) (*RedisQueue, error) {
+func OpenRedisQueue(address string, database int, queueKey string, tzShift int) (*RedisQueue, error) {
 	if queueKey == "" {
 		return nil, fmt.Errorf("No queue key provided")
 	}
@@ -56,7 +57,7 @@ func OpenRedisQueue(address string, database int, queueKey string, localTimezone
 		}),
 		queueKey:       queueKey,
 		failedItemsKey: queueKey + "_failed",
-		localTimezone:  localTimezone,
+		tzShift:        tzShift,
 	}
 	return client, nil
 }
@@ -78,7 +79,7 @@ func (rc *RedisQueue) GetItems() []conversion.InputRecord {
 		if err != nil {
 			log.Printf("WARNING: %s, orig item: %s", err, rawItem)
 		}
-		item, err := kontext.ImportJSONLog(rawItem, rc.localTimezone)
+		item, err := kontext.ImportJSONLog(rawItem)
 		if err != nil {
 			log.Printf("WARNING: %s, orig item: %s", err, rawItem)
 

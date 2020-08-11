@@ -141,7 +141,7 @@ type OutputRecord interface {
 // LogItemTransformer defines a general object able to transform
 // an input log record to an output one.
 type LogItemTransformer interface {
-	Transform(logRec InputRecord, recType string, anonymousUsers []int) (OutputRecord, error)
+	Transform(logRec InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (OutputRecord, error)
 }
 
 // AppErrorRegister describes a type which reacts to logged errors

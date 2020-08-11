@@ -18,9 +18,11 @@ package shiny
 
 import (
 	"encoding/json"
-	"time"
+	"regexp"
+)
 
-	"github.com/czcorpus/klogproc/conversion"
+var (
+	tzSrch = regexp.MustCompile("\\d[-+][0-1]\\d:[0-5]\\d$")
 )
 
 // LineParser is a parser for reading KonText application logs
@@ -28,23 +30,17 @@ type LineParser struct {
 	AnonymousUserID int
 }
 
-func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*InputRecord, error) {
+func (lp *LineParser) ParseLine(s string, lineNum int) (*InputRecord, error) {
 	rec := &InputRecord{}
 	err := json.Unmarshal([]byte(s), rec)
 	if err != nil {
 		return rec, err
 	}
-	if rec.TS[len(rec.TS)-1] == 'Z' {
-		minsChng, err := conversion.TimezoneToInt(localTimezone)
-		if err != nil {
-			return rec, err
-		}
-		tm, err := time.Parse("2006-01-02T15:04:05-07:00", rec.TS[:len(rec.TS)-1]+localTimezone)
-		if err != nil {
-			return rec, err
-		}
-		tm = tm.Add(time.Minute * time.Duration(minsChng))
-		rec.TS = tm.Format("2006-01-02T15:04:05-07:00")
+	if rec.TS[len(rec.TS)-1] == 'Z' { // UTC time
+		rec.TS = rec.TS[:len(rec.TS)-1]
+
+	} else if tzSrch.FindString(rec.TS) != "" {
+		rec.TS = rec.TS[:len(rec.TS)-5]
 	}
 	return rec, nil
 }

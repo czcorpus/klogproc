@@ -57,10 +57,10 @@ func (lp *LineParser) isIgnoredError(s string) bool {
 
 // ParseLine parses a query log line - i.e. it expects
 // that the line contains user interaction log
-func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*InputRecord, error) {
+func (lp *LineParser) ParseLine(s string, lineNum int) (*InputRecord, error) {
 	jsonLine := parseRawLine(s)
 	if jsonLine != "" {
-		return ImportJSONLog([]byte(jsonLine), localTimezone)
+		return ImportJSONLog([]byte(jsonLine))
 
 	} else if tp := getLineType(s); tp == "QUERY" {
 		return nil, fmt.Errorf("Failed to process QUERY entry: %s", s)

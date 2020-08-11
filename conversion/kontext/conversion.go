@@ -16,20 +16,24 @@
 
 package kontext
 
-import "github.com/czcorpus/klogproc/conversion"
+import (
+	"time"
+
+	"github.com/czcorpus/klogproc/conversion"
+)
 
 // Transformer converts a source log object into a destination one
 type Transformer struct{}
 
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymousUsers []int) (*OutputRecord, error) {
+func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
 	fullCorpname := importCorpname(logRecord)
 	r := &OutputRecord{
 		Type:           recType,
 		Action:         logRecord.Action,
 		Corpus:         fullCorpname.Corpname,
 		AlignedCorpora: logRecord.GetAlignedCorpora(),
-		Datetime:       logRecord.Date,
+		Datetime:       logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
 		datetime:       logRecord.GetTime(),
 		IPAddress:      logRecord.GetClientIP().String(),
 		IsAnonymous:    conversion.UserBelongsToList(logRecord.UserID, anonymousUsers),
