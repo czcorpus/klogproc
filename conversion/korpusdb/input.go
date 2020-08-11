@@ -40,10 +40,11 @@ type Pagination struct {
 }
 
 type Request struct {
-	Feats []string                 `json:"feats"`
-	Query Query                    `json:"query"`
-	Page  Pagination               `json:"page"`
-	Sort  []map[string]interface{} `json:"sort"`
+	Feats      []string                 `json:"feats"`
+	Query      Query                    `json:"query"`
+	Page       Pagination               `json:"page"`
+	Sort       []map[string]interface{} `json:"sort"`
+	ClientFlag string                   `json:"_client"`
 }
 
 // InputRecord is a KorpusDB parsed log record
