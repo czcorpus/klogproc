@@ -22,7 +22,7 @@ import (
 
 type LineParser struct{}
 
-func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*InputRecord, error) {
+func (lp *LineParser) ParseLine(s string, lineNum int) (*InputRecord, error) {
 	var rec InputRecord
 	err := json.Unmarshal([]byte(s), &rec)
 	if err != nil {

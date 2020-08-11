@@ -31,7 +31,7 @@ type Transformer struct {
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymousUsers []int) (*OutputRecord, error) {
+func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
 	userID := -1
 	if logRecord.User != "-" && logRecord.User != "" {
 		uid := t.userMap.GetIdOf(logRecord.User)
@@ -45,7 +45,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 	r := &OutputRecord{
 		Type:        recType,
 		time:        logRecord.GetTime(),
-		Datetime:    logRecord.GetTime().Format(time.RFC3339),
+		Datetime:    logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
 		IPAddress:   logRecord.Request.RemoteAddr,
 		UserAgent:   logRecord.Request.HTTPUserAgent,
 		IsAnonymous: userID == -1 || conversion.UserBelongsToList(userID, anonymousUsers),

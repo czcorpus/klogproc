@@ -19,6 +19,7 @@ package morfio
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
 )
@@ -27,7 +28,7 @@ import (
 type Transformer struct{}
 
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymousUsers []int) (*OutputRecord, error) {
+func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
 
 	userID := -1
 	if logRecord.UserID != "-" && logRecord.UserID != "" {
@@ -52,7 +53,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 		// ID set later
 		Type:            "morfio",
 		time:            logRecord.GetTime(),
-		Datetime:        logRecord.Datetime,
+		Datetime:        logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
 		IPAddress:       logRecord.IPAddress,
 		UserID:          logRecord.UserID,
 		IsAnonymous:     userID == -1 || conversion.UserBelongsToList(userID, anonymousUsers),

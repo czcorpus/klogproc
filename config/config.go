@@ -46,7 +46,6 @@ type Main struct {
 	LogTail           tail.Conf              `json:"logTail"`
 	CeleryStatus      celery.Conf            `json:"celeryStatus"`
 	GeoIPDbPath       string                 `json:"geoIpDbPath"`
-	LocalTimezone     string                 `json:"localTimezone"`
 	AnonymousUsers    []int                  `json:"anonymousUsers"`
 	LogPath           string                 `json:"logPath"`
 	CustomConfDir     string                 `json:"customConfDir"`
@@ -100,9 +99,6 @@ func Load(path string) *Main {
 	}
 	var conf Main
 	json.Unmarshal(rawData, &conf)
-	if conf.LocalTimezone == "" {
-		conf.LocalTimezone = "+02:00" // add Czech timezone by default
-	}
 	return &conf
 }
 

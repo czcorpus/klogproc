@@ -27,7 +27,7 @@ func TestParseLine(t *testing.T) {
 	// please note that the last 5 values tested are semantically incorrect as they should be 0/1 encoded booleans
 	// but for the sake of this test we want to distinguish between them which means we need more values.
 	p := LineParser{}
-	rec, err := p.ParseLine(line, 71, "+01:00")
+	rec, err := p.ParseLine(line, 71)
 	assert.Nil(t, err)
 	// kwords ignore timezone correction
 	assert.Equal(t, "2019-07-08T18:16:23+02:00", rec.Datetime)

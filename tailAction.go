@@ -47,6 +47,7 @@ type tailProcessor struct {
 	appType           string
 	filePath          string
 	version           int
+	tzShift           int
 	checkIntervalSecs int
 	conf              *config.Main
 	lineParser        batch.LineParser
@@ -54,7 +55,6 @@ type tailProcessor struct {
 	geoDB             *geoip2.Reader
 	dataForES         chan conversion.OutputRecord
 	dataForInflux     chan conversion.OutputRecord
-	localTimezone     string
 	anonymousUsers    []int
 	elasticChunkSize  int
 	influxChunkSize   int
@@ -72,7 +72,7 @@ func (tp *tailProcessor) OnCheckStart() {
 }
 
 func (tp *tailProcessor) OnEntry(item string) {
-	parsed, err := tp.lineParser.ParseLine(item, 0, tp.localTimezone)
+	parsed, err := tp.lineParser.ParseLine(item, 0)
 	if err != nil {
 		switch tErr := err.(type) {
 		case conversion.LineParsingError:
@@ -82,7 +82,7 @@ func (tp *tailProcessor) OnEntry(item string) {
 		}
 		return
 	}
-	outRec, err := tp.logTransformer.Transform(parsed, tp.appType, tp.anonymousUsers)
+	outRec, err := tp.logTransformer.Transform(parsed, tp.appType, tp.tzShift, tp.anonymousUsers)
 	if err != nil {
 		log.Printf("ERROR: %s", err)
 		return
@@ -152,12 +152,12 @@ func newTailProcessor(tailConf tail.FileConf, conf config.Main, geoDB *geoip2.Re
 		appType:           tailConf.AppType,
 		filePath:          tailConf.Path,
 		version:           tailConf.Version,
+		tzShift:           tailConf.TZShift,
 		checkIntervalSecs: conf.LogTail.IntervalSecs, // TODO maybe per-app type here ??
 		conf:              &conf,
 		lineParser:        lineParser,
 		logTransformer:    logTransformer,
 		geoDB:             geoDB,
-		localTimezone:     conf.LocalTimezone,
 		anonymousUsers:    conf.AnonymousUsers,
 		elasticChunkSize:  conf.ElasticSearch.PushChunkSize,
 		influxChunkSize:   conf.InfluxDB.PushChunkSize,

@@ -25,7 +25,7 @@ import (
 func TestParseLine(t *testing.T) {
 	line := `2019-07-25T15:40:54+02:00	127.0.0.1	953	Q	N	brBRepBf	R	syn2015	0	lemma	word	yes	 (.+) ý . 	 (.+) ák . `
 	p := LineParser{}
-	rec, err := p.ParseLine(line, 71, "+01:00") // parser ignores time zone correction
+	rec, err := p.ParseLine(line, 71)
 	assert.Nil(t, err)
 	assert.Equal(t, "2019-07-25T15:40:54+02:00", rec.Datetime)
 	assert.Equal(t, "127.0.0.1", rec.IPAddress)

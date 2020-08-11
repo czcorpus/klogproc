@@ -23,27 +23,33 @@ import (
 )
 
 func TestImportDatetimeString(t *testing.T) {
-	v, err := importDatetimeString("2019-07-25T23:13:57.3", "01:00")
-	assert.Equal(t, "2019-07-25T23:13:57.3+01:00", v)
+	v, err := importDatetimeString("2019-07-25T23:13:57.3")
+	assert.Equal(t, "2019-07-25T23:13:57.3", v)
 	assert.Nil(t, err)
 }
 
 // datetime where "T" is replaced by " "
 func TestImportDatetimeString2(t *testing.T) {
-	v, err := importDatetimeString("2019-07-25 23:13:57.3", "01:00")
-	assert.Equal(t, "2019-07-25T23:13:57.3+01:00", v)
+	v, err := importDatetimeString("2019-07-25 23:13:57.3")
+	assert.Equal(t, "2019-07-25T23:13:57.3", v)
 	assert.Nil(t, err)
 }
 
 // negative timezone
-func TestImportDatetimeString3(t *testing.T) {
-	v, err := importDatetimeString("2019-07-25 23:13:57.3", "-05:00")
-	assert.Equal(t, "2019-07-25T23:13:57.3-05:00", v)
+func TestImportDatetimeStringWithTimezoneToIgnore(t *testing.T) {
+	v, err := importDatetimeString("2019-07-25 23:13:57.3+02:00")
+	assert.Equal(t, "2019-07-25T23:13:57.3", v)
+	assert.Nil(t, err)
+}
+
+func TestImportDatetimeStringWithSuffixZ(t *testing.T) {
+	v, err := importDatetimeString("2019-07-25T23:13:57.3Z")
+	assert.Equal(t, "2019-07-25T23:13:57.3", v)
 	assert.Nil(t, err)
 }
 
 func TestImportDatetimeInvalidString(t *testing.T) {
-	v, err := importDatetimeString("foo", "00:00")
+	v, err := importDatetimeString("foo")
 	assert.Equal(t, "", v)
 	assert.Error(t, err)
 }
@@ -56,7 +62,7 @@ func TestImportJSONLog(t *testing.T) {
 				"attr_vmode": "mouseover", "pagesize": "100", "refs": "=doc.title,=doc.pubyear", "q": "~Iz4HSjvL9mhP",
 				"viewmode": "kwic", "attrs": "word", "corpname": "syn_v7", "attr_allpos": "all"}, "date": "2019-06-25 14:04:11.301121"}`
 
-	rec, err := ImportJSONLog([]byte(jsonLog), "-01:00")
+	rec, err := ImportJSONLog([]byte(jsonLog))
 	assert.Nil(t, err)
 	assert.Equal(t, 1537, rec.UserID)
 	assert.InDelta(t, 2.4023, rec.ProcTime, 0.0001)
@@ -64,7 +70,7 @@ func TestImportJSONLog(t *testing.T) {
 	assert.Equal(t, "89.176.43.98", rec.Request.HTTPForwardedFor)
 	assert.Equal(t, "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:67.0) Gecko/20100101 Firefox/67.0", rec.Request.HTTPUserAgent)
 	assert.Equal(t, "quick_filter", rec.Action)
-	assert.Equal(t, "2019-06-25T14:04:11.301121-01:00", rec.Date)
+	assert.Equal(t, "2019-06-25T14:04:11.301121", rec.Date)
 	params := map[string]interface{}{
 		"ctxattrs":    "word",
 		"q2":          "P0 1 1 [lemma=\"na\"]",
@@ -82,16 +88,16 @@ func TestImportJSONLog(t *testing.T) {
 
 func TestImportJSONLogInvalid(t *testing.T) {
 	jsonLog := `{}`
-	rec, err := ImportJSONLog([]byte(jsonLog), "-01:00")
+	rec, err := ImportJSONLog([]byte(jsonLog))
 	assert.Error(t, err)
 	assert.Nil(t, rec)
 }
 
 func TestImportJSONLogDateOnly(t *testing.T) {
 	jsonLog := `{"date": "2019-06-25 14:04:11.301121"}`
-	rec, err := ImportJSONLog([]byte(jsonLog), "-01:00")
+	rec, err := ImportJSONLog([]byte(jsonLog))
 	assert.Nil(t, err)
-	assert.Equal(t, "2019-06-25T14:04:11.301121-01:00", rec.Date)
+	assert.Equal(t, "2019-06-25T14:04:11.301121", rec.Date)
 }
 
 func TestGetStringParam(t *testing.T) {

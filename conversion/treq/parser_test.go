@@ -36,7 +36,7 @@ func TestParseLineTypeD(t *testing.T) {
 		"\t" . $_SESSION["hledejCo"] . "\t\t";
 	*/
 	p := LineParser{}
-	rec, err := p.ParseLine(line, 71, "+01:00")
+	rec, err := p.ParseLine(line, 71)
 	assert.Nil(t, err)
 	assert.Equal(t, "2019-07-24T11:52:42+02:00", rec.Datetime)
 	assert.Equal(t, "127.0.0.1", rec.IPAddress)
@@ -61,7 +61,7 @@ func TestParseLineTypeL(t *testing.T) {
 		    $query = $Gleft . "\t" . $Gright . "\t" . $Glemma . "\t" . $GdataPack . "\t\t\t" . $Gquery1 . "\t" . $Gquery2;
 	*/
 	p := LineParser{}
-	rec, err := p.ParseLine(line, 71, "+01:00")
+	rec, err := p.ParseLine(line, 71)
 	assert.Nil(t, err)
 	assert.Equal(t, "2017-03-26T14:27:27+02:00", rec.Datetime)
 	assert.Equal(t, "127.0.0.1", rec.IPAddress)

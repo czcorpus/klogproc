@@ -50,8 +50,8 @@ type LineParser struct {
 }
 
 // ParseLine parses a HTTP access log format line
-func (lp *LineParser) ParseLine(s string, lineNum int, localTimezone string) (*InputRecord, error) {
-	parsed, err := lp.parser.ParseLine(s, lineNum, localTimezone)
+func (lp *LineParser) ParseLine(s string, lineNum int) (*InputRecord, error) {
+	parsed, err := lp.parser.ParseLine(s, lineNum)
 	if err != nil {
 		return &InputRecord{isProcessable: false}, err
 	}

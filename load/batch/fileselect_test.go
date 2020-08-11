@@ -29,9 +29,9 @@ func TestGetFilesInDir(t *testing.T) {
 	}
 
 	// this should cause the function to return only two latest log files
-	limit := int64(1485887057)
+	limit := int64(1485890776)
 	// TODO we can test realiably only strict mode
-	files := getFilesInDir(filepath.Join(rootDir, "..", "..", "testdata", "logs"), limit, true, "+01:00")
+	files := getFilesInDir(filepath.Join(rootDir, "..", "..", "testdata", "logs"), limit, true, 1)
 	if len(files) != 2 {
 		t.Errorf("Invalid number of files detected - expected 2, found %d ", len(files))
 	}

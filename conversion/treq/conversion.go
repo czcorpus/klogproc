@@ -19,6 +19,7 @@ package treq
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
 )
@@ -32,7 +33,7 @@ const (
 type Transformer struct{}
 
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymousUsers []int) (*OutputRecord, error) {
+func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
 
 	userID := -1
 	if logRecord.UserID != "-" {
@@ -63,7 +64,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 	out := &OutputRecord{
 		Type:        "treq",
 		time:        logRecord.GetTime(),
-		Datetime:    logRecord.Datetime,
+		Datetime:    logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
 		QLang:       logRecord.QLang,
 		SecondLang:  logRecord.SecondLang,
 		IPAddress:   logRecord.IPAddress,

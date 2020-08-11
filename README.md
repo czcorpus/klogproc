@@ -19,7 +19,7 @@ concurrently which makes it quite fast.
 |----------|-------------|-------------------------------|
 | Calc     | calc        | a Shiny app with a custom log   |
 | KonText  | kontext     |                               |
-| KorpusDB | korpus-db   | 
+| KorpusDB | korpus-db   |
 | Kwords   | kwords      |                               |
 | Lists    | lists       | a Shiny app with a custom log   |
 | Mapka    | mapka       | using Apache access log       |
@@ -132,6 +132,47 @@ Start the service:
 
 `systemctl start klogproc`
 
+## Time-zone notes
+
+Klogproc assumes the logs are stored in the UTC time. In case a log datetime string
+contains a time-zone info (e.g. 2007-04-05T12:30-02:00), Klogproc ignores the time-zone
+information. To handle possible issues, it is possible (in the 'tail' and 'batch' modes) to
+set `tzShift` value to modify stored time (i.e. using the example above we would set
+`tzShift = 120` to add 120 minutes to each record).
+
+For the tail action, the config is as follows:
+
+```json
+{
+  "logTail": {
+    "intervalSecs": 5,
+    "worklogPath": "/path/to/tail-worklog",
+    "numErrorsAlarm": 0,
+    "errCountTimeRangeSecs": 15,
+    "files": [
+        {
+          "path": "/path/to/application.log",
+          "appType": "korpus-db",
+          "tzShift": 120
+        }
+    ]
+  }
+}
+```
+
+For the batch mode, the config is like this:
+
+```json
+{
+  "logFiles": {
+    "appType": "korpus-db",
+    "worklogPath": "/path/to/batch-worklog",
+    "srcPath": "/path/to/log/files/dir",
+    "tzShift": 120,
+    "partiallyMatchingFiles": false
+  }
+}
+```
 
 ## ElasticSearch compatibility notes
 

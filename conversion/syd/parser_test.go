@@ -25,7 +25,7 @@ import (
 func TestParseLine(t *testing.T) {
 	line := `2019-07-26T02:43:16+02:00	2a00:1028:8386:6532:5d6c:d8cd:ceab:40da	-	Q	N	VJLAVCnL	S	R`
 	p := LineParser{}
-	rec, err := p.ParseLine(line, 71, "+01:00")
+	rec, err := p.ParseLine(line, 71)
 	assert.Nil(t, err)
 	assert.Equal(t, "2019-07-26T02:43:16+02:00", rec.Datetime)
 	assert.Equal(t, "2a00:1028:8386:6532:5d6c:d8cd:ceab:40da", rec.IPAddress)

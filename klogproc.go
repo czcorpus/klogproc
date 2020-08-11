@@ -35,6 +35,9 @@ const (
 	actionKeyremove = "keyremove"
 	actionDocupdate = "docupdate"
 	actionHelp      = "help"
+	actionVersion   = "version"
+
+	version = "2020-08-11"
 
 	startingServiceMsg = "INFO: ######################## Starting klogproc ########################"
 )
@@ -109,7 +112,7 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending CNC app logs to ElasticSearch & InfluxDB\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\t%s\n\nOptions:\n",
-			filepath.Base(os.Args[0]), strings.Join([]string{actionBatch, actionTail, actionRedis, actionDocupdate, actionKeyremove, actionHelp}, ", "))
+			filepath.Base(os.Args[0]), strings.Join([]string{actionBatch, actionTail, actionRedis, actionDocupdate, actionKeyremove, actionHelp, actionVersion}, ", "))
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -135,6 +138,8 @@ func main() {
 		conf, logf = setup(flag.Arg(1))
 		log.Print(startingServiceMsg)
 		processCeleryStatus(conf)
+	case actionVersion:
+		fmt.Printf("Klogproc version %s\n", version)
 	default:
 		fmt.Printf("Unknown action [%s]. Try -h for help\n", flag.Arg(0))
 		os.Exit(1)

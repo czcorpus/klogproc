@@ -40,10 +40,10 @@ type konTextTransformer struct {
 
 // Transform transforms KonText app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (k *konTextTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (k *konTextTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
 	tRec, ok := logRec.(*kontext.InputRecord)
 	if ok {
-		return k.t.Transform(tRec, recType, anonymousUsers)
+		return k.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
 	return nil, fmt.Errorf("Invalid type for conversion by KonText transformer %T", logRec)
 }
@@ -56,10 +56,10 @@ type kwordsTransformer struct {
 
 // Transform transforms KWords app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *kwordsTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (s *kwordsTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
 	tRec, ok := logRec.(*kwords.InputRecord)
 	if ok {
-		return s.t.Transform(tRec, recType, anonymousUsers)
+		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
 	return nil, fmt.Errorf("Invalid type for conversion by KWords transformer %T", logRec)
 }
@@ -72,10 +72,10 @@ type korpusDBTransformer struct {
 
 // Transform transforms KorpusDB app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *korpusDBTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (s *korpusDBTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
 	tRec, ok := logRec.(*korpusdb.InputRecord)
 	if ok {
-		return s.t.Transform(tRec, recType, anonymousUsers)
+		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
 	return nil, fmt.Errorf("Invalid type for conversion by KonText transformer %T", logRec)
 }
@@ -88,10 +88,10 @@ type mapkaTransformer struct {
 
 // Transform transforms Mapka app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *mapkaTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (s *mapkaTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
 	tRec, ok := logRec.(*mapka.InputRecord)
 	if ok {
-		return s.t.Transform(tRec, recType, anonymousUsers)
+		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
 	return nil, fmt.Errorf("Invalid type for conversion by Mapka transformer %T", logRec)
 }
@@ -104,10 +104,10 @@ type morfioTransformer struct {
 
 // Transform transforms Morfio app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *morfioTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (s *morfioTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
 	tRec, ok := logRec.(*morfio.InputRecord)
 	if ok {
-		return s.t.Transform(tRec, recType, anonymousUsers)
+		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
 	return nil, fmt.Errorf("Invalid type for conversion by Morfio transformer %T", logRec)
 }
@@ -120,10 +120,10 @@ type skeTransformer struct {
 
 // Transform transforms SkE app log record (= web access log) types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *skeTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (s *skeTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
 	tRec, ok := logRec.(*ske.InputRecord)
 	if ok {
-		return s.t.Transform(tRec, recType, anonymousUsers)
+		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
 	return nil, fmt.Errorf("Invalid type for conversion by SkE transformer %T", logRec)
 }
@@ -136,10 +136,10 @@ type shinyTransformer struct {
 
 // Transform transforms WaG app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *shinyTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (s *shinyTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
 	tRec, ok := logRec.(*shiny.InputRecord)
 	if ok {
-		return s.t.Transform(tRec, recType, anonymousUsers)
+		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
 	return nil, fmt.Errorf("Invalid type for conversion by Shiny transformer %T", logRec)
 }
@@ -152,10 +152,10 @@ type sydTransformer struct {
 
 // Transform transforms SyD app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *sydTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (s *sydTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
 	tRec, ok := logRec.(*syd.InputRecord)
 	if ok {
-		return s.t.Transform(tRec, recType, anonymousUsers)
+		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
 	return nil, fmt.Errorf("Invalid type for conversion by SyD transformer %T", logRec)
 }
@@ -168,10 +168,10 @@ type treqTransformer struct {
 
 // Transform transforms Treq app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *treqTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (s *treqTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
 	tRec, ok := logRec.(*treq.InputRecord)
 	if ok {
-		return s.t.Transform(tRec, recType, anonymousUsers)
+		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
 	return nil, fmt.Errorf("Invalid type for conversion by Treq transformer %T", logRec)
 }
@@ -184,10 +184,10 @@ type wagTransformer struct {
 
 // Transform transforms WaG app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *wagTransformer) Transform(logRec conversion.InputRecord, recType string, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (s *wagTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
 	tRec, ok := logRec.(*wag.InputRecord)
 	if ok {
-		return s.t.Transform(tRec, recType, anonymousUsers)
+		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
 	return nil, fmt.Errorf("Invalid type for conversion by WaG transformer %T", logRec)
 }
