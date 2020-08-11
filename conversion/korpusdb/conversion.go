@@ -19,13 +19,10 @@ package korpusdb
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/czcorpus/klogproc/conversion"
 )
-
-func testIsQuery(rec *InputRecord) bool {
-	return rec.Path == "cunits/_view" && rec.Request.Page.From == 0
-}
 
 func getQueryType(rec *InputRecord) string {
 	switch rec.Request.Query.Type {
@@ -36,6 +33,14 @@ func getQueryType(rec *InputRecord) string {
 	default:
 		return ""
 	}
+}
+
+func testIsAPI(rec *InputRecord) bool {
+	return rec.Request.ClientFlag != "" && !strings.HasPrefix(rec.Request.ClientFlag, "ratatosk-paw/")
+}
+
+func testIsQuery(rec *InputRecord) bool {
+	return !testIsAPI(rec) && rec.Path == "cunits/_view" && rec.Request.Page.From == 0
 }
 
 // Transformer converts a KorpusDB log record to a destination format
@@ -61,8 +66,10 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, anonymou
 		IPAddress:   logRecord.IP,
 		Datetime:    logRecord.TS,
 		UserID:      logRecord.UserID,
+		ClientFlag:  logRecord.Request.ClientFlag,
 		IsAnonymous: userID == -1 || conversion.UserBelongsToList(userID, anonymousUsers),
 		IsQuery:     testIsQuery(logRecord),
+		IsAPI:       testIsAPI(logRecord),
 		QueryType:   getQueryType(logRecord),
 	}
 	out.ID = createID(out)

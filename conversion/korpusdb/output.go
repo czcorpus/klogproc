@@ -45,6 +45,8 @@ type OutputRecord struct {
 	UserID      string                   `json:"userId"`
 	IsAnonymous bool                     `json:"isAnonymous"`
 	IsQuery     bool                     `json:"isQuery"`
+	IsAPI       bool                     `json:"isApi"`
+	ClientFlag  string                   `json:"clientFlag"`
 	GeoIP       conversion.GeoDataRecord `json:"geoip"`
 	QueryType   string                   `json:"queryType"` // token/ngram
 }
