@@ -95,7 +95,7 @@ type InputRecord struct {
 // instance. Please note that the value is truncated
 // to seconds.
 func (rec *InputRecord) GetTime() time.Time {
-	return conversion.ConvertDatetimeString(rec.Date)
+	return conversion.ConvertDatetimeStringWithMillisNoTZ(rec.Date)
 }
 
 // GetClientIP returns a client IP no matter in which
