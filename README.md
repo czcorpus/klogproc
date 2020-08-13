@@ -88,7 +88,7 @@ Create a config file (e.g. in /usr/local/etc/klogproc.json):
         {"path": "/var/log/ucnk/syd.log", "appType": "syd"},
         {"path": "/var/log/treq/treq.log", "appType": "treq"},
 	    {"path": "/var/log/ucnk/morfio.log", "appType": "morfio"},
-	    {"path": "/var/log/ucnk/kwords.log", "appType": "kwords"}
+	    {"path": "/var/log/ucnk/kwords.log", "appType": "kwords", "tzShift": -120}
       ]
     },
     "elasticSearch": {
@@ -100,12 +100,17 @@ Create a config file (e.g. in /usr/local/etc/klogproc.json):
       "reqTimeoutSecs": 10
     },
     "geoIPDbPath": "/var/opt/klogproc/GeoLite2-City.mmdb",
-    "localTimezone": "+01:00",
     "anonymousUsers": [0, 1, 2]
 }
 ```
-(do not forget to create directory for logging, worklog and also
-download and save GeoLite2-City database).
+
+notes:
+
+- Do not forget to create directory for logging, worklog and also
+download and save GeoLite2-City database.
+- The applied `tzShift` for the *kwords* app is just an example; it should be applied iff the stored
+datetime values provide incorrect time-zone (e.g. if it looks like UTC time but the actual
+values reprezent local time) - see the section Time-zone notes for more info.
 
 Configure systemd (/etc/systemd/system/klogproc.service):
 
@@ -134,11 +139,11 @@ Start the service:
 
 ## Time-zone notes
 
-Klogproc assumes the logs are stored in the UTC time. In case a log datetime string
-contains a time-zone info (e.g. 2007-04-05T12:30-02:00), Klogproc ignores the time-zone
-information. To handle possible issues, it is possible (in the 'tail' and 'batch' modes) to
-set `tzShift` value to modify stored time (i.e. using the example above we would set
-`tzShift = 120` to add 120 minutes to each record).
+Klogproc treats each log type individually when parsing but it converts all the
+timestamps to UTC. In case there is an application storing incorrect values
+(e.g. missing timezone info even if the time values are actually non-UTC), it
+is possible to use `tzShift` setting which defines number of minutes klogproc
+should add/remove to/from the logged values.
 
 For the tail action, the config is as follows:
 
