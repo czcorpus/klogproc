@@ -146,6 +146,9 @@ func CreateLogFileProcFunc(processor LogItemProcessor, destChans ...chan convers
 		} else {
 			procAlarm = &alarm.NullAlarm{}
 		}
+		if conf.TZShift != 0 {
+			log.Printf("Found time-zone correction %d minutes", conf.TZShift)
+		}
 		for _, file := range files {
 			p := newParser(file, conf.TZShift, processor.GetAppType(), procAlarm)
 			p.Parse(minTimestamp, processor, destChans...)
