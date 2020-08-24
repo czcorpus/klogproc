@@ -57,7 +57,8 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 		Params:      logRecord.Params,
 	}
 	r.ID = createID(r)
-	if t.prevReqs.ContainsSimilar(r) && r.Action == "overlay" || r.Action == "text" {
+	if t.prevReqs.ContainsSimilar(r) && r.Action == "overlay" ||
+		!t.prevReqs.ContainsSimilar(r) && r.Action == "text" {
 		r.IsQuery = true
 	}
 	t.prevReqs.AddItem(r)
