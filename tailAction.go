@@ -82,14 +82,16 @@ func (tp *tailProcessor) OnEntry(item string) {
 		}
 		return
 	}
-	outRec, err := tp.logTransformer.Transform(parsed, tp.appType, tp.tzShift, tp.anonymousUsers)
-	if err != nil {
-		log.Printf("ERROR: %s", err)
-		return
+	if parsed.IsProcessable() {
+		outRec, err := tp.logTransformer.Transform(parsed, tp.appType, tp.tzShift, tp.anonymousUsers)
+		if err != nil {
+			log.Printf("ERROR: %s", err)
+			return
+		}
+		applyLocation(parsed, tp.geoDB, outRec)
+		tp.dataForES <- outRec
+		tp.dataForInflux <- outRec
 	}
-	applyLocation(parsed, tp.geoDB, outRec)
-	tp.dataForES <- outRec
-	tp.dataForInflux <- outRec
 }
 
 func (tp *tailProcessor) OnCheckStop() {
