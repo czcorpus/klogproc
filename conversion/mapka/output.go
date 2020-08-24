@@ -17,8 +17,6 @@
 package mapka
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
 	"encoding/json"
 	"time"
 
@@ -78,11 +76,4 @@ func (r *OutputRecord) ToJSON() ([]byte, error) {
 // ToInfluxDB creates tags and values to store in InfluxDB
 func (r *OutputRecord) ToInfluxDB() (tags map[string]string, values map[string]interface{}) {
 	return make(map[string]string), make(map[string]interface{})
-}
-
-// createID creates an idempotent ID of rec based on its properties.
-func createID(rec *OutputRecord) string {
-	str := rec.Type + rec.Path + rec.Datetime + rec.IPAddress + rec.UserID
-	sum := sha1.Sum([]byte(str))
-	return hex.EncodeToString(sum[:])
 }

@@ -23,25 +23,33 @@ import (
 )
 
 func getAction(path string) (string, *RequestParams) {
+	var params *RequestParams
 	if strings.HasPrefix(path, "/mapka") {
 		elms := strings.Split(strings.Trim(path, "/"), "/")
-		params := RequestParams{}
 		if len(elms) > 1 {
 			if elms[1] == "text" {
 				if len(elms) >= 4 {
-					params.CardType = elms[2]
-					params.CardFolder = elms[3]
+					params = &RequestParams{
+						CardType:   &elms[2],
+						CardFolder: &elms[3],
+					}
 				}
-				return elms[1], &params
+				return elms[1], params
 
 			} else if elms[1] == "overlay" {
-				return elms[1], &params
+				if len(elms) >= 3 {
+					sub := strings.Split(elms[2], "+")
+					params = &RequestParams{
+						OverlayFile: &sub[len(sub)-1],
+					}
+				}
+				return elms[1], params
 			}
 			return "", nil
 		}
-		return "index", &params
+		return "index", params
 	}
-	return "", nil
+	return "", params
 }
 
 // LineParser is a parser for reading Mapka application logs

@@ -17,15 +17,25 @@
 package mapka
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"strconv"
 	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/users"
 )
+
+// createID creates an idempotent ID of rec based on its properties.
+func createID(rec *OutputRecord) string {
+	str := rec.Type + rec.Path + rec.Datetime + rec.IPAddress + rec.UserID
+	sum := sha1.Sum([]byte(str))
+	return hex.EncodeToString(sum[:])
+}
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
+	prevReqs   *PrevReqPool
+	numSimilar int
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
@@ -39,18 +49,25 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 		IPAddress:   logRecord.Request.RemoteAddr,
 		UserAgent:   logRecord.Request.HTTPUserAgent,
 		IsAnonymous: userID == -1 || conversion.UserBelongsToList(userID, anonymousUsers),
-		IsQuery:     false, // TODO
+		IsQuery:     false,
 		UserID:      strconv.Itoa(userID),
 		Action:      logRecord.Action,
 		Path:        logRecord.Path,
 		ProcTime:    logRecord.ProcTime,
+		Params:      logRecord.Params,
 	}
 	r.ID = createID(r)
+	if t.prevReqs.ContainsSimilar(r) && r.Action == "overlay" || r.Action == "text" {
+		r.IsQuery = true
+	}
+	t.prevReqs.AddItem(r)
 	return r, nil
 }
 
 // NewTransformer is a default constructor for the Transformer.
 // It also loads user ID map from a configured file (if exists).
-func NewTransformer(userMap *users.UserMap) *Transformer {
-	return &Transformer{}
+func NewTransformer() *Transformer {
+	return &Transformer{
+		prevReqs: NewPrevReqPool(5),
+	}
 }

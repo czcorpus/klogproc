@@ -15,18 +15,18 @@ concurrently which makes it quite fast.
 
 ### Supported applications
 
-| Name     | config code | note                          |
-|----------|-------------|-------------------------------|
+| Name     | config code | note                            |
+|----------|-------------|---------------------------------|
 | Calc     | calc        | a Shiny app with a custom log   |
-| KonText  | kontext     |                               |
-| KorpusDB | korpus-db   |
-| Kwords   | kwords      |                               |
+| KonText  | kontext     |                                 |
+| KorpusDB | korpus-db   |                                 |
+| Kwords   | kwords      |                                 |
 | Lists    | lists       | a Shiny app with a custom log   |
-| Mapka    | mapka       | using Apache access log       |
-| Morfio   | morfio      |                               |
-| SkE      | ske         | using Nginx/Apache access log |
-| SyD      | syd         | a custom app log              |
-| Treq     | treq        | a custom app log              |
+| Mapka    | mapka       | using Nginx/Apache access log   |
+| Morfio   | morfio      |                                 |
+| SkE      | ske         | using Nginx/Apache access log   |
+| SyD      | syd         | a custom app log                |
+| Treq     | treq        | a custom app log                |
 | WaG      | wag         | web access log, currently without user cred.  |
 
 The program supports three operation modes - *batch*, *tail*, *redis*

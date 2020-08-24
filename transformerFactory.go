@@ -206,7 +206,7 @@ func GetLogTransformer(appType string, version int, userMap *users.UserMap) (con
 	case conversion.AppTypeKorpusDB:
 		return &korpusDBTransformer{t: &korpusdb.Transformer{}}, nil
 	case conversion.AppTypeMapka:
-		return &mapkaTransformer{t: &mapka.Transformer{}}, nil
+		return &mapkaTransformer{t: mapka.NewTransformer()}, nil
 	case conversion.AppTypeMorfio:
 		return &morfioTransformer{t: &morfio.Transformer{}}, nil
 	case conversion.AppTypeSke:
