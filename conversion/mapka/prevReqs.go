@@ -16,7 +16,7 @@
 
 package mapka
 
-const poolSize = 50
+const poolSize = 1000
 
 // PrevReqPool is a cyclic list containing recently processed
 // requests. It is used for searching very similar requests as
