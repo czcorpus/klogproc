@@ -34,7 +34,7 @@ func TestPrevReqPoolIncrement(t *testing.T) {
 			Action:    "text",
 		})
 	}
-	assert.Equal(t, 0, p.getFirstIdx())
+	assert.Equal(t, poolSize-1, p.lastIdx)
 
 	for i := 0; i < 11; i++ {
 		p.AddItem(&OutputRecord{
@@ -43,7 +43,7 @@ func TestPrevReqPoolIncrement(t *testing.T) {
 			Action:    "text",
 		})
 	}
-	assert.Equal(t, 11, p.getFirstIdx())
+	assert.Equal(t, 10, p.lastIdx)
 }
 
 func TestPoolSearchNoPropMatch(t *testing.T) {
