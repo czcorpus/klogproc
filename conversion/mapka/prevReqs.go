@@ -20,7 +20,7 @@ import (
 	"time"
 )
 
-const poolSize = 1000
+const poolSize = 200
 
 // PrevReqPool is a cyclic list containing recently processed
 // requests. It is used for searching very similar requests as
