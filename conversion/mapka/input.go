@@ -34,8 +34,9 @@ type Request struct {
 
 // RequestParams is a mix of some significant params of watched requests
 type RequestParams struct {
-	CardType   string `json:"cardType"`
-	CardFolder string `json:"cardFolder"`
+	CardType    *string `json:"cardType"`
+	CardFolder  *string `json:"cardFolder"`
+	OverlayFile *string `json:"overlayFile"`
 }
 
 // InputRecord represents a raw-parsed version of MAPKA's access log
