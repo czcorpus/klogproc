@@ -16,6 +16,10 @@
 
 package mapka
 
+import (
+	"time"
+)
+
 const poolSize = 1000
 
 // PrevReqPool is a cyclic list containing recently processed
@@ -47,10 +51,11 @@ func (prp *PrevReqPool) getFirstIdx() int {
 // 2) user agent
 // 3) server action
 func (prp *PrevReqPool) ContainsSimilar(rec *OutputRecord) bool {
-	for i := prp.getFirstIdx(); i%poolSize < prp.lastIdx; i = (i + 1) % poolSize {
+	for i := prp.getFirstIdx(); i%poolSize <= prp.lastIdx; i = (i + 1) % poolSize {
 		item := prp.requests[i]
 		if item.UserAgent == rec.UserAgent && item.IPAddress == rec.IPAddress &&
-			rec.Action == rec.Action {
+			item.Action == rec.Action &&
+			rec.GetTime().Sub(item.GetTime()) <= time.Duration(prp.maxTimeDistSec)*time.Second {
 			return true
 		}
 	}
