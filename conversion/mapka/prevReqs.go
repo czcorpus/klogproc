@@ -38,21 +38,17 @@ func (prp *PrevReqPool) AddItem(rec *OutputRecord) {
 	prp.requests[prp.lastIdx] = rec
 }
 
-func (prp *PrevReqPool) getFirstIdx() int {
-	if prp.lastIdx == -1 || prp.requests[(prp.lastIdx+1)%poolSize] == nil {
-		return 0
-	}
-	return (prp.lastIdx + 1) % poolSize
-}
-
 // ContainsSimilar tests whethere there is a similar request already
 // present. The similarity is tested using:
 // 1) IP address
 // 2) user agent
 // 3) server action
 func (prp *PrevReqPool) ContainsSimilar(rec *OutputRecord) bool {
-	for i := prp.getFirstIdx(); i%poolSize <= prp.lastIdx; i = (i + 1) % poolSize {
-		item := prp.requests[i]
+	for i := 0; i < poolSize; i++ {
+		item := prp.requests[(i+prp.lastIdx+1)%poolSize]
+		if item == nil {
+			continue
+		}
 		if item.UserAgent == rec.UserAgent && item.IPAddress == rec.IPAddress &&
 			item.Action == rec.Action &&
 			rec.GetTime().Sub(item.GetTime()) <= time.Duration(prp.maxTimeDistSec)*time.Second {
