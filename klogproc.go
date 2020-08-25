@@ -37,9 +37,13 @@ const (
 	actionHelp      = "help"
 	actionVersion   = "version"
 
-	version = "2020-08-11"
-
 	startingServiceMsg = "INFO: ######################## Starting klogproc ########################"
+)
+
+var (
+	version   string
+	build     string
+	gitCommit string
 )
 
 func updateRecords(conf *config.Main, options *ProcessOptions) {
@@ -139,7 +143,7 @@ func main() {
 		log.Print(startingServiceMsg)
 		processCeleryStatus(conf)
 	case actionVersion:
-		fmt.Printf("Klogproc version %s\n", version)
+		fmt.Printf("Klogproc %s\nbuild date: %s\nlast commit: %s\n", version, build, gitCommit)
 	default:
 		fmt.Printf("Unknown action [%s]. Try -h for help\n", flag.Arg(0))
 		os.Exit(1)
