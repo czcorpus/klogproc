@@ -5,6 +5,8 @@ HASH=`git rev-parse --short HEAD`
 
 LDFLAGS=-ldflags "-w -s -X main.version=${VERSION} -X main.build=${BUILD} -X main.gitCommit=${HASH}"
 
+all: test build
+
 build:
 	go build ${LDFLAGS}
 
@@ -14,4 +16,7 @@ install:
 clean:
 	rm klogproc
 
-.PHONY: clean install
+test:
+	go test ./...
+
+.PHONY: clean install test
