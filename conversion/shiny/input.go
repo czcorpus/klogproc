@@ -41,6 +41,9 @@ type InputRecord struct {
 
 // GetTime returns a normalized log date and time information
 func (r *InputRecord) GetTime() time.Time {
+	if r.TS[len(r.TS)-1] == 'Z' { // UTC time
+		return conversion.ConvertDatetimeStringNoTZ(r.TS[:len(r.TS)-1])
+	}
 	return conversion.ConvertDatetimeString(r.TS)
 }
 

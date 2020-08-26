@@ -78,7 +78,7 @@ func (lp *LineParser) tokenize(s string) []string {
 				items[parsedPos] = item[1 : len(item)-1]
 				parsedPos++
 
-			} else if closeChar == 0 {
+			} else if closeChar == 0 && parsedPos < len(items)-1 {
 				items[parsedPos] = item
 				parsedPos++
 			}
