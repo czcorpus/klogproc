@@ -30,6 +30,7 @@ import (
 	"github.com/czcorpus/klogproc/conversion/syd"
 	"github.com/czcorpus/klogproc/conversion/treq"
 	"github.com/czcorpus/klogproc/conversion/wag"
+	"github.com/czcorpus/klogproc/conversion/wsserver"
 )
 
 // ------------------------------------
@@ -138,6 +139,16 @@ func (parser *wagLineParser) ParseLine(s string, lineNum int) (conversion.InputR
 
 // ------------------------------------
 
+type wsserverLineParser struct {
+	lp *wsserver.LineParser
+}
+
+func (parser *wsserverLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
+}
+
+// ------------------------------------
+
 // NewLineParser creates a parser for individual lines of a respective appType
 func NewLineParser(appType string, appErrRegister conversion.AppErrorRegister) (LineParser, error) {
 	switch appType {
@@ -161,6 +172,8 @@ func NewLineParser(appType string, appErrRegister conversion.AppErrorRegister) (
 		return &treqLineParser{lp: &treq.LineParser{}}, nil
 	case conversion.AppTypeWag:
 		return &wagLineParser{lp: &wag.LineParser{}}, nil
+	case conversion.AppTypeWsserver:
+		return &wsserverLineParser{lp: &wsserver.LineParser{}}, nil
 	default:
 		return nil, fmt.Errorf("Parser not found for application type %s", appType)
 	}

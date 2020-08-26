@@ -62,6 +62,9 @@ const (
 
 	// AppTypeWag defines a universal storage identifier for Word at a Glance
 	AppTypeWag = "wag"
+
+	// AppTypeWsserver defines a universal storage identifier for Word-Sim-Server
+	AppTypeWsserver = "wsserver"
 )
 
 // LineParsingError informs that we failed to parse a line as
@@ -220,6 +223,15 @@ func ImportBool(v, keyName string) (bool, error) {
 // of a parsing error, "zero" time instance is created.
 func ConvertDatetimeString(datetime string) time.Time {
 	t, err := time.Parse("2006-01-02T15:04:05-07:00", datetime)
+	if err == nil {
+		return t
+	}
+	log.Print("WARNING: ", err)
+	return time.Time{}
+}
+
+func ConvertDatetimeStringNoTZ(datetime string) time.Time {
+	t, err := time.Parse("2006-01-02T15:04:05", datetime)
 	if err == nil {
 		return t
 	}

@@ -28,6 +28,7 @@ import (
 	"github.com/czcorpus/klogproc/conversion/syd"
 	"github.com/czcorpus/klogproc/conversion/treq"
 	"github.com/czcorpus/klogproc/conversion/wag"
+	"github.com/czcorpus/klogproc/conversion/wsserver"
 	"github.com/czcorpus/klogproc/users"
 )
 
@@ -194,6 +195,22 @@ func (s *wagTransformer) Transform(logRec conversion.InputRecord, recType string
 
 // ------------------------------------
 
+type wsserverTransformer struct {
+	t *wsserver.Transformer
+}
+
+// Transform transforms WaG app log record types as general InputRecord
+// In case of type mismatch, error is returned.
+func (s *wsserverTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+	tRec, ok := logRec.(*wsserver.InputRecord)
+	if ok {
+		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
+	}
+	return nil, fmt.Errorf("Invalid type for conversion by WSServer transformer %T", logRec)
+}
+
+// ------------------------------------
+
 // GetLogTransformer returns a type-safe transformer for a concrete app type
 func GetLogTransformer(appType string, version int, userMap *users.UserMap) (conversion.LogItemTransformer, error) {
 	switch appType {
@@ -217,6 +234,8 @@ func GetLogTransformer(appType string, version int, userMap *users.UserMap) (con
 		return &treqTransformer{t: &treq.Transformer{}}, nil
 	case conversion.AppTypeWag:
 		return &wagTransformer{t: &wag.Transformer{}}, nil
+	case conversion.AppTypeWsserver:
+		return &wsserverTransformer{t: &wsserver.Transformer{}}, nil
 	default:
 		return nil, fmt.Errorf("Cannot find log transformer for app type %s", appType)
 	}
