@@ -36,11 +36,5 @@ func (lp *LineParser) ParseLine(s string, lineNum int) (*InputRecord, error) {
 	if err != nil {
 		return rec, err
 	}
-	if rec.TS[len(rec.TS)-1] == 'Z' { // UTC time
-		rec.TS = rec.TS[:len(rec.TS)-1]
-
-	} else if tzSrch.FindString(rec.TS) != "" {
-		rec.TS = rec.TS[:len(rec.TS)-5]
-	}
 	return rec, nil
 }
