@@ -94,7 +94,9 @@ func getAction(path string) actionArgs {
 		}
 	case actionCompare:
 		ans.lang1 = items[0]
-		ans.queries = strings.Split(items[1], "--")
+		if len(items) > 1 {
+			ans.queries = strings.Split(items[1], "--")
+		}
 	}
 	return ans
 }
