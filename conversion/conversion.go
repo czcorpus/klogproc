@@ -51,6 +51,9 @@ const (
 	// AppTypeMorfio defines a universal storage identifier for Morfio
 	AppTypeMorfio = "morfio"
 
+	// AppTypeQuitaUp defines a universal storage identifier for QuitaUp
+	AppTypeQuitaUp = "quita-up"
+
 	// AppTypeSke defines a universal storage identifier for Treq
 	AppTypeSke = "ske"
 
