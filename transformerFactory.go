@@ -42,7 +42,7 @@ type konTextTransformer struct {
 // Transform transforms KonText app log record types as general InputRecord
 // In case of type mismatch, error is returned.
 func (k *konTextTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
-	tRec, ok := logRec.(*kontext.InputRecord)
+	tRec, ok := logRec.(*kontext.InputRecord013)
 	if ok {
 		return k.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}

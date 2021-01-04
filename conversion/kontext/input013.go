@@ -39,10 +39,10 @@ func importDatetimeString(dateStr string) (string, error) {
 	return "", fmt.Errorf("Failed to import datetime \"%s\"", dateStr)
 }
 
-// ImportJSONLog parses original JSON record with some
+// Import013JSONLog parses original JSON record with some
 // additional value corrections.
-func ImportJSONLog(jsonLine []byte) (*InputRecord, error) {
-	var record InputRecord
+func Import013JSONLog(jsonLine []byte) (*InputRecord013, error) {
+	var record InputRecord013
 	err := json.Unmarshal(jsonLine, &record)
 	if err != nil {
 		return nil, err
@@ -78,8 +78,8 @@ type ErrorRecord struct {
 
 // ------------------------------------------------------------
 
-// InputRecord represents a parsed KonText record
-type InputRecord struct {
+// InputRecord013 represents a parsed KonText record
+type InputRecord013 struct {
 	UserID   int                    `json:"user_id"`
 	ProcTime float32                `json:"proc_time"`
 	Date     string                 `json:"date"`
@@ -94,14 +94,14 @@ type InputRecord struct {
 // GetTime returns record's time as a Golang's Time
 // instance. Please note that the value is truncated
 // to seconds.
-func (rec *InputRecord) GetTime() time.Time {
+func (rec *InputRecord013) GetTime() time.Time {
 	return conversion.ConvertDatetimeStringWithMillisNoTZ(rec.Date)
 }
 
 // GetClientIP returns a client IP no matter in which
 // part of the record it was found
 // (e.g. REMOTE_ADDR vs. HTTP_REMOTE_ADDR vs. HTTP_FORWARDED_FOR)
-func (rec *InputRecord) GetClientIP() net.IP {
+func (rec *InputRecord013) GetClientIP() net.IP {
 	if rec.Request.HTTPForwardedFor != "" {
 		return net.ParseIP(rec.Request.HTTPForwardedFor)
 
@@ -115,18 +115,18 @@ func (rec *InputRecord) GetClientIP() net.IP {
 }
 
 // GetUserAgent returns a raw HTTP user agent info as provided by the client
-func (rec *InputRecord) GetUserAgent() string {
+func (rec *InputRecord013) GetUserAgent() string {
 	return rec.Request.HTTPUserAgent
 }
 
 // IsProcessable returns true if there was no error in reading the record
-func (rec *InputRecord) IsProcessable() bool {
+func (rec *InputRecord013) IsProcessable() bool {
 	return true
 }
 
 // GetStringParam fetches a string parameter from
 // a special "params" sub-object
-func (rec *InputRecord) GetStringParam(name string) string {
+func (rec *InputRecord013) GetStringParam(name string) string {
 	switch v := rec.Params[name].(type) {
 	case string:
 		return v
@@ -136,7 +136,7 @@ func (rec *InputRecord) GetStringParam(name string) string {
 
 // GetIntParam fetches an integer parameter from
 // a special "params" sub-object
-func (rec *InputRecord) GetIntParam(name string) int {
+func (rec *InputRecord013) GetIntParam(name string) int {
 	switch v := rec.Params[name].(type) {
 	case int:
 		return v
@@ -149,7 +149,7 @@ func (rec *InputRecord) GetIntParam(name string) int {
 // user from miscellaneous idiosyncrasies of KonText/Bonito
 // URL parameter handling (= it's not always that straightforward
 // to detect aligned languages from raw URL).
-func (rec *InputRecord) GetAlignedCorpora() []string {
+func (rec *InputRecord013) GetAlignedCorpora() []string {
 	tmp := make(map[string]bool)
 	for k := range rec.Params {
 		if strings.HasPrefix(k, "queryselector_") {

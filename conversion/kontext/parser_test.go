@@ -37,7 +37,7 @@ func (h *onErrorHandler) Reset() {}
 
 func TestParseLine(t *testing.T) {
 	line := `2018-03-06 19:34:40,755 [QUERY] INFO: {"user_id": 4230, "proc_time": 0.5398, "pid": 46885, "request": {"HTTP_X_FORWARDED_FOR": "66.249.65.216", "HTTP_USER_AGENT": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"}, "action": "view", "params": {"ctxattrs": "word", "attr_vmode": "visible", "pagesize": "50", "q": "~U1OTWBoC", "viewmode": "kwic", "attrs": "word", "corpname": "omezeni/syn2015", "structs": "p", "attr_allpos": "kw"}, "date": "2018-03-06 19:34:40.755029"}`
-	p := LineParser{}
+	p := LineParser013{}
 	rec, err := p.ParseLine(line, 71)
 	assert.Nil(t, err)
 	assert.NotNil(t, rec)
@@ -45,7 +45,7 @@ func TestParseLine(t *testing.T) {
 
 func TestParseLineInvalidQuery(t *testing.T) {
 	line := `2018-03-06 19:34:40,755 [QUERY] INFO: this won't work`
-	p := LineParser{}
+	p := LineParser013{}
 	rec, err := p.ParseLine(line, 71)
 	assert.Error(t, err)
 	assert.Nil(t, rec)
@@ -53,7 +53,7 @@ func TestParseLineInvalidQuery(t *testing.T) {
 
 func TestParseLineNonQueryLine(t *testing.T) {
 	line := `2018-03-06 22:07:57,836 [actions.concordance] ERROR: AttrNotFound (lemma)`
-	p := LineParser{appErrorRegister: &onErrorHandler{}}
+	p := LineParser013{appErrorRegister: &onErrorHandler{}}
 	rec, err := p.ParseLine(line, 71)
 	assert.Error(t, err)
 	assert.Nil(t, rec)
@@ -80,7 +80,7 @@ func TestIsIgnoredError(t *testing.T) {
 	}
 	for _, line := range lines {
 		reg := &onErrorHandler{}
-		p := LineParser{appErrorRegister: reg}
+		p := LineParser013{appErrorRegister: reg}
 		rec, err := p.ParseLine(line, 71)
 		_, ok := err.(conversion.LineParsingError)
 		assert.True(t, ok)
@@ -98,7 +98,7 @@ func TestIsNotIgnoredError(t *testing.T) {
 	}
 	for _, line := range lines {
 		reg := &onErrorHandler{}
-		p := LineParser{appErrorRegister: reg}
+		p := LineParser013{appErrorRegister: reg}
 		rec, err := p.ParseLine(line, 71)
 		_, ok := err.(conversion.LineParsingError)
 		assert.True(t, ok)

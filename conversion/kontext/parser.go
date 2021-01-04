@@ -45,22 +45,22 @@ func getLineType(s string) string {
 	return ""
 }
 
-// LineParser is a parser for reading KonText application logs
-type LineParser struct {
+// LineParser013 is a parser for reading KonText application logs
+type LineParser013 struct {
 	appErrorRegister conversion.AppErrorRegister
 }
 
-func (lp *LineParser) isIgnoredError(s string) bool {
+func (lp *LineParser013) isIgnoredError(s string) bool {
 	return strings.Index(s, "] ERROR: syntax error") > -1 ||
 		strings.Index(s, "] ERROR: regexopt: at position") > -1
 }
 
 // ParseLine parses a query log line - i.e. it expects
 // that the line contains user interaction log
-func (lp *LineParser) ParseLine(s string, lineNum int) (*InputRecord, error) {
+func (lp *LineParser013) ParseLine(s string, lineNum int) (*InputRecord013, error) {
 	jsonLine := parseRawLine(s)
 	if jsonLine != "" {
-		return ImportJSONLog([]byte(jsonLine))
+		return Import013JSONLog([]byte(jsonLine))
 
 	} else if tp := getLineType(s); tp == "QUERY" {
 		return nil, fmt.Errorf("Failed to process QUERY entry: %s", s)
@@ -74,6 +74,6 @@ func (lp *LineParser) ParseLine(s string, lineNum int) (*InputRecord, error) {
 }
 
 // NewLineParser is a factory for LineParser
-func NewLineParser(appErrRegister conversion.AppErrorRegister) *LineParser {
-	return &LineParser{appErrorRegister: appErrRegister}
+func NewLineParser(version string, appErrRegister conversion.AppErrorRegister) *LineParser013 {
+	return &LineParser013{appErrorRegister: appErrRegister}
 }
