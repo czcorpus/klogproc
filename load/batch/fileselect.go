@@ -45,9 +45,12 @@ type Conf struct {
 	PartiallyMatchingFiles bool   `json:"partiallyMatchingFiles"`
 	WorklogPath            string `json:"worklogPath"`
 	AppType                string `json:"appType"`
-	Version                int    `json:"version"`
-	NumErrorsAlarm         int    `json:"numErrorsAlarm"`
-	TZShift                int    `json:"tzShift"`
+
+	// Version represents a major and minor version signature as used in semantic versioning
+	// (e.g. 0.15, 1.2)
+	Version        string `json:"version"`
+	NumErrorsAlarm int    `json:"numErrorsAlarm"`
+	TZShift        int    `json:"tzShift"`
 }
 
 // importTimeFromLine import a datetime information from the beginning
@@ -122,6 +125,7 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, tzShift
 type LogItemProcessor interface {
 	ProcItem(logRec conversion.InputRecord, tzShiftMin int) conversion.OutputRecord
 	GetAppType() string
+	GetAppVersion() string
 }
 
 // LogFileProcFunc is a function for batch/tail processing of file-based logs
@@ -150,7 +154,7 @@ func CreateLogFileProcFunc(processor LogItemProcessor, destChans ...chan convers
 			log.Printf("Found time-zone correction %d minutes", conf.TZShift)
 		}
 		for _, file := range files {
-			p := newParser(file, conf.TZShift, processor.GetAppType(), procAlarm)
+			p := newParser(file, conf.TZShift, processor.GetAppType(), processor.GetAppVersion(), procAlarm)
 			p.Parse(minTimestamp, processor, destChans...)
 		}
 		procAlarm.Evaluate()

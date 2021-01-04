@@ -20,7 +20,8 @@ import (
 	"fmt"
 
 	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/conversion/kontext"
+	"github.com/czcorpus/klogproc/conversion/kontext013"
+	"github.com/czcorpus/klogproc/conversion/kontext015"
 	"github.com/czcorpus/klogproc/conversion/korpusdb"
 	"github.com/czcorpus/klogproc/conversion/kwords"
 	"github.com/czcorpus/klogproc/conversion/mapka"
@@ -35,14 +36,27 @@ import (
 
 // ------------------------------------
 
-// kontextLineParser wraps kontext-specific parser into a general form as required
+// kontext013LineParser wraps kontext-specific parser into a general form as required
 // by core of the klogproc
-type kontextLineParser struct {
-	lp *kontext.LineParser
+type kontext013LineParser struct {
+	lp *kontext013.LineParser
 }
 
 // ParseLine parses a passed line of a respective log
-func (parser *kontextLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+func (parser *kontext013LineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
+}
+
+// ------------------------------------
+
+// kontext015LineParser wraps kontext-specific parser into a general form as required
+// by core of the klogproc
+type kontext015LineParser struct {
+	lp *kontext015.LineParser
+}
+
+// ParseLine parses a passed line of a respective log
+func (parser *kontext015LineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -150,12 +164,19 @@ func (parser *wsserverLineParser) ParseLine(s string, lineNum int) (conversion.I
 // ------------------------------------
 
 // NewLineParser creates a parser for individual lines of a respective appType
-func NewLineParser(appType string, appErrRegister conversion.AppErrorRegister) (LineParser, error) {
+func NewLineParser(appType string, version string, appErrRegister conversion.AppErrorRegister) (LineParser, error) {
 	switch appType {
 	case conversion.AppTypeCalc, conversion.AppTypeLists, conversion.AppTypeQuitaUp:
 		return &shinyLineParser{lp: &shiny.LineParser{}}, nil
 	case conversion.AppTypeKontext, conversion.AppTypeKontextAPI:
-		return &kontextLineParser{lp: kontext.NewLineParser(appErrRegister)}, nil
+		switch version {
+		case "0.13":
+			return &kontext013LineParser{lp: kontext013.NewLineParser(appErrRegister)}, nil
+		case "0.15":
+			return &kontext015LineParser{lp: kontext015.NewLineParser(appErrRegister)}, nil
+		default:
+			return nil, fmt.Errorf("Cannot find parser - unsupported version of KonText specified: %s", version)
+		}
 	case conversion.AppTypeKwords:
 		return &kwordsLineParser{lp: &kwords.LineParser{}}, nil
 	case conversion.AppTypeKorpusDB:

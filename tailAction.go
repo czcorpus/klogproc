@@ -46,7 +46,7 @@ func (n *notifyFailedChunks) RescueFailedChunks(chunk [][]byte) error {
 type tailProcessor struct {
 	appType           string
 	filePath          string
-	version           int
+	version           string
 	tzShift           int
 	checkIntervalSecs int
 	conf              *config.Main
@@ -141,7 +141,7 @@ func newTailProcessor(tailConf tail.FileConf, conf config.Main, geoDB *geoip2.Re
 	if err != nil {
 		log.Fatal("FATAL: Failed to initialize alarm: ", err)
 	}
-	lineParser, err := batch.NewLineParser(tailConf.AppType, procAlarm)
+	lineParser, err := batch.NewLineParser(tailConf.AppType, tailConf.Version, procAlarm)
 	if err != nil {
 		log.Fatal("FATAL: Failed to initialize parser: ", err)
 	}

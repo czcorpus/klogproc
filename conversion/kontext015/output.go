@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kontext
+package kontext015
 
 import (
 	"crypto/sha1"
@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
@@ -31,45 +30,26 @@ import (
 // importQueryType translates KonText/Bonito query type argument
 // into a more understandable form
 func importQueryType(record *InputRecord) string {
-	val := record.GetStringParam("queryselector")
-	switch val {
-	case "iqueryrow":
-		return "basic"
-	case "lemmarow":
-		return "lemma"
-	case "phraserow":
-		return "phrase"
-	case "wordrow":
-		return "word"
-	case "charrow":
-		return "char"
-	case "cqlrow":
-		return "cql"
-	default:
-		return ""
-	}
+	return record.GetStringArg("qtype")
 }
 
 // importCorpname extracts actual corpus name from
 // URL argument which may contain additional data (e.g. variant prefix)
-func importCorpname(record *InputRecord) fullCorpname {
+func importCorpname(record *InputRecord) string {
 	var corpname string
-	var limited bool
 
-	if record.Params["corpname"] != "" {
-		corpname = record.GetStringParam("corpname")
+	if record.HasArg("corpname") {
+		corpname = record.GetStringArg("corpname")
 		corpname, _ = url.QueryUnescape(corpname)
-		corpname = strings.Split(corpname, ";")[0]
-		if strings.Index(corpname, "omezeni/") == 0 {
-			corpname = corpname[len("omezeni/"):]
-			limited = true
+		return corpname
 
-		} else {
-			limited = false
+	} else if record.HasArg("corpora") {
+		c, ok := getSliceOfStrings(record.Args, "corpora")
+		if ok && len(c) > 0 {
+			return c[0]
 		}
-		return fullCorpname{corpname, limited}
 	}
-	return fullCorpname{}
+	return ""
 }
 
 // OutputRecord represents an exported application log record ready
@@ -85,13 +65,13 @@ type OutputRecord struct {
 	IPAddress      string                   `json:"ipAddress"`
 	IsAnonymous    bool                     `json:"isAnonymous"`
 	IsQuery        bool                     `json:"isQuery"`
-	Limited        bool                     `json:"limited"`
 	ProcTime       float32                  `json:"procTime"`
 	QueryType      string                   `json:"queryType"`
 	UserAgent      string                   `json:"userAgent"`
 	UserID         int                      `json:"userId"`
 	GeoIP          conversion.GeoDataRecord `json:"geoip"`
 	Error          ErrorRecord              `json:"error"`
+	Args           map[string]interface{}   `json:"args"`
 }
 
 // ToJSON converts self to JSON string
@@ -135,11 +115,6 @@ func (cnkr *OutputRecord) SetLocation(countryName string, latitude float32, long
 	cnkr.GeoIP.Timezone = timezone
 }
 
-type fullCorpname struct {
-	Corpname string
-	limited  bool
-}
-
 func createID(cnkr *OutputRecord) string {
 	str := cnkr.Action + cnkr.Corpus + cnkr.Datetime + cnkr.IPAddress +
 		cnkr.Type + cnkr.UserAgent + strconv.Itoa(cnkr.UserID)
@@ -148,7 +123,7 @@ func createID(cnkr *OutputRecord) string {
 }
 
 func isEntryQuery(action string) bool {
-	ea := []string{"first", "wordlist", "wsketch", "thes", "wsdiff", "query_submit"}
+	ea := []string{"query_submit", "wordlist"}
 	for _, item := range ea {
 		if item == action {
 			return true

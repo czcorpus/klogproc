@@ -36,7 +36,9 @@ const (
 type FileConf struct {
 	Path    string `json:"path"`
 	AppType string `json:"appType"`
-	Version int    `json:"version"`
+	// Version represents a major and minor version signature as used in semantic versioning
+	// (e.g. 0.15, 1.2)
+	Version string `json:"version"`
 	TZShift int    `json:"tzShift"`
 }
 

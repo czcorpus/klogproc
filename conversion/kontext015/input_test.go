@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kontext
+package kontext015
 
 import (
 	"testing"
@@ -55,35 +55,30 @@ func TestImportDatetimeInvalidString(t *testing.T) {
 }
 
 func TestImportJSONLog(t *testing.T) {
-	jsonLog := `{"user_id": 1537, "proc_time": 2.4023, "pid": 61800,
-				"request": {"HTTP_X_FORWARDED_FOR": "89.176.43.98",
-				"HTTP_USER_AGENT": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:67.0) Gecko/20100101 Firefox/67.0"},
-				"action": "quick_filter", "params": {"ctxattrs": "word", "q2": "P0 1 1 [lemma=\"na\"]",
-				"attr_vmode": "mouseover", "pagesize": "100", "refs": "=doc.title,=doc.pubyear", "q": "~Iz4HSjvL9mhP",
-				"viewmode": "kwic", "attrs": "word", "corpname": "syn_v7", "attr_allpos": "all"}, "date": "2019-06-25 14:04:11.301121"}`
+	jsonLog := `{"args": {"corpora": ["ortofon_v1", "ortofox_v1"], "qtype": "simple", "use_regexp": false,
+	"qmcase": false, "extended_query": false, "uses_context": 0, "uses_tt": false},
+	"date": "2021-01-03 01:28:46.153734", "action": "query_submit", "user_id": 19185,
+	"proc_time": 0.5779, "request": {"HTTP_X_FORWARDED_FOR": "89.176.43.98",
+	"HTTP_USER_AGENT": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:67.0) Gecko/20100101 Firefox/67.0"}}`
 
 	rec, err := ImportJSONLog([]byte(jsonLog))
 	assert.Nil(t, err)
-	assert.Equal(t, 1537, rec.UserID)
-	assert.InDelta(t, 2.4023, rec.ProcTime, 0.0001)
-	assert.Equal(t, 61800, rec.PID)
+	assert.Equal(t, 19185, rec.UserID)
+	assert.InDelta(t, 0.5779, rec.ProcTime, 0.0001)
 	assert.Equal(t, "89.176.43.98", rec.Request.HTTPForwardedFor)
 	assert.Equal(t, "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:67.0) Gecko/20100101 Firefox/67.0", rec.Request.HTTPUserAgent)
-	assert.Equal(t, "quick_filter", rec.Action)
-	assert.Equal(t, "2019-06-25T14:04:11.301121", rec.Date)
-	params := map[string]interface{}{
-		"ctxattrs":    "word",
-		"q2":          "P0 1 1 [lemma=\"na\"]",
-		"attr_vmode":  "mouseover",
-		"pagesize":    "100",
-		"refs":        "=doc.title,=doc.pubyear",
-		"q":           "~Iz4HSjvL9mhP",
-		"viewmode":    "kwic",
-		"attrs":       "word",
-		"corpname":    "syn_v7",
-		"attr_allpos": "all",
+	assert.Equal(t, "query_submit", rec.Action)
+	assert.Equal(t, "2021-01-03T01:28:46.153734", rec.Date)
+	args := map[string]interface{}{
+		"corpora":        []interface{}{"ortofon_v1", "ortofox_v1"},
+		"qtype":          "simple",
+		"use_regexp":     false,
+		"qmcase":         false,
+		"extended_query": false,
+		"uses_context":   false,
+		"uses_tt":        false,
 	}
-	assert.Equal(t, params, rec.Params)
+	assert.Equal(t, args, rec.Args)
 }
 
 func TestImportJSONLogInvalid(t *testing.T) {
@@ -100,29 +95,32 @@ func TestImportJSONLogDateOnly(t *testing.T) {
 	assert.Equal(t, "2019-06-25T14:04:11.301121", rec.Date)
 }
 
-func TestGetStringParam(t *testing.T) {
+func TestGetStringArg(t *testing.T) {
 	rec := InputRecord{
 		Date: "2019-06-25T14:04:50.23-01:00",
-		Params: map[string]interface{}{
-			"foo": 1,
+		Args: map[string]interface{}{
+			"foo": map[string]interface{}{
+				"zoo": "hit",
+			},
 			"bar": "xxx",
 		},
 	}
-	assert.Equal(t, "", rec.GetStringParam("foo"))
-	assert.Equal(t, "xxx", rec.GetStringParam("bar"))
-	assert.Equal(t, "", rec.GetStringParam("baz"))
+	assert.Equal(t, "", rec.GetStringArg("xoo"))
+	assert.Equal(t, "", rec.GetStringArg("foo", "baz"))
+	assert.Equal(t, "xxx", rec.GetStringArg("bar"))
+	assert.Equal(t, "hit", rec.GetStringArg("foo", "zoo"))
 }
 
 func TestGetIntParam(t *testing.T) {
 	rec := InputRecord{
 		Date: "2019-06-25T14:04:50.23-01:00",
-		Params: map[string]interface{}{
+		Args: map[string]interface{}{
 			"foo": 1,
 			"bar": "xxx",
 		},
 	}
-	assert.Equal(t, 1, rec.GetIntParam("foo"))
-	assert.Equal(t, -1, rec.GetIntParam("bar"))
+	assert.Equal(t, 1, rec.GetIntArg("foo"))
+	assert.Equal(t, -1, rec.GetIntArg("bar"))
 }
 
 func TestGetClientSimple(t *testing.T) {
@@ -162,16 +160,26 @@ func TestGetClientIPProxy(t *testing.T) {
 
 func TestGetAlignedCorpora(t *testing.T) {
 	rec := InputRecord{
-		Date: "2019-06-25T14:04:50.23-01:00",
-		Params: map[string]interface{}{
-			"queryselector_intercorp_v10_cs": "value1",
-			"queryselector_intercorp_v10_en": "value2",
-			"pcq_pos_neg_intercorp_v10_de":   "value3",
+		Action: "query_submit",
+		Date:   "2019-06-25T14:04:50.23-01:00",
+		Args: map[string]interface{}{
+			"corpora": []interface{}{"intercorp_v11_cs", "intercorp_v11_en", "intercorp_v11_de"},
 		},
 	}
 	ac := rec.GetAlignedCorpora()
-	assert.Contains(t, ac, "intercorp_v10_cs")
-	assert.Contains(t, ac, "intercorp_v10_en")
-	assert.Contains(t, ac, "intercorp_v10_de")
-	assert.Equal(t, 3, len(ac))
+	assert.Contains(t, ac, "intercorp_v11_en")
+	assert.Contains(t, ac, "intercorp_v11_de")
+	assert.Equal(t, 2, len(ac))
+}
+
+func TestGetAlignedCorporaNonQueryAction(t *testing.T) {
+	rec := InputRecord{
+		Action: "wordlist",
+		Date:   "2019-06-25T14:04:50.23-01:00",
+		Args: map[string]interface{}{
+			"corpora": []interface{}{"intercorp_v11_cs", "intercorp_v11_en", "intercorp_v11_de"},
+		},
+	}
+	ac := rec.GetAlignedCorpora()
+	assert.Equal(t, 0, len(ac))
 }

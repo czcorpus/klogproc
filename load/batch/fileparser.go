@@ -32,7 +32,7 @@ import (
 
 // newParser creates a new instance of the Parser.
 // tzShift can be used to correct an incorrectly stored datetime
-func newParser(path string, tzShift int, appType string, appErrRegister conversion.AppErrorRegister) *Parser {
+func newParser(path string, tzShift int, appType string, version string, appErrRegister conversion.AppErrorRegister) *Parser {
 	f, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -41,7 +41,7 @@ func newParser(path string, tzShift int, appType string, appErrRegister conversi
 		panic(err)
 	}
 	sc := bufio.NewScanner(f)
-	lineParser, err := NewLineParser(appType, appErrRegister)
+	lineParser, err := NewLineParser(appType, version, appErrRegister)
 	if err != nil {
 		panic(err) // TODO
 	}

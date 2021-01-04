@@ -14,12 +14,14 @@
 
 package sredis
 
+// Deprecation note: please note that this package is deprecated and no longer in use in production
+
 import (
 	"fmt"
 	"log"
 
 	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/conversion/kontext"
+	"github.com/czcorpus/klogproc/conversion/kontext013"
 	"github.com/go-redis/redis"
 )
 
@@ -31,7 +33,7 @@ type RedisConf struct {
 	Database int    `json:"database"`
 	QueueKey string `json:"queueKey"`
 	AppType  string `json:"appType"`
-	Version  int    `json:"version"`
+	Version  string `json:"version"`
 	TZShift  int    `json:"tzShift"`
 }
 
@@ -79,7 +81,7 @@ func (rc *RedisQueue) GetItems() []conversion.InputRecord {
 		if err != nil {
 			log.Printf("WARNING: %s, orig item: %s", err, rawItem)
 		}
-		item, err := kontext.ImportJSONLog(rawItem)
+		item, err := kontext013.ImportJSONLog(rawItem)
 		if err != nil {
 			log.Printf("WARNING: %s, orig item: %s", err, rawItem)
 

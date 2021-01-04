@@ -23,7 +23,7 @@ import (
 )
 
 func TestTransformDia(t *testing.T) {
-	tmr := NewTransformer(0)
+	tmr := NewTransformer("0.1")
 	rec := &InputRecord{
 		UserID: "30",
 		Ltool:  "D",
@@ -35,7 +35,7 @@ func TestTransformDia(t *testing.T) {
 }
 
 func TestTransformSync(t *testing.T) {
-	tmr := NewTransformer(0)
+	tmr := NewTransformer("0.1")
 	rec := &InputRecord{
 		UserID: "30",
 		Ltool:  "S",
@@ -49,7 +49,7 @@ func TestTransformSync(t *testing.T) {
 }
 
 func TestAcceptsDashAsUserID(t *testing.T) {
-	tmr := NewTransformer(0)
+	tmr := NewTransformer("0.1")
 	rec := &InputRecord{
 		UserID: "-",
 	}
@@ -59,7 +59,7 @@ func TestAcceptsDashAsUserID(t *testing.T) {
 }
 
 func TestAnonymousUserDetection(t *testing.T) {
-	tmr := NewTransformer(0)
+	tmr := NewTransformer("0.1")
 
 	rec := &InputRecord{
 		UserID: "27",
