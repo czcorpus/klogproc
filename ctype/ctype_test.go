@@ -19,20 +19,20 @@ package ctype
 import (
 	"testing"
 
-	"github.com/czcorpus/klogproc/conversion/kontext"
+	"github.com/czcorpus/klogproc/conversion/kontext015"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAgentIsBot(t *testing.T) {
-	rec := &kontext.InputRecord{
+	rec := &kontext015.InputRecord{
 		Date: "2019-06-25T14:04:50.23-01:00",
-		Request: kontext.Request{
+		Request: kontext015.Request{
 			HTTPUserAgent: "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.96 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
 		},
 	}
 	analyzer := &ClientTypeAnalyzer{
 		bots: []BotInfo{
-			BotInfo{
+			{
 				Title:   "",
 				Match:   []string{"googlebot/", "mozilla/5.0"},
 				Example: "",
@@ -43,15 +43,15 @@ func TestAgentIsBot(t *testing.T) {
 }
 
 func TestAgentIsBotMustMatchAll(t *testing.T) {
-	rec := &kontext.InputRecord{
+	rec := &kontext015.InputRecord{
 		Date: "2019-06-25T14:04:50.23-01:00",
-		Request: kontext.Request{
+		Request: kontext015.Request{
 			HTTPUserAgent: "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.96 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
 		},
 	}
 	analyzer := &ClientTypeAnalyzer{
 		bots: []BotInfo{
-			BotInfo{
+			{
 				Title:   "",
 				Match:   []string{"googlebot/", "mozilla/6.0"},
 				Example: "",
