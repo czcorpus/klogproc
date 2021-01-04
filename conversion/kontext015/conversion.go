@@ -22,28 +22,38 @@ import (
 	"github.com/czcorpus/klogproc/conversion"
 )
 
+func exportArgs(data map[string]interface{}) map[string]interface{} {
+	ans := make(map[string]interface{})
+	for k, v := range data {
+		if k != "corpora" && k != "corpname" {
+			ans[k] = v
+		}
+	}
+	return ans
+}
+
 // Transformer converts a source log object into a destination one
 type Transformer struct{}
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
-	fullCorpname := importCorpname(logRecord)
+	corpname := importCorpname(logRecord)
 	r := &OutputRecord{
 		Type:           recType,
 		Action:         logRecord.Action,
-		Corpus:         fullCorpname.Corpname,
+		Corpus:         corpname,
 		AlignedCorpora: logRecord.GetAlignedCorpora(),
 		Datetime:       logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
 		datetime:       logRecord.GetTime(),
 		IPAddress:      logRecord.GetClientIP().String(),
 		IsAnonymous:    conversion.UserBelongsToList(logRecord.UserID, anonymousUsers),
 		IsQuery:        isEntryQuery(logRecord.Action),
-		Limited:        fullCorpname.limited,
 		ProcTime:       logRecord.ProcTime,
 		QueryType:      importQueryType(logRecord),
 		UserAgent:      logRecord.Request.HTTPUserAgent,
 		UserID:         logRecord.UserID,
 		Error:          logRecord.Error,
+		Args:           exportArgs(logRecord.Args),
 	}
 	r.ID = createID(r)
 	return r, nil

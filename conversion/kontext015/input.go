@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
@@ -52,7 +51,41 @@ func ImportJSONLog(jsonLine []byte) (*InputRecord, error) {
 		return nil, err
 	}
 	record.Date = dt
+
+	v := record.Args["uses_context"]
+	if vt, ok := v.(float64); ok {
+		if vt > 0 {
+			record.Args["uses_context"] = true
+
+		} else {
+			record.Args["uses_context"] = false
+		}
+
+	} else if vt, ok := v.(bool); ok {
+		record.Args["uses_context"] = vt
+	}
+
 	return &record, nil
+}
+
+func getSliceOfStrings(data interface{}, key string) ([]string, bool) {
+	v, ok := data.(map[string]interface{})
+	if !ok {
+		return []string{}, false
+	}
+	v2, ok := v[key]
+	if !ok {
+		return []string{}, false
+	}
+	v3, ok := v2.([]interface{})
+	if !ok {
+		return []string{}, false
+	}
+	ans := make([]string, len(v3))
+	for i, s := range v3 {
+		ans[i] = string(fmt.Sprintf("%v", s))
+	}
+	return ans, true
 }
 
 // ------------------------------------------------------------
@@ -85,9 +118,7 @@ type InputRecord struct {
 	Date     string                 `json:"date"`
 	Action   string                 `json:"action"`
 	Request  Request                `json:"request"`
-	Params   map[string]interface{} `json:"params"`
-	PID      int                    `json:"pid"`
-	Settings map[string]interface{} `json:"settings"`
+	Args     map[string]interface{} `json:"args"`
 	Error    ErrorRecord            `json:"error"`
 }
 
@@ -124,46 +155,55 @@ func (rec *InputRecord) IsProcessable() bool {
 	return true
 }
 
-// GetStringParam fetches a string parameter from
-// a special "params" sub-object
-func (rec *InputRecord) GetStringParam(name string) string {
-	switch v := rec.Params[name].(type) {
+// GetStringArg fetches a string parameter from
+// a special "args" sub-object. The function supports
+// nested keys - e.g. {"foo": {"bar": "test"}} can be
+// accessed via GetStringArg("foo", "bar")
+func (rec *InputRecord) GetStringArg(names ...string) string {
+	var val interface{}
+	val = rec.Args
+	for _, name := range names {
+		valmap, ok := val.(map[string]interface{})
+		if !ok {
+			return ""
+		}
+		val = valmap[name]
+	}
+	switch v := val.(type) {
 	case string:
 		return v
 	}
 	return ""
 }
 
-// GetIntParam fetches an integer parameter from
+// HasArg tests whether there is a top-level key matching
+// a provided name
+func (rec *InputRecord) HasArg(name string) bool {
+	_, ok := rec.Args[name]
+	return ok
+}
+
+// GetIntArg fetches an integer parameter from
 // a special "params" sub-object
-func (rec *InputRecord) GetIntParam(name string) int {
-	switch v := rec.Params[name].(type) {
+func (rec *InputRecord) GetIntArg(name string) int {
+	switch v := rec.Args[name].(type) {
 	case int:
 		return v
 	}
 	return -1
 }
 
-// GetAlignedCorpora fetches aligned corpora names from arguments
-// found in record's "Params" attribute. It isolates
-// user from miscellaneous idiosyncrasies of KonText/Bonito
-// URL parameter handling (= it's not always that straightforward
-// to detect aligned languages from raw URL).
+// GetAlignedCorpora returns a list of aligned corpora
+// (i.e. not the first corpus but possible other corpora aligned
+// with the main one)
 func (rec *InputRecord) GetAlignedCorpora() []string {
-	tmp := make(map[string]bool)
-	for k := range rec.Params {
-		if strings.HasPrefix(k, "queryselector_") {
-			tmp[k[len("queryselector_"):]] = true
+	switch rec.Action {
+	case "query_submit":
+		corpora, _ := getSliceOfStrings(rec.Args, "corpora")
+		if len(corpora) > 0 {
+			return corpora[1:]
 		}
-		if strings.HasPrefix(k, "pcq_pos_neg_") {
-			tmp[k[len("pcq_pos_neg_"):]] = true
-		}
+
 	}
-	ans := make([]string, len(tmp))
-	i := 0
-	for k := range tmp {
-		ans[i] = k
-		i++
-	}
-	return ans
+	return []string{}
 }
