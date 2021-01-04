@@ -26,7 +26,7 @@ import (
 
 // Transformer converts a SyD log record to a destination format
 type Transformer struct {
-	Version     int
+	Version     string
 	SyncCorpora []string
 	DiaCorpora  []string
 }
@@ -68,9 +68,9 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 
 // NewTransformer is a recommended factory for new Transformer instances
 // to reflect the version properly
-func NewTransformer(version int) *Transformer {
+func NewTransformer(version string) *Transformer {
 	switch version {
-	case 0:
+	case "0.1":
 		return &Transformer{
 			Version:     version,
 			SyncCorpora: []string{"syn2010", "oral_v2", "ksk-dopisy"},

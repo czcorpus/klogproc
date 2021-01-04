@@ -46,7 +46,7 @@ func (n *notifyFailedChunks) RescueFailedChunks(chunk [][]byte) error {
 type tailProcessor struct {
 	appType           string
 	filePath          string
-	version           int
+	version           string
 	tzShift           int
 	checkIntervalSecs int
 	conf              *config.Main
