@@ -141,7 +141,7 @@ func newTailProcessor(tailConf tail.FileConf, conf config.Main, geoDB *geoip2.Re
 	if err != nil {
 		log.Fatal("FATAL: Failed to initialize alarm: ", err)
 	}
-	lineParser, err := batch.NewLineParser(tailConf.AppType, procAlarm)
+	lineParser, err := batch.NewLineParser(tailConf.AppType, tailConf.Version, procAlarm)
 	if err != nil {
 		log.Fatal("FATAL: Failed to initialize parser: ", err)
 	}

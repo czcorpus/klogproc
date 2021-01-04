@@ -125,6 +125,7 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, tzShift
 type LogItemProcessor interface {
 	ProcItem(logRec conversion.InputRecord, tzShiftMin int) conversion.OutputRecord
 	GetAppType() string
+	GetAppVersion() string
 }
 
 // LogFileProcFunc is a function for batch/tail processing of file-based logs
@@ -153,7 +154,7 @@ func CreateLogFileProcFunc(processor LogItemProcessor, destChans ...chan convers
 			log.Printf("Found time-zone correction %d minutes", conf.TZShift)
 		}
 		for _, file := range files {
-			p := newParser(file, conf.TZShift, processor.GetAppType(), procAlarm)
+			p := newParser(file, conf.TZShift, processor.GetAppType(), processor.GetAppVersion(), procAlarm)
 			p.Parse(minTimestamp, processor, destChans...)
 		}
 		procAlarm.Evaluate()

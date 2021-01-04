@@ -150,7 +150,7 @@ func (parser *wsserverLineParser) ParseLine(s string, lineNum int) (conversion.I
 // ------------------------------------
 
 // NewLineParser creates a parser for individual lines of a respective appType
-func NewLineParser(appType string, appErrRegister conversion.AppErrorRegister) (LineParser, error) {
+func NewLineParser(appType string, version string, appErrRegister conversion.AppErrorRegister) (LineParser, error) {
 	switch appType {
 	case conversion.AppTypeCalc, conversion.AppTypeLists, conversion.AppTypeQuitaUp:
 		return &shinyLineParser{lp: &shiny.LineParser{}}, nil

@@ -66,6 +66,7 @@ type ProcessOptions struct {
 // as InputRecord instances
 type CNKLogProcessor struct {
 	appType        string
+	appVersion     string
 	anonymousUsers []int
 	geoIPDb        *geoip2.Reader
 	chunkSize      int
@@ -105,6 +106,11 @@ func (clp *CNKLogProcessor) ProcItem(logRec conversion.InputRecord, tzShiftMin i
 // want to archive logs for (e.g. 'kontext', 'syd', ...)
 func (clp *CNKLogProcessor) GetAppType() string {
 	return clp.appType
+}
+
+// GetAppVersion returns an application version (major and minor version info, e.g. 0.15, 1.7)
+func (clp *CNKLogProcessor) GetAppVersion() string {
+	return clp.appVersion
 }
 
 func processRedisLogs(conf *config.Main, queue *sredis.RedisQueue, processor *CNKLogProcessor, destChans ...chan<- conversion.OutputRecord) {
@@ -195,6 +201,7 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 				geoIPDb:        geoDb,
 				chunkSize:      conf.ElasticSearch.PushChunkSize,
 				appType:        conf.LogRedis.AppType,
+				appVersion:     conf.LogRedis.Version,
 				logTransformer: lt,
 				anonymousUsers: conf.AnonymousUsers,
 				clientAnalyzer: clientTypeDetector,
@@ -236,6 +243,7 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 				geoIPDb:        geoDb,
 				chunkSize:      conf.ElasticSearch.PushChunkSize,
 				appType:        conf.LogFiles.AppType,
+				appVersion:     conf.LogFiles.Version,
 				logTransformer: lt,
 				anonymousUsers: conf.AnonymousUsers,
 				clientAnalyzer: clientTypeDetector,
