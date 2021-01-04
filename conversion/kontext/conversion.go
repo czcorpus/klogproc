@@ -26,7 +26,7 @@ import (
 type Transformer struct{}
 
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *InputRecord013, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
+func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
 	fullCorpname := importCorpname(logRecord)
 	r := &OutputRecord{
 		Type:           recType,

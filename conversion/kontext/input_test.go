@@ -62,7 +62,7 @@ func TestImportJSONLog(t *testing.T) {
 				"attr_vmode": "mouseover", "pagesize": "100", "refs": "=doc.title,=doc.pubyear", "q": "~Iz4HSjvL9mhP",
 				"viewmode": "kwic", "attrs": "word", "corpname": "syn_v7", "attr_allpos": "all"}, "date": "2019-06-25 14:04:11.301121"}`
 
-	rec, err := Import013JSONLog([]byte(jsonLog))
+	rec, err := ImportJSONLog([]byte(jsonLog))
 	assert.Nil(t, err)
 	assert.Equal(t, 1537, rec.UserID)
 	assert.InDelta(t, 2.4023, rec.ProcTime, 0.0001)
@@ -88,20 +88,20 @@ func TestImportJSONLog(t *testing.T) {
 
 func TestImportJSONLogInvalid(t *testing.T) {
 	jsonLog := `{}`
-	rec, err := Import013JSONLog([]byte(jsonLog))
+	rec, err := ImportJSONLog([]byte(jsonLog))
 	assert.Error(t, err)
 	assert.Nil(t, rec)
 }
 
 func TestImportJSONLogDateOnly(t *testing.T) {
 	jsonLog := `{"date": "2019-06-25 14:04:11.301121"}`
-	rec, err := Import013JSONLog([]byte(jsonLog))
+	rec, err := ImportJSONLog([]byte(jsonLog))
 	assert.Nil(t, err)
 	assert.Equal(t, "2019-06-25T14:04:11.301121", rec.Date)
 }
 
 func TestGetStringParam(t *testing.T) {
-	rec := InputRecord013{
+	rec := InputRecord{
 		Date: "2019-06-25T14:04:50.23-01:00",
 		Params: map[string]interface{}{
 			"foo": 1,
@@ -114,7 +114,7 @@ func TestGetStringParam(t *testing.T) {
 }
 
 func TestGetIntParam(t *testing.T) {
-	rec := InputRecord013{
+	rec := InputRecord{
 		Date: "2019-06-25T14:04:50.23-01:00",
 		Params: map[string]interface{}{
 			"foo": 1,
@@ -127,7 +127,7 @@ func TestGetIntParam(t *testing.T) {
 
 func TestGetClientSimple(t *testing.T) {
 	remoteIP := "89.176.43.98"
-	rec := InputRecord013{
+	rec := InputRecord{
 		Date: "2019-06-25T14:04:50.23-01:00",
 		Request: Request{
 			HTTPRemoteAddr: remoteIP,
@@ -138,7 +138,7 @@ func TestGetClientSimple(t *testing.T) {
 
 func TestGetClientSimple2(t *testing.T) {
 	remoteIP := "89.176.43.98"
-	rec := InputRecord013{
+	rec := InputRecord{
 		Date: "2019-06-25T14:04:50.23-01:00",
 		Request: Request{
 			RemoteAddr: remoteIP,
@@ -149,7 +149,7 @@ func TestGetClientSimple2(t *testing.T) {
 
 func TestGetClientIPProxy(t *testing.T) {
 	forwIP := "89.176.43.98"
-	rec := InputRecord013{
+	rec := InputRecord{
 		Date: "2019-06-25T14:04:50.23-01:00",
 		Request: Request{
 			HTTPForwardedFor: forwIP,
@@ -161,7 +161,7 @@ func TestGetClientIPProxy(t *testing.T) {
 }
 
 func TestGetAlignedCorpora(t *testing.T) {
-	rec := InputRecord013{
+	rec := InputRecord{
 		Date: "2019-06-25T14:04:50.23-01:00",
 		Params: map[string]interface{}{
 			"queryselector_intercorp_v10_cs": "value1",

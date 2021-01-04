@@ -30,7 +30,7 @@ import (
 
 // importQueryType translates KonText/Bonito query type argument
 // into a more understandable form
-func importQueryType(record *InputRecord013) string {
+func importQueryType(record *InputRecord) string {
 	val := record.GetStringParam("queryselector")
 	switch val {
 	case "iqueryrow":
@@ -52,7 +52,7 @@ func importQueryType(record *InputRecord013) string {
 
 // importCorpname extracts actual corpus name from
 // URL argument which may contain additional data (e.g. variant prefix)
-func importCorpname(record *InputRecord013) fullCorpname {
+func importCorpname(record *InputRecord) fullCorpname {
 	var corpname string
 	var limited bool
 

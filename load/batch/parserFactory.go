@@ -38,7 +38,7 @@ import (
 // kontextLineParser wraps kontext-specific parser into a general form as required
 // by core of the klogproc
 type kontextLineParser struct {
-	lp *kontext.LineParser013
+	lp *kontext.LineParser
 }
 
 // ParseLine parses a passed line of a respective log
@@ -155,7 +155,7 @@ func NewLineParser(appType string, version string, appErrRegister conversion.App
 	case conversion.AppTypeCalc, conversion.AppTypeLists, conversion.AppTypeQuitaUp:
 		return &shinyLineParser{lp: &shiny.LineParser{}}, nil
 	case conversion.AppTypeKontext, conversion.AppTypeKontextAPI:
-		return &kontextLineParser{lp: kontext.NewLineParser(version, appErrRegister)}, nil
+		return &kontextLineParser{lp: kontext.NewLineParser(appErrRegister)}, nil
 	case conversion.AppTypeKwords:
 		return &kwordsLineParser{lp: &kwords.LineParser{}}, nil
 	case conversion.AppTypeKorpusDB:

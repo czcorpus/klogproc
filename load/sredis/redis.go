@@ -79,7 +79,7 @@ func (rc *RedisQueue) GetItems() []conversion.InputRecord {
 		if err != nil {
 			log.Printf("WARNING: %s, orig item: %s", err, rawItem)
 		}
-		item, err := kontext.Import013JSONLog(rawItem)
+		item, err := kontext.ImportJSONLog(rawItem)
 		if err != nil {
 			log.Printf("WARNING: %s, orig item: %s", err, rawItem)
 
