@@ -30,6 +30,9 @@ const (
 	// AppTypeCalc defines a universal storage identifier for Calc
 	AppTypeCalc = "calc"
 
+	// AppTypeGramatikat defines a universal storage identifier for Gramatikat
+	AppTypeGramatikat = "gramatikat"
+
 	// AppTypeKontext defines a universal storage identifier for KonText
 	AppTypeKontext = "kontext"
 
