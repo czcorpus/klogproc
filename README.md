@@ -17,19 +17,23 @@ concurrently which makes it quite fast.
 
 ### Supported applications
 
-| Name     | config code | note                            |
-|----------|-------------|---------------------------------|
-| Calc     | calc        | a Shiny app with a custom log   |
-| KonText  | kontext     |                                 |
-| KorpusDB | korpus-db   |                                 |
-| Kwords   | kwords      |                                 |
-| Lists    | lists       | a Shiny app with a custom log   |
-| Mapka    | mapka       | using Nginx/Apache access log   |
-| Morfio   | morfio      |                                 |
-| SkE      | ske         | using Nginx/Apache access log   |
-| SyD      | syd         | a custom app log                |
-| Treq     | treq        | a custom app log                |
-| WaG      | wag         | web access log, currently without user cred.  |
+| Name       | config code | note                                |
+|------------|-------------|-------------------------------------|
+| Calc       | calc        | a Shiny app with a custom log (*)   |
+| Gramatikat | gramatikat  | a Shiny app with a custom log (*)   |
+| KonText    | kontext     |                                     |
+| KorpusDB   | korpus-db   |                                     |
+| Kwords     | kwords      |                                     |
+| Lists      | lists       | a Shiny app with a custom log (*)   |
+| Mapka      | mapka       | using Nginx/Apache access log       |
+| Morfio     | morfio      |                                     |
+| QuitaUP    | quita-up    | a Shiny app with a custom log (*)   |
+| SkE        | ske         | using Nginx/Apache access log       |
+| SyD        | syd         | a custom app log                    |
+| Treq       | treq        | a custom app log                    |
+| WaG        | wag         | web access log, currently without user credentials  |
+
+(*) All the Shiny apps use the same log fromat.
 
 The program supports three operation modes - *batch*, *tail*, *redis*
 
@@ -41,7 +45,7 @@ can be even changed over time by adding **newer** log records and *klogproc* wil
 be able to import only new items as it keeps a worklog with the newest record
 currently processed.
 
-### Batch processing of a Redis queue
+### Batch processing of a Redis queue (deprecated)
 
 Note: On the application side, this is currently supported only in KonText
 and SkE (with added special Python module *scripts/redislog.py* which is part of

@@ -232,7 +232,8 @@ func (s *wsserverTransformer) Transform(logRec conversion.InputRecord, recType s
 // GetLogTransformer returns a type-safe transformer for a concrete app type
 func GetLogTransformer(appType string, version string, userMap *users.UserMap) (conversion.LogItemTransformer, error) {
 	switch appType {
-	case conversion.AppTypeCalc, conversion.AppTypeLists, conversion.AppTypeQuitaUp:
+	case conversion.AppTypeCalc, conversion.AppTypeLists, conversion.AppTypeQuitaUp,
+		conversion.AppTypeGramatikat:
 		return &shinyTransformer{t: shiny.NewTransformer()}, nil
 	case conversion.AppTypeKontext, conversion.AppTypeKontextAPI:
 		switch version {
