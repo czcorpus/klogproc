@@ -93,9 +93,14 @@ func getAction(path string) actionArgs {
 			log.Print("WARNING: missing query: ", path)
 		}
 	case actionCompare:
-		ans.lang1 = items[0]
 		if len(items) > 1 {
-			ans.queries = strings.Split(items[1], "--")
+			ans.lang1 = items[0]
+			if len(items) > 1 {
+				ans.queries = strings.Split(items[1], "--")
+
+			} else {
+				log.Print("WARNING: missing query: ", path)
+			}
 		}
 	}
 	return ans
