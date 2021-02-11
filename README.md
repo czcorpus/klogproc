@@ -19,6 +19,7 @@ concurrently which makes it quite fast.
 
 | Name       | config code | note                                |
 |------------|-------------|-------------------------------------|
+| Akalex     | akalex      | a Shiny app with a custom log (*)   |
 | Calc       | calc        | a Shiny app with a custom log (*)   |
 | Gramatikat | gramatikat  | a Shiny app with a custom log (*)   |
 | KonText    | kontext     |                                     |
