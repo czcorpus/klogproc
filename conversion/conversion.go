@@ -27,6 +27,9 @@ import (
 
 const (
 
+	// AppTypeAkalex defines a universal storage identifier for Calc
+	AppTypeAkalex = "akalex"
+
 	// AppTypeCalc defines a universal storage identifier for Calc
 	AppTypeCalc = "calc"
 
