@@ -26,10 +26,11 @@ import (
 // Request is a simple representation of
 // HTTP request metadata used in KonText logging
 type Request struct {
-	HTTPForwardedFor string `json:"HTTP_X_FORWARDED_FOR"`
-	HTTPUserAgent    string `json:"HTTP_USER_AGENT"`
-	HTTPRemoteAddr   string `json:"HTTP_REMOTE_ADDR"`
-	RemoteAddr       string `json:"REMOTE_ADDR"`
+	HTTPForwardedFor string
+	HTTPUserAgent    string
+	HTTPRemoteAddr   string
+	RemoteAddr       string
+	Referer          string // the misspelling is intentional
 }
 
 // InputRecord represents a raw-parsed version of SkE's access log

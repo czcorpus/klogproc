@@ -140,6 +140,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int) (*InputRecord, error) {
 			HTTPUserAgent:  parsed.UserAgent,
 			HTTPRemoteAddr: parsed.IPAddress,
 			RemoteAddr:     parsed.IPAddress, // TODO the same stuff as above?
+			Referer:        parsed.Referrer,
 		},
 		ProcTime:            parsed.ProcTime,
 		QueryType:           action.action, // for legacy reasons (otherwise it is redundant)
