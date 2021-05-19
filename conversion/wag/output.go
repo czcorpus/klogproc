@@ -36,6 +36,7 @@ type OutputRecord struct {
 	time                time.Time
 	IPAddress           string                   `json:"ipAddress"`
 	UserAgent           string                   `json:"userAgent"`
+	ReferringDomain     string                   `json:"referringDomain"`
 	UserID              string                   `json:"userId"`
 	IsAnonymous         bool                     `json:"isAnonymous"`
 	IsQuery             bool                     `json:"isQuery"`

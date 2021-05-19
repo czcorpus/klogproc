@@ -17,11 +17,22 @@
 package wag
 
 import (
+	"log"
+	"net/url"
 	"time"
 )
 
 func isQuery(action string) bool {
 	return action == actionSearch || action == actionCompare || action == actionTranslate
+}
+
+func domainFromURL(urlAddr string) string {
+	u, err := url.Parse(urlAddr)
+	if err != nil {
+		log.Print("Failed to parse url: ", err)
+		return ""
+	}
+	return u.Hostname()
 }
 
 // Transformer converts a source log object into a destination one
@@ -37,6 +48,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 		Datetime:            logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
 		IPAddress:           logRecord.Request.RemoteAddr,
 		UserAgent:           logRecord.Request.HTTPUserAgent,
+		ReferringDomain:     domainFromURL(logRecord.Request.Referer),
 		IsAnonymous:         true, // currently we
 		IsQuery:             isQuery(logRecord.Action),
 		IsMobileClient:      logRecord.IsMobileClient,
