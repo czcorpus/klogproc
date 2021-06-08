@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package wag
+package wag06
 
 import (
 	"log"
@@ -41,7 +41,6 @@ type Transformer struct {
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
-
 	r := &OutputRecord{
 		Type:                recType,
 		time:                logRecord.GetTime(),
@@ -49,7 +48,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 		IPAddress:           logRecord.Request.RemoteAddr,
 		UserAgent:           logRecord.Request.HTTPUserAgent,
 		ReferringDomain:     domainFromURL(logRecord.Request.Referer),
-		IsAnonymous:         true, // currently we
+		IsAnonymous:         true, // from a web access log, we cannot extract the information
 		IsQuery:             isQuery(logRecord.Action),
 		IsMobileClient:      logRecord.IsMobileClient,
 		HasPosSpecification: logRecord.HasPosSpecification,
@@ -60,6 +59,6 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 		Action:              logRecord.Action,
 		ProcTime:            logRecord.ProcTime,
 	}
-	r.ID = createID(r)
+	r.ID = CreateID(r)
 	return r, nil
 }

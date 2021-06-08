@@ -17,7 +17,6 @@
 package kontext013
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/czcorpus/klogproc/conversion"
@@ -52,7 +51,6 @@ func createRecord() *OutputRecord {
 
 func TestCreateID(t *testing.T) {
 	rec := createRecord()
-	fmt.Println("HASH: ", createID(rec))
 	if createID(rec) != "2452d6c39ddd4dfcba2df61e1115511e547c09af" {
 		t.Error("Hash match error")
 	}

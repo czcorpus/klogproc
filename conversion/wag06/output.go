@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package wag
+package wag06
 
 import (
 	"crypto/sha1"
@@ -37,7 +37,7 @@ type OutputRecord struct {
 	IPAddress           string                   `json:"ipAddress"`
 	UserAgent           string                   `json:"userAgent"`
 	ReferringDomain     string                   `json:"referringDomain"`
-	UserID              string                   `json:"userId"`
+	UserID              int                      `json:"userId"`
 	IsAnonymous         bool                     `json:"isAnonymous"`
 	IsQuery             bool                     `json:"isQuery"`
 	IsMobileClient      bool                     `json:"isMobileClient"`
@@ -86,10 +86,23 @@ func (r *OutputRecord) ToInfluxDB() (tags map[string]string, values map[string]i
 	return make(map[string]string), make(map[string]interface{})
 }
 
-// createID creates an idempotent ID of rec based on its properties.
-func createID(rec *OutputRecord) string {
-	str := rec.Type + rec.Action + strconv.FormatBool(rec.IsAnonymous) + rec.Datetime + rec.IPAddress + rec.UserID +
-		rec.QueryType + strings.Join(rec.Queries, "--") + rec.Lang1 + rec.Lang2
+// NewTimedOutputRecord creates a general empty record with specified date and time
+func NewTimedOutputRecord(t time.Time, tzShiftMin int) *OutputRecord {
+	dt := t.Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339)
+	if dt[len(dt)-1] == 'Z' {
+		dt = dt[:len(dt)-1] + "+00:00"
+	}
+	return &OutputRecord{
+		time:     t,
+		Datetime: dt,
+	}
+}
+
+// CreateID creates an idempotent ID of rec based on its properties.
+func CreateID(rec *OutputRecord) string {
+	str := rec.Type + rec.Action + strconv.FormatBool(rec.IsAnonymous) + rec.Datetime + rec.IPAddress +
+		strconv.Itoa(rec.UserID) + rec.QueryType + strings.Join(rec.Queries, "--") + rec.Lang1 +
+		rec.Lang2
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }
