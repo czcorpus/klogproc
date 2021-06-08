@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package wag
+package wag06
 
 import (
 	"net"
@@ -24,7 +24,7 @@ import (
 )
 
 // Request is a simple representation of
-// HTTP request metadata used in KonText logging
+// HTTP request metadata used in WaG logging
 type Request struct {
 	HTTPForwardedFor string
 	HTTPUserAgent    string
@@ -33,7 +33,7 @@ type Request struct {
 	Referer          string // the misspelling is intentional
 }
 
-// InputRecord represents a raw-parsed version of SkE's access log
+// InputRecord represents a raw-parsed version of WaG access log
 type InputRecord struct {
 	Action              string
 	QueryType           string

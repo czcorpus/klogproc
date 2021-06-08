@@ -30,7 +30,9 @@ import (
 	"github.com/czcorpus/klogproc/conversion/ske"
 	"github.com/czcorpus/klogproc/conversion/syd"
 	"github.com/czcorpus/klogproc/conversion/treq"
-	"github.com/czcorpus/klogproc/conversion/wag"
+	"github.com/czcorpus/klogproc/conversion/wag07"
+
+	"github.com/czcorpus/klogproc/conversion/wag06"
 	"github.com/czcorpus/klogproc/conversion/wsserver"
 )
 
@@ -143,11 +145,21 @@ func (parser *treqLineParser) ParseLine(s string, lineNum int) (conversion.Input
 
 // ------------------------------------
 
-type wagLineParser struct {
-	lp *wag.LineParser
+type wag06LineParser struct {
+	lp *wag06.LineParser
 }
 
-func (parser *wagLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+func (parser *wag06LineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
+}
+
+// ------------------------------------
+
+type wag07LineParser struct {
+	lp *wag07.LineParser
+}
+
+func (parser *wag07LineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -193,7 +205,14 @@ func NewLineParser(appType string, version string, appErrRegister conversion.App
 	case conversion.AppTypeTreq:
 		return &treqLineParser{lp: &treq.LineParser{}}, nil
 	case conversion.AppTypeWag:
-		return &wagLineParser{lp: &wag.LineParser{}}, nil
+		switch version {
+		case "0.6":
+			return &wag06LineParser{lp: &wag06.LineParser{}}, nil
+		case "0.7":
+			return &wag07LineParser{lp: &wag07.LineParser{}}, nil
+		default:
+			return nil, fmt.Errorf("Cannot find parser - unsupported version of WaG specified: %s", version)
+		}
 	case conversion.AppTypeWsserver:
 		return &wsserverLineParser{lp: &wsserver.LineParser{}}, nil
 	default:

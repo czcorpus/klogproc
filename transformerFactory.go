@@ -28,7 +28,8 @@ import (
 	"github.com/czcorpus/klogproc/conversion/ske"
 	"github.com/czcorpus/klogproc/conversion/syd"
 	"github.com/czcorpus/klogproc/conversion/treq"
-	"github.com/czcorpus/klogproc/conversion/wag"
+	"github.com/czcorpus/klogproc/conversion/wag06"
+	"github.com/czcorpus/klogproc/conversion/wag07"
 	"github.com/czcorpus/klogproc/conversion/wsserver"
 	"github.com/czcorpus/klogproc/users"
 )
@@ -197,18 +198,34 @@ func (s *treqTransformer) Transform(logRec conversion.InputRecord, recType strin
 
 // ------------------------------------
 
-type wagTransformer struct {
-	t *wag.Transformer
+type wag06Transformer struct {
+	t *wag06.Transformer
 }
 
 // Transform transforms WaG app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *wagTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
-	tRec, ok := logRec.(*wag.InputRecord)
+func (s *wag06Transformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+	tRec, ok := logRec.(*wag06.InputRecord)
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("Invalid type for conversion by WaG transformer %T", logRec)
+	return nil, fmt.Errorf("Invalid type for conversion by WaG 0.6 transformer %T", logRec)
+}
+
+// ------------------------------------
+
+type wag07Transformer struct {
+	t *wag07.Transformer
+}
+
+// Transform transforms WaG app log record types as general InputRecord
+// In case of type mismatch, error is returned.
+func (s *wag07Transformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+	tRec, ok := logRec.(*wag07.InputRecord)
+	if ok {
+		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
+	}
+	return nil, fmt.Errorf("Invalid type for conversion by WaG 0.7 transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -259,7 +276,14 @@ func GetLogTransformer(appType string, version string, userMap *users.UserMap) (
 	case conversion.AppTypeTreq:
 		return &treqTransformer{t: &treq.Transformer{}}, nil
 	case conversion.AppTypeWag:
-		return &wagTransformer{t: &wag.Transformer{}}, nil
+		switch version {
+		case "0.6":
+			return &wag06Transformer{t: &wag06.Transformer{}}, nil
+		case "0.7":
+			return &wag07Transformer{t: &wag07.Transformer{}}, nil
+		default:
+			return nil, fmt.Errorf("Cannot create transformer, unsupported WaG version: %s", version)
+		}
 	case conversion.AppTypeWsserver:
 		return &wsserverTransformer{t: &wsserver.Transformer{}}, nil
 	default:
