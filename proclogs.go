@@ -163,6 +163,9 @@ func retryRescuedItems(appType string, queue *sredis.RedisQueue, conf *elastic.C
 // precedence.
 func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 	geoDb, err := geoip2.Open(conf.GeoIPDbPath)
+	if err != nil {
+		log.Fatal("FATAL: ", err)
+	}
 	userMap := users.EmptyUserMap()
 	confPath := filepath.Join(conf.CustomConfDir, "usermap.json")
 	if fsop.IsFile(confPath) {
