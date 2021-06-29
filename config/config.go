@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/czcorpus/klogproc/fsop"
 	"github.com/czcorpus/klogproc/load/batch"
 	"github.com/czcorpus/klogproc/load/celery"
 	"github.com/czcorpus/klogproc/load/sredis"
@@ -88,6 +89,9 @@ func Validate(conf *Main) {
 		if err != nil {
 			log.Fatal("FATAL: ", err)
 		}
+	}
+	if !fsop.IsFile(conf.GeoIPDbPath) {
+		log.Fatal("FATAL: Invalid GeoIPDbPath: '", conf.GeoIPDbPath, "'")
 	}
 }
 
