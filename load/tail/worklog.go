@@ -31,8 +31,8 @@ type WorklogItem struct {
 }
 
 type updateRequest struct {
-	AppType string
-	Value   WorklogItem
+	FilePath string
+	Value    WorklogItem
 }
 
 // WorklogRecord provides WorkLogItem info for all configured apps
@@ -70,7 +70,7 @@ func (w *Worklog) Init() error {
 	w.updRequests = make(chan updateRequest)
 	go func() {
 		for req := range w.updRequests {
-			w.rec[req.AppType] = req.Value
+			w.rec[req.FilePath] = req.Value
 			w.save()
 		}
 	}()
@@ -116,13 +116,13 @@ func (w *Worklog) save() error {
 
 // UpdateFileInfo adds individual app reading position info. Please
 // note that this does not save the worklog.
-func (w *Worklog) UpdateFileInfo(appType string, inode int64, seek int64) {
-	w.updRequests <- updateRequest{AppType: appType, Value: WorklogItem{Inode: inode, Seek: seek}}
+func (w *Worklog) UpdateFileInfo(filePath string, inode int64, seek int64) {
+	w.updRequests <- updateRequest{FilePath: filePath, Value: WorklogItem{Inode: inode, Seek: seek}}
 }
 
 // GetData retrieves reading info for a provided app
-func (w *Worklog) GetData(appType string) WorklogItem {
-	v, ok := w.rec[appType]
+func (w *Worklog) GetData(filePath string) WorklogItem {
+	v, ok := w.rec[filePath]
 	if ok {
 		return v
 	}

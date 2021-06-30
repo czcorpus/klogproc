@@ -40,19 +40,24 @@ func getFileProps(filePath string) (inode int64, size int64, err error) {
 // FileTailReader reads newly added lines to a file.
 // Important assumptions:
 // 1) file changes only by appending new lines
-// 2) during normal operation the inode of the file remains the same
+// 2) during normal operation, the inode of the file remains the same
 // 3) change of inode means we start reading a new file from the beginning
 type FileTailReader struct {
 	processor   FileTailProcessor
 	lastInode   int64
 	lastSize    int64
 	file        *os.File
+	filePath    string
 	lastReadPos int64
 }
 
 // AppType returns app type identifier (kontext, syd, treq,...)
 func (ftw *FileTailReader) AppType() string {
 	return ftw.processor.AppType()
+}
+
+func (ftw *FileTailReader) FilePath() string {
+	return ftw.filePath
 }
 
 // Processor returns attached file tail processor
@@ -104,6 +109,7 @@ func NewReader(processor FileTailProcessor, lastInode, lastReadPos int64) (*File
 		lastInode:   lastInode,
 		lastSize:    -1,
 		file:        nil,
+		filePath:    processor.FilePath(),
 		lastReadPos: lastReadPos,
 	}
 	if lastInode > 0 {

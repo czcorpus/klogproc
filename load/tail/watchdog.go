@@ -105,7 +105,7 @@ func Run(conf *Conf, processors []FileTailProcessor, clientAnalyzer ClientAnalyz
 	} else {
 		readers = make([]*FileTailReader, len(processors))
 		for i, processor := range processors {
-			wlItem := worklog.GetData(processor.AppType())
+			wlItem := worklog.GetData(processor.FilePath())
 			log.Printf("INFO: Found configuration for file %s", processor.FilePath())
 			if wlItem.Inode > -1 {
 				log.Printf("INFO: Found worklog for %s, inode: %d, seek: %d", processor.FilePath(), wlItem.Inode, wlItem.Seek)
@@ -132,7 +132,7 @@ func Run(conf *Conf, processors []FileTailProcessor, clientAnalyzer ClientAnalyz
 							rdr.Processor().OnEntry(v)
 						},
 						func(inode int64, seek int64) {
-							worklog.UpdateFileInfo(rdr.AppType(), inode, seek)
+							worklog.UpdateFileInfo(rdr.FilePath(), inode, seek)
 						},
 					)
 					rdr.Processor().OnCheckStop()
