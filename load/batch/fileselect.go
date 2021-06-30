@@ -133,7 +133,7 @@ type LogFileProcFunc = func(conf *Conf, minTimestamp int64)
 
 // CreateLogFileProcFunc joins a defined log transformer and output channels to and
 // returns a customized function for file/directory processing.
-func CreateLogFileProcFunc(processor LogItemProcessor, destChans ...chan conversion.OutputRecord) LogFileProcFunc {
+func CreateLogFileProcFunc(processor LogItemProcessor, fromTime, toTime *time.Time, destChans ...chan conversion.OutputRecord) LogFileProcFunc {
 	return func(conf *Conf, minTimestamp int64) {
 		var files []string
 		if fsop.IsDir(conf.SrcPath) {
@@ -155,7 +155,7 @@ func CreateLogFileProcFunc(processor LogItemProcessor, destChans ...chan convers
 		}
 		for _, file := range files {
 			p := newParser(file, conf.TZShift, processor.GetAppType(), processor.GetAppVersion(), procAlarm)
-			p.Parse(minTimestamp, processor, destChans...)
+			p.Parse(minTimestamp, processor, fromTime, toTime, destChans...)
 		}
 		procAlarm.Evaluate()
 		procAlarm.Reset()
