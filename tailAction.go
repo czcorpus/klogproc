@@ -18,6 +18,7 @@ package main
 
 import (
 	"log"
+	"path/filepath"
 	"sync"
 
 	"github.com/czcorpus/klogproc/config"
@@ -152,7 +153,7 @@ func newTailProcessor(tailConf tail.FileConf, conf config.Main, geoDB *geoip2.Re
 
 	return &tailProcessor{
 		appType:           tailConf.AppType,
-		filePath:          tailConf.Path,
+		filePath:          filepath.Clean(tailConf.Path), // note: this is not a full path normalization !
 		version:           tailConf.Version,
 		tzShift:           tailConf.TZShift,
 		checkIntervalSecs: conf.LogTail.IntervalSecs, // TODO maybe per-app type here ??
