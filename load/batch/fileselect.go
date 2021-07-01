@@ -22,11 +22,13 @@ package batch
 
 import (
 	"bufio"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
@@ -36,6 +38,7 @@ import (
 
 var (
 	datetimePattern = regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2}\\s[012]\\d:[0-5]\\d:[0-5]\\d)[\\.,]\\d+")
+	tzRangePattern  = regexp.MustCompile("^\\d+$")
 )
 
 // Conf represents a configuration for a single batch task. Currently it is not
@@ -51,6 +54,49 @@ type Conf struct {
 	Version        string `json:"version"`
 	NumErrorsAlarm int    `json:"numErrorsAlarm"`
 	TZShift        int    `json:"tzShift"`
+}
+
+type DatetimeRange struct {
+	From *time.Time
+	To   *time.Time
+}
+
+// importTimeRangeEntry imports time information as expected in from-time to-time CMD args
+// It should be either a numeric UNIX timestamp (seconds till the epoch) or
+// YYYY-MM-DDTHH:mm:ss+hh:mm (or YYYY-MM-DDTHH:mm:ss-hh:mm)
+func importTimeRangeEntry(v string) (time.Time, error) {
+	if tzRangePattern.MatchString(v) {
+		vc, err := strconv.Atoi(v)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("Failed to parse UNIX timestamp-like value: %v", err)
+		}
+		return time.Unix(int64(vc), 0), nil
+	}
+	t := conversion.ConvertDatetimeString(v)
+	if t.IsZero() {
+		return t, fmt.Errorf("Unrecognized time format. Must be either a numeric UNIX timestamp or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm")
+	}
+	return t, nil
+}
+
+func NewDateTimeRange(fromTimestamp, toTimestamp *string) (DatetimeRange, error) {
+	ans := DatetimeRange{}
+	if *fromTimestamp != "" {
+		fromTime, err := importTimeRangeEntry(*fromTimestamp)
+		if err != nil {
+			return ans, err
+		}
+		ans.From = &fromTime
+	}
+
+	if *toTimestamp != "" {
+		toTime, err := importTimeRangeEntry(*toTimestamp)
+		if err != nil {
+			return ans, err
+		}
+		ans.To = &toTime
+	}
+	return ans, nil
 }
 
 // importTimeFromLine import a datetime information from the beginning
@@ -131,9 +177,9 @@ type LogItemProcessor interface {
 // LogFileProcFunc is a function for batch/tail processing of file-based logs
 type LogFileProcFunc = func(conf *Conf, minTimestamp int64)
 
-// CreateLogFileProcFunc joins a defined log transformer and output channels to and
+// CreateLogFileProcFunc connects a defined log transformer with output channels and
 // returns a customized function for file/directory processing.
-func CreateLogFileProcFunc(processor LogItemProcessor, fromTime, toTime *time.Time, destChans ...chan conversion.OutputRecord) LogFileProcFunc {
+func CreateLogFileProcFunc(processor LogItemProcessor, datetimeRange DatetimeRange, destChans ...chan conversion.OutputRecord) LogFileProcFunc {
 	return func(conf *Conf, minTimestamp int64) {
 		var files []string
 		if fsop.IsDir(conf.SrcPath) {
@@ -155,7 +201,7 @@ func CreateLogFileProcFunc(processor LogItemProcessor, fromTime, toTime *time.Ti
 		}
 		for _, file := range files {
 			p := newParser(file, conf.TZShift, processor.GetAppType(), processor.GetAppVersion(), procAlarm)
-			p.Parse(minTimestamp, processor, fromTime, toTime, destChans...)
+			p.Parse(minTimestamp, processor, datetimeRange, destChans...)
 		}
 		procAlarm.Evaluate()
 		procAlarm.Reset()

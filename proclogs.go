@@ -21,7 +21,6 @@ import (
 	"log"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/czcorpus/klogproc/config"
 	"github.com/czcorpus/klogproc/conversion"
@@ -59,9 +58,9 @@ type ClientAnalyzer interface {
 }
 
 type ProcessOptions struct {
-	worklogReset     bool
-	dryRun           bool
-	fromTime, toTime *time.Time
+	worklogReset  bool
+	dryRun        bool
+	datetimeRange batch.DatetimeRange
 }
 
 // CNKLogProcessor imports parsed log records represented
@@ -277,7 +276,7 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 				go elastic.RunWriteConsumer(conf.LogFiles.AppType, &conf.ElasticSearch, channelWriteES, &wg, worklog)
 				go influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux, &wg)
 			}
-			proc := batch.CreateLogFileProcFunc(processor, options.fromTime, options.toTime, channelWriteES, channelWriteInflux)
+			proc := batch.CreateLogFileProcFunc(processor, options.datetimeRange, channelWriteES, channelWriteInflux)
 			proc(&conf.LogFiles, worklog.GetLastRecord())
 			close(channelWriteES)
 			close(channelWriteInflux)
