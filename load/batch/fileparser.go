@@ -73,7 +73,7 @@ type Parser struct {
 }
 
 // Parse runs the parsing process based on provided minimum accepted record
-// time, record type (which is just passed to ElastiSearch) and a
+// time, record type (which is just passed to ElasticSearch) and a
 // provided LogInterceptor).
 func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, fromTime, toTime *time.Time, outputs ...chan conversion.OutputRecord) {
 	for i := 0; p.fr.Scan(); i++ {
@@ -81,12 +81,12 @@ func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, fromTime, toT
 		if err == nil {
 			recTime := rec.GetTime()
 			if fromTime != nil && recTime.Before(*fromTime) {
-				log.Println("Skipping line before fromTime: ", i)
+				log.Printf("Skipping line %d (timestamp: %v) due to required time range", i, recTime)
 				continue
 			}
 			if toTime != nil && recTime.After(*toTime) {
-				log.Println("Skipping line after toTime: ", i)
-				continue
+				log.Printf("Stopping file processing - record at line %d (timestamp: %v) is newer than the required limit %v", i, recTime, toTime)
+				break
 			}
 			if recTime.Unix() >= fromTimestamp {
 				outRec := proc.ProcItem(rec, p.tzShift)
