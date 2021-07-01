@@ -26,7 +26,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
 )
@@ -75,17 +74,18 @@ type Parser struct {
 // Parse runs the parsing process based on provided minimum accepted record
 // time, record type (which is just passed to ElasticSearch) and a
 // provided LogInterceptor).
-func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, fromTime, toTime *time.Time, outputs ...chan conversion.OutputRecord) {
+func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, datetimeRange DatetimeRange, outputs ...chan conversion.OutputRecord) {
 	for i := 0; p.fr.Scan(); i++ {
 		rec, err := p.lineParser.ParseLine(p.fr.Text(), i)
 		if err == nil {
 			recTime := rec.GetTime()
-			if fromTime != nil && recTime.Before(*fromTime) {
+			if datetimeRange.From != nil && recTime.Before(*datetimeRange.From) {
 				log.Printf("Skipping line %d (timestamp: %v) due to required time range", i, recTime)
 				continue
 			}
-			if toTime != nil && recTime.After(*toTime) {
-				log.Printf("Stopping file processing - record at line %d (timestamp: %v) is newer than the required limit %v", i, recTime, toTime)
+			if datetimeRange.To != nil && recTime.After(*datetimeRange.To) {
+				log.Printf("Stopping file processing - record at line %d (timestamp: %v) is newer than the required limit %v",
+					i, recTime, datetimeRange.To)
 				break
 			}
 			if recTime.Unix() >= fromTimestamp {

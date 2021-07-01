@@ -19,15 +19,12 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
-	"regexp"
-	"strconv"
 	"strings"
-	"time"
 
 	"os"
 
 	"github.com/czcorpus/klogproc/config"
-	"github.com/czcorpus/klogproc/conversion"
+	"github.com/czcorpus/klogproc/load/batch"
 	"github.com/czcorpus/klogproc/save/elastic"
 )
 
@@ -45,10 +42,9 @@ const (
 )
 
 var (
-	version        string
-	build          string
-	gitCommit      string
-	tzRangePattern = regexp.MustCompile("^\\d+$")
+	version   string
+	build     string
+	gitCommit string
 )
 
 func updateRecords(conf *config.Main, options *ProcessOptions) {
@@ -114,24 +110,6 @@ func setup(confPath string) (*config.Main, *os.File) {
 	return conf, nil
 }
 
-// importTimeRangeEntry imports time information as expected in from-time to-time CMD args
-// It should be either a numeric UNIX timestamp (seconds till the epoch) or
-// YYYY-MM-DDTHH:mm:ss+hh:mm (or YYYY-MM-DDTHH:mm:ss-hh:mm)
-func importTimeRangeEntry(v string) (time.Time, error) {
-	if tzRangePattern.MatchString(v) {
-		vc, err := strconv.Atoi(v)
-		if err != nil {
-			return time.Time{}, fmt.Errorf("Failed to parse UNIX timestamp-like value: %v", err)
-		}
-		return time.Unix(int64(vc), 0), nil
-	}
-	t := conversion.ConvertDatetimeString(v)
-	if t.IsZero() {
-		return t, fmt.Errorf("Unrecognized time format. Must be either a numeric UNIX timestamp or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm")
-	}
-	return t, nil
-}
-
 func main() {
 	procOpts := new(ProcessOptions)
 	flag.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
@@ -146,20 +124,10 @@ func main() {
 	}
 	flag.Parse()
 
-	if *fromTimestamp != "" {
-		fromTime, err := importTimeRangeEntry(*fromTimestamp)
-		if err != nil {
-			log.Fatal("FATAL: ", err)
-		}
-		procOpts.fromTime = &fromTime
-	}
-
-	if *toTimestamp != "" {
-		toTime, err := importTimeRangeEntry(*toTimestamp)
-		if err != nil {
-			log.Fatal("FATAL: ", err)
-		}
-		procOpts.toTime = &toTime
+	var err error
+	procOpts.datetimeRange, err = batch.NewDateTimeRange(fromTimestamp, toTimestamp)
+	if err != nil {
+		log.Fatal("FATAL: ", err)
 	}
 
 	var conf *config.Main
