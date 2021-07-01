@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -26,6 +27,7 @@ import (
 	"os"
 
 	"github.com/czcorpus/klogproc/config"
+	"github.com/czcorpus/klogproc/conversion"
 	"github.com/czcorpus/klogproc/save/elastic"
 )
 
@@ -43,9 +45,10 @@ const (
 )
 
 var (
-	version   string
-	build     string
-	gitCommit string
+	version        string
+	build          string
+	gitCommit      string
+	tzRangePattern = regexp.MustCompile("^\\d+$")
 )
 
 func updateRecords(conf *config.Main, options *ProcessOptions) {
@@ -111,12 +114,30 @@ func setup(confPath string) (*config.Main, *os.File) {
 	return conf, nil
 }
 
+// importTimeRangeEntry imports time information as expected in from-time to-time CMD args
+// It should be either a numeric UNIX timestamp (seconds till the epoch) or
+// YYYY-MM-DDTHH:mm:ss+hh:mm (or YYYY-MM-DDTHH:mm:ss-hh:mm)
+func importTimeRangeEntry(v string) (time.Time, error) {
+	if tzRangePattern.MatchString(v) {
+		vc, err := strconv.Atoi(v)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("Failed to parse UNIX timestamp-like value: %v", err)
+		}
+		return time.Unix(int64(vc), 0), nil
+	}
+	t := conversion.ConvertDatetimeString(v)
+	if t.IsZero() {
+		return t, fmt.Errorf("Unrecognized time format. Must be either a numeric UNIX timestamp or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm")
+	}
+	return t, nil
+}
+
 func main() {
 	procOpts := new(ProcessOptions)
 	flag.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
 	flag.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
-	fromTimestamp := flag.String("from-time", "", "Batch UNIX timestamp start time range")
-	toTimestamp := flag.String("to-time", "", "Batch UNIX timestamp end time range")
+	fromTimestamp := flag.String("from-time", "", "Batch process only the records with datetime greater or equal to this time (UNIX timestamp, or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm)")
+	toTimestamp := flag.String("to-time", "", "Batch process only the records with datetime less or equal to this UNIX timestamp, or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm)")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending CNC app logs to ElasticSearch & InfluxDB\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\t%s\n\nOptions:\n",
@@ -126,21 +147,19 @@ func main() {
 	flag.Parse()
 
 	if *fromTimestamp != "" {
-		fromTime, err := strconv.Atoi(*fromTimestamp)
+		fromTime, err := importTimeRangeEntry(*fromTimestamp)
 		if err != nil {
-			log.Fatal("FATAL: Invalid fromTime UNIX timestamp: ", err)
+			log.Fatal("FATAL: ", err)
 		}
-		tmp := time.Unix(int64(fromTime), 0)
-		procOpts.fromTime = &tmp
+		procOpts.fromTime = &fromTime
 	}
 
 	if *toTimestamp != "" {
-		toTime, err := strconv.Atoi(*toTimestamp)
+		toTime, err := importTimeRangeEntry(*toTimestamp)
 		if err != nil {
-			log.Fatal("FATAL: Invalid toTime UNIX timestamp: ", err)
+			log.Fatal("FATAL: ", err)
 		}
-		tmp := time.Unix(int64(toTime), 0)
-		procOpts.toTime = &tmp
+		procOpts.toTime = &toTime
 	}
 
 	var conf *config.Main
