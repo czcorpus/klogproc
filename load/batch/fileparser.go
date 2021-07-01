@@ -81,9 +81,11 @@ func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, fromTime, toT
 		if err == nil {
 			recTime := rec.GetTime()
 			if fromTime != nil && recTime.Before(*fromTime) {
+				log.Println("Skipping line before fromTime: ", i)
 				continue
 			}
 			if toTime != nil && recTime.After(*toTime) {
+				log.Println("Skipping line after toTime: ", i)
 				continue
 			}
 			if recTime.Unix() >= fromTimestamp {
