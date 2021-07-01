@@ -68,7 +68,7 @@ the log files are not overwritten  in the meantime due to log rotation).
 
 ## Installation
 
-[Install](https://golang.org/doc/install) the *Go* language if it is not already
+[Install](https://golang.org/doc/install) *Go* language if it is not already
 available on your system.
 
 Clone the *klogproc* project:
@@ -85,29 +85,30 @@ Copy the binary somewhere:
 
 Create a config file (e.g. in /usr/local/etc/klogproc.json):
 
-```
+```json
 {
-    "logPath": "/var/log/klogproc/klogproc.log",
-    "logTail": {
-	"intervalSecs": 15,
-      "worklogPath": "/var/opt/klogproc/worklog-tail.log",
-      "files": [
-        {"path": "/var/log/ucnk/syd.log", "appType": "syd"},
-        {"path": "/var/log/treq/treq.log", "appType": "treq"},
-	    {"path": "/var/log/ucnk/morfio.log", "appType": "morfio"},
-	    {"path": "/var/log/ucnk/kwords.log", "appType": "kwords", "tzShift": -120}
-      ]
-    },
-    "elasticSearch": {
-	  "majorVersion": 5,
-      "server": "http://elastic:9200",
-      "index": "log_archive",
-      "pushChunkSize": 500,
-      "scrollTtl": "3m",
-      "reqTimeoutSecs": 10
-    },
-    "geoIPDbPath": "/var/opt/klogproc/GeoLite2-City.mmdb",
-    "anonymousUsers": [0, 1, 2]
+  "logPath": "/var/log/klogproc/klogproc.log",
+  "logTail": {
+    "intervalSecs": 15,
+    "worklogPath": "/var/opt/klogproc/worklog-tail.log",
+    "files": [
+      {"path": "/var/log/ucnk/syd.log", "appType": "syd"},
+      {"path": "/var/log/treq/treq.log", "appType": "treq"},
+      {"path": "/var/log/ucnk/morfio.log", "appType": "morfio"},
+      {"path": "/var/log/ucnk/kwords.log", "appType": "kwords", "tzShift": -120}
+      {"path": "/var/log/wag/current.log", "appType": "wag", "version": "0.7"}
+    ]
+  },
+  "elasticSearch": {
+    "majorVersion": 6,
+    "server": "http://elastic:9200",
+    "index": "app",
+    "pushChunkSize": 500,
+    "scrollTtl": "3m",
+    "reqTimeoutSecs": 10
+  },
+  "geoIPDbPath": "/var/opt/klogproc/GeoLite2-City.mmdb",
+  "anonymousUsers": [0, 1, 2]
 }
 ```
 
@@ -121,7 +122,7 @@ values reprezent local time) - see the section Time-zone notes for more info.
 
 Configure systemd (/etc/systemd/system/klogproc.service):
 
-```
+```ini
 [Unit]
 Description=A custom agent for collecting UCNK apps logs
 After=network.target
