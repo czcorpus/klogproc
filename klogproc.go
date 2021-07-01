@@ -19,7 +19,9 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"os"
 
@@ -113,6 +115,8 @@ func main() {
 	procOpts := new(ProcessOptions)
 	flag.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
 	flag.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
+	fromTimestamp := flag.String("from-time", "", "Batch UNIX timestamp start time range")
+	toTimestamp := flag.String("to-time", "", "Batch UNIX timestamp end time range")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending CNC app logs to ElasticSearch & InfluxDB\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\t%s\n\nOptions:\n",
@@ -120,6 +124,24 @@ func main() {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+
+	if *fromTimestamp != "" {
+		fromTime, err := strconv.Atoi(*fromTimestamp)
+		if err != nil {
+			log.Fatal("FATAL: Invalid fromTime UNIX timestamp: ", err)
+		}
+		tmp := time.Unix(int64(fromTime), 0)
+		procOpts.fromTime = &tmp
+	}
+
+	if *toTimestamp != "" {
+		toTime, err := strconv.Atoi(*toTimestamp)
+		if err != nil {
+			log.Fatal("FATAL: Invalid toTime UNIX timestamp: ", err)
+		}
+		tmp := time.Unix(int64(toTime), 0)
+		procOpts.toTime = &tmp
+	}
 
 	var conf *config.Main
 	var logf *os.File

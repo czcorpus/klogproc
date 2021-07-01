@@ -26,6 +26,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
 )
@@ -74,11 +75,20 @@ type Parser struct {
 // Parse runs the parsing process based on provided minimum accepted record
 // time, record type (which is just passed to ElastiSearch) and a
 // provided LogInterceptor).
-func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, outputs ...chan conversion.OutputRecord) {
+func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, fromTime, toTime *time.Time, outputs ...chan conversion.OutputRecord) {
 	for i := 0; p.fr.Scan(); i++ {
 		rec, err := p.lineParser.ParseLine(p.fr.Text(), i)
 		if err == nil {
-			if rec.GetTime().Unix() >= fromTimestamp {
+			recTime := rec.GetTime()
+			if fromTime != nil && recTime.Before(*fromTime) {
+				log.Println("Skipping line before fromTime: ", i)
+				continue
+			}
+			if toTime != nil && recTime.After(*toTime) {
+				log.Println("Skipping line after toTime: ", i)
+				continue
+			}
+			if recTime.Unix() >= fromTimestamp {
 				outRec := proc.ProcItem(rec, p.tzShift)
 				if outRec != nil {
 					for _, output := range outputs {
