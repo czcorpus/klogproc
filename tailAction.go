@@ -72,8 +72,8 @@ func (tp *tailProcessor) OnCheckStart() {
 	go influx.RunWriteConsumer(&tp.conf.InfluxDB, tp.dataForInflux, &tp.outSync)
 }
 
-func (tp *tailProcessor) OnEntry(item string) {
-	parsed, err := tp.lineParser.ParseLine(item, 0)
+func (tp *tailProcessor) OnEntry(item string, lineNum int64) {
+	parsed, err := tp.lineParser.ParseLine(item, int(lineNum))
 	if err != nil {
 		switch tErr := err.(type) {
 		case conversion.LineParsingError:
