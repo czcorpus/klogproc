@@ -46,6 +46,7 @@ type FileTailReader struct {
 	processor   FileTailProcessor
 	lastInode   int64
 	lastSize    int64
+	lastLine    int64
 	file        *os.File
 	filePath    string
 	lastReadPos int64
@@ -66,7 +67,7 @@ func (ftw *FileTailReader) Processor() FileTailProcessor {
 }
 
 // ApplyNewContent calls a provided function to newly added lines
-func (ftw *FileTailReader) ApplyNewContent(onLine func(line string), onDone func(inode int64, seek int64)) error {
+func (ftw *FileTailReader) ApplyNewContent(onLine func(line string, lineNum int64), onDone func(inode int64, seek int64, lineNum int64)) error {
 	currInode, currSize, err := getFileProps(ftw.processor.FilePath())
 	if err != nil {
 		return err
@@ -78,6 +79,7 @@ func (ftw *FileTailReader) ApplyNewContent(onLine func(line string), onDone func
 		ftw.lastInode = currInode
 		ftw.lastSize = currSize
 		ftw.lastReadPos = 0
+		ftw.lastLine = 0
 		ftw.file.Close()
 		ftw.file, err = os.Open(ftw.processor.FilePath())
 		if err != nil {
@@ -91,23 +93,25 @@ func (ftw *FileTailReader) ApplyNewContent(onLine func(line string), onDone func
 	if contentChanged {
 		sc := bufio.NewScanner(ftw.file)
 		for sc.Scan() {
-			onLine(sc.Text())
+			ftw.lastLine++
+			onLine(sc.Text(), ftw.lastLine)
 		}
 		ftw.lastReadPos, err = ftw.file.Seek(0, os.SEEK_CUR)
 		if err != nil {
 			return err
 		}
-		onDone(ftw.lastInode, ftw.lastReadPos)
+		onDone(ftw.lastInode, ftw.lastReadPos, ftw.lastLine)
 	}
 	return nil
 }
 
 // NewReader creates a new file reader instance
-func NewReader(processor FileTailProcessor, lastInode, lastReadPos int64) (*FileTailReader, error) {
+func NewReader(processor FileTailProcessor, lastInode, lastReadPos int64, lastLineNum int64) (*FileTailReader, error) {
 	r := &FileTailReader{
 		processor:   processor,
 		lastInode:   lastInode,
 		lastSize:    -1,
+		lastLine:    lastLineNum,
 		file:        nil,
 		filePath:    processor.FilePath(),
 		lastReadPos: lastReadPos,

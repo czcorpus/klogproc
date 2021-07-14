@@ -67,7 +67,7 @@ type FileTailProcessor interface {
 	FilePath() string
 	CheckIntervalSecs() int
 	OnCheckStart()
-	OnEntry(item string)
+	OnEntry(item string, lineNum int64)
 	OnCheckStop()
 	OnQuit()
 }
@@ -108,9 +108,9 @@ func Run(conf *Conf, processors []FileTailProcessor, clientAnalyzer ClientAnalyz
 			wlItem := worklog.GetData(processor.FilePath())
 			log.Printf("INFO: Found configuration for file %s", processor.FilePath())
 			if wlItem.Inode > -1 {
-				log.Printf("INFO: Found worklog for %s, inode: %d, seek: %d", processor.FilePath(), wlItem.Inode, wlItem.Seek)
+				log.Printf("INFO: Found worklog for %s, inode: %d, seek: %d, line: %d", processor.FilePath(), wlItem.Inode, wlItem.Seek, wlItem.Line)
 			}
-			rdr, err := NewReader(processor, wlItem.Inode, wlItem.Seek)
+			rdr, err := NewReader(processor, wlItem.Inode, wlItem.Seek, wlItem.Line)
 			if err != nil {
 				log.Print("ERROR: ", err)
 				quitChan <- true
@@ -128,11 +128,11 @@ func Run(conf *Conf, processors []FileTailProcessor, clientAnalyzer ClientAnalyz
 				go func(rdr *FileTailReader) {
 					rdr.Processor().OnCheckStart()
 					rdr.ApplyNewContent(
-						func(v string) {
-							rdr.Processor().OnEntry(v)
+						func(v string, lineNum int64) {
+							rdr.Processor().OnEntry(v, lineNum)
 						},
-						func(inode int64, seek int64) {
-							worklog.UpdateFileInfo(rdr.FilePath(), inode, seek)
+						func(inode int64, seek int64, lineNum int64) {
+							worklog.UpdateFileInfo(rdr.FilePath(), inode, seek, lineNum)
 						},
 					)
 					rdr.Processor().OnCheckStop()

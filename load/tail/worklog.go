@@ -28,6 +28,7 @@ import (
 type WorklogItem struct {
 	Inode int64 `json:"inode"`
 	Seek  int64 `json:"seek"`
+	Line  int64 `json:"line"`
 }
 
 type updateRequest struct {
@@ -116,8 +117,8 @@ func (w *Worklog) save() error {
 
 // UpdateFileInfo adds individual app reading position info. Please
 // note that this does not save the worklog.
-func (w *Worklog) UpdateFileInfo(filePath string, inode int64, seek int64) {
-	w.updRequests <- updateRequest{FilePath: filePath, Value: WorklogItem{Inode: inode, Seek: seek}}
+func (w *Worklog) UpdateFileInfo(filePath string, inode int64, seek int64, line int64) {
+	w.updRequests <- updateRequest{FilePath: filePath, Value: WorklogItem{Inode: inode, Seek: seek, Line: line}}
 }
 
 // GetData retrieves reading info for a provided app
@@ -126,7 +127,7 @@ func (w *Worklog) GetData(filePath string) WorklogItem {
 	if ok {
 		return v
 	}
-	return WorklogItem{Inode: -1, Seek: 0}
+	return WorklogItem{Inode: -1, Seek: 0, Line: 0}
 }
 
 // NewWorklog creates a new Worklog instance. Please note that
