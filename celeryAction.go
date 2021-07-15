@@ -19,10 +19,12 @@ package main
 import (
 	"github.com/czcorpus/klogproc/config"
 	"github.com/czcorpus/klogproc/load/celery"
+	"github.com/czcorpus/klogproc/save"
 )
 
 func processCeleryStatus(conf *config.Main) {
 	finishEvent := make(chan bool)
-	go celery.Run(&conf.CeleryStatus, finishEvent, &conf.InfluxDB, &conf.ElasticSearch, &notifyFailedChunks{})
+	confirmChan := make(chan save.ConfirmMsg)
+	go celery.Run(&conf.CeleryStatus, finishEvent, &conf.InfluxDB, &conf.ElasticSearch, confirmChan)
 	<-finishEvent
 }

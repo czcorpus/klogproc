@@ -26,6 +26,7 @@ import (
 
 	"github.com/czcorpus/klogproc/conversion"
 	"github.com/czcorpus/klogproc/conversion/celery"
+	"github.com/czcorpus/klogproc/save"
 	"github.com/czcorpus/klogproc/save/elastic"
 	"github.com/czcorpus/klogproc/save/influx"
 )
@@ -93,7 +94,7 @@ func (p *Processor) Process() (*celery.OutputRecord, error) {
 
 // Run controls regular checking of one or more Celery apps
 func Run(conf *Conf, finishEvent chan<- bool, influxConf *influx.ConnectionConf, esConf *elastic.ConnectionConf,
-	failHandler elastic.ESImportFailHandler) {
+	confirmChan chan save.ConfirmMsg) {
 	tickerInterval := time.Duration(conf.IntervalSecs)
 	if tickerInterval == 0 {
 		log.Printf("WARNING: intervalSecs for Celery status mode not set, using default %ds", defaultTickerIntervalSecs)
@@ -123,8 +124,8 @@ func Run(conf *Conf, finishEvent chan<- bool, influxConf *influx.ConnectionConf,
 			saveChannelES := make(chan conversion.OutputRecord, esConf.PushChunkSize)
 			var writeSync sync.WaitGroup
 			writeSync.Add(2)
-			go influx.RunWriteConsumer(influxConf, saveChannelInflux, &writeSync) // nil => no need to synchronize with other stuff
-			go elastic.RunWriteConsumer("celery", esConf, saveChannelES, &writeSync, failHandler)
+			go influx.RunWriteConsumer(influxConf, saveChannelInflux, &writeSync, confirmChan) // nil => no need to synchronize with other stuff
+			go elastic.RunWriteConsumer("celery", esConf, saveChannelES, &writeSync, confirmChan)
 
 			for _, proc := range processors {
 				go func(proc *Processor) {

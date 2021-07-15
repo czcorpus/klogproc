@@ -212,6 +212,7 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 			}
 			channelWriteES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
 			channelWriteInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
+			channelConfirm := make(chan save.ConfirmMsg)
 			redisQueue, err := sredis.OpenRedisQueue(
 				conf.LogRedis.Address,
 				conf.LogRedis.Database,
@@ -230,11 +231,20 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 			processRedisLogs(conf, redisQueue, processor, channelWriteES, channelWriteInflux)
 			var wg sync.WaitGroup
 			wg.Add(2)
-			go elastic.RunWriteConsumer(conf.LogRedis.AppType, &conf.ElasticSearch, channelWriteES, &wg, redisQueue)
-			go influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux, &wg)
+			go elastic.RunWriteConsumer(conf.LogRedis.AppType, &conf.ElasticSearch, channelWriteES, &wg, channelConfirm)
+			go influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux, &wg, channelConfirm)
+			go func() {
+				for confirm := range channelConfirm {
+					if confirm.Saved == false {
+						log.Printf("ERROR: failed to save data to %s", confirm.DBType)
+						// TODO
+					}
+				}
+			}()
 			wg.Wait()
 			close(channelWriteES)
 			close(channelWriteInflux)
+			close(channelConfirm)
 			finishEvent <- true
 			log.Printf("INFO: Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)
 
@@ -254,6 +264,7 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 			}
 			channelWriteES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
 			channelWriteInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
+			channelConfirm := make(chan save.ConfirmMsg)
 			worklog := batch.NewWorklog(conf.LogFiles.WorklogPath)
 			log.Printf("INFO: using worklog %s", conf.LogFiles.WorklogPath)
 			if options.worklogReset {
@@ -269,17 +280,26 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 			wg.Add(2)
 
 			if options.dryRun {
-				go save.RunWriteConsumer(channelWriteES, channelWriteInflux, &wg)
+				go save.RunWriteConsumer(channelWriteES, channelWriteInflux, &wg, channelConfirm)
 				log.Print("WARNING: using dry-run mode, output goes to stdout")
 
 			} else {
-				go elastic.RunWriteConsumer(conf.LogFiles.AppType, &conf.ElasticSearch, channelWriteES, &wg, worklog)
-				go influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux, &wg)
+				go elastic.RunWriteConsumer(conf.LogFiles.AppType, &conf.ElasticSearch, channelWriteES, &wg, channelConfirm)
+				go influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux, &wg, channelConfirm)
+				go func() {
+					for confirm := range channelConfirm {
+						if confirm.Saved == false {
+							log.Printf("ERROR: failed to save data to %s", confirm.DBType)
+							// TODO
+						}
+					}
+				}()
 			}
 			proc := batch.CreateLogFileProcFunc(processor, options.datetimeRange, channelWriteES, channelWriteInflux)
 			proc(&conf.LogFiles, worklog.GetLastRecord())
 			close(channelWriteES)
 			close(channelWriteInflux)
+			close(channelConfirm)
 			wg.Wait()
 			finishEvent <- true
 			log.Printf("INFO: Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)

@@ -28,7 +28,7 @@ import (
 // to a configured InfluxDB measurement. For performance reasons, the actual
 // database write is performed each time number of added items equals
 // conf.PushChunkSize and also once the incomingData channel is closed.
-func RunWriteConsumer(incomingESData <-chan conversion.OutputRecord, incomingInfluxData <-chan conversion.OutputRecord, waitGroup *sync.WaitGroup) {
+func RunWriteConsumer(incomingESData <-chan conversion.OutputRecord, incomingInfluxData <-chan conversion.OutputRecord, waitGroup *sync.WaitGroup, confirmChan chan ConfirmMsg) {
 	go func() {
 		for range incomingInfluxData {
 		}

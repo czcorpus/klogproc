@@ -21,13 +21,14 @@ import (
 	"sync"
 
 	"github.com/czcorpus/klogproc/conversion"
+	"github.com/czcorpus/klogproc/save"
 )
 
 // RunWriteConsumer reads from incomingData channel and stores the data
 // to a configured InfluxDB measurement. For performance reasons, the actual
 // database write is performed each time number of added items equals
 // conf.PushChunkSize and also once the incomingData channel is closed.
-func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan conversion.OutputRecord, waitGroup *sync.WaitGroup) {
+func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan conversion.OutputRecord, waitGroup *sync.WaitGroup, confirmChan chan save.ConfirmMsg) {
 	// InfluxDB batch writes
 	if waitGroup != nil {
 		defer waitGroup.Done()
@@ -41,8 +42,9 @@ func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan conversion.Outpu
 		for rec := range incomingData {
 			err = client.AddRecord(rec)
 			if err != nil {
-				log.Print("ERROR: ", err) // TODO
+				confirmChan <- save.ConfirmMsg{rec.GetID(), save.Influx, false, err}
 			}
+			confirmChan <- save.ConfirmMsg{rec.GetID(), save.Influx, true, nil}
 		}
 		err = client.Finish()
 		if err != nil {
@@ -50,7 +52,8 @@ func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan conversion.Outpu
 		}
 
 	} else {
-		for range incomingData {
+		for rec := range incomingData {
+			confirmChan <- save.ConfirmMsg{rec.GetID(), save.Influx, true, nil}
 		}
 	}
 }

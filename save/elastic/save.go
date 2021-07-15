@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/czcorpus/klogproc/conversion"
+	"github.com/czcorpus/klogproc/save"
 )
 
 const (
@@ -61,7 +62,7 @@ func BulkWriteRequest(data [][]byte, appType string, esconf *ConnectionConf) err
 // RunWriteConsumer reads incoming records from incomingData channel and writes them
 // chunk by chunk. Once the channel is closed, the rest of items in buffer is writtten
 // and the consumer finishes.
-func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan conversion.OutputRecord, waitGroup *sync.WaitGroup, failHandler ESImportFailHandler) {
+func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan conversion.OutputRecord, waitGroup *sync.WaitGroup, confirmChan chan save.ConfirmMsg) {
 	// Elasticsearch bulk writes
 	defer waitGroup.Done()
 	if conf.IsConfigured() {
@@ -96,9 +97,9 @@ func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan 
 				data[i] = []byte("\n")
 				esErr = BulkWriteRequest(data[:i+1], appType, conf)
 				if esErr != nil {
-					log.Print("ERROR: Failed to save a data chunk to ElasticSearch")
-					failed = append(failed, data[:i+1]...)
+					confirmChan <- save.ConfirmMsg{rec.GetID(), save.Elastic, false, err}
 				}
+				confirmChan <- save.ConfirmMsg{rec.GetID(), save.Elastic, true, nil}
 				i = 0
 			}
 		}
@@ -110,12 +111,10 @@ func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan 
 				failed = append(failed, data[:i+1]...)
 			}
 		}
-		if failHandler != nil {
-			failHandler.RescueFailedChunks(failed)
-		}
 
 	} else {
-		for range incomingData {
+		for rec := range incomingData {
+			confirmChan <- save.ConfirmMsg{rec.GetID(), save.Elastic, true, nil}
 		}
 	}
 }

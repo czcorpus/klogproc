@@ -27,20 +27,12 @@ import (
 	"github.com/czcorpus/klogproc/load/alarm"
 	"github.com/czcorpus/klogproc/load/batch"
 	"github.com/czcorpus/klogproc/load/tail"
+	"github.com/czcorpus/klogproc/save"
 	"github.com/czcorpus/klogproc/save/elastic"
 	"github.com/czcorpus/klogproc/save/influx"
 	"github.com/czcorpus/klogproc/users"
 	"github.com/oschwald/geoip2-golang"
 )
-
-type notifyFailedChunks struct{}
-
-func (n *notifyFailedChunks) RescueFailedChunks(chunk [][]byte) error {
-	if len(chunk) > 0 {
-		log.Print("ERROR: failed to insert a chunk of size ", len(chunk))
-	}
-	return nil
-}
 
 // -----
 
@@ -56,6 +48,7 @@ type tailProcessor struct {
 	geoDB             *geoip2.Reader
 	dataForES         chan conversion.OutputRecord
 	dataForInflux     chan conversion.OutputRecord
+	confirmChan       chan save.ConfirmMsg
 	anonymousUsers    []int
 	elasticChunkSize  int
 	influxChunkSize   int
@@ -66,10 +59,11 @@ type tailProcessor struct {
 func (tp *tailProcessor) OnCheckStart() {
 	tp.dataForES = make(chan conversion.OutputRecord, tp.elasticChunkSize*2)
 	tp.dataForInflux = make(chan conversion.OutputRecord, tp.influxChunkSize)
+	tp.confirmChan = make(chan save.ConfirmMsg)
 	tp.outSync = sync.WaitGroup{}
 	tp.outSync.Add(2)
-	go elastic.RunWriteConsumer(tp.appType, &tp.conf.ElasticSearch, tp.dataForES, &tp.outSync, &notifyFailedChunks{})
-	go influx.RunWriteConsumer(&tp.conf.InfluxDB, tp.dataForInflux, &tp.outSync)
+	go elastic.RunWriteConsumer(tp.appType, &tp.conf.ElasticSearch, tp.dataForES, &tp.outSync, tp.confirmChan)
+	go influx.RunWriteConsumer(&tp.conf.InfluxDB, tp.dataForInflux, &tp.outSync, tp.confirmChan)
 }
 
 func (tp *tailProcessor) OnEntry(item string, lineNum int64) {
@@ -98,6 +92,7 @@ func (tp *tailProcessor) OnEntry(item string, lineNum int64) {
 func (tp *tailProcessor) OnCheckStop() {
 	close(tp.dataForES)
 	close(tp.dataForInflux)
+	close(tp.confirmChan)
 	tp.outSync.Wait()
 	tp.alarm.Evaluate()
 }
