@@ -37,36 +37,45 @@ import (
 // -----
 
 type tailProcessor struct {
-	appType           string
-	filePath          string
-	version           string
-	tzShift           int
-	checkIntervalSecs int
-	conf              *config.Main
-	lineParser        batch.LineParser
-	logTransformer    conversion.LogItemTransformer
-	geoDB             *geoip2.Reader
-	dataForES         chan conversion.OutputRecord
-	dataForInflux     chan conversion.OutputRecord
-	confirmChan       chan save.ConfirmMsg
-	anonymousUsers    []int
-	elasticChunkSize  int
-	influxChunkSize   int
-	outSync           sync.WaitGroup
-	alarm             conversion.AppErrorRegister
+	appType            string
+	filePath           string
+	version            string
+	tzShift            int
+	checkIntervalSecs  int
+	conf               *config.Main
+	lineParser         batch.LineParser
+	logTransformer     conversion.LogItemTransformer
+	geoDB              *geoip2.Reader
+	dataForES          chan conversion.OutputRecord
+	dataForInflux      chan conversion.OutputRecord
+	confirmChan        chan save.ConfirmMsg
+	pendingRecPosition map[string]pendingRec
+	pendingMutex       sync.Mutex
+	anonymousUsers     []int
+	elasticChunkSize   int
+	influxChunkSize    int
+	outSync            sync.WaitGroup
+	alarm              conversion.AppErrorRegister
+}
+
+type pendingRec struct {
+	inode          int64
+	seek           int64
+	line           int64
+	elasticConfirm bool
+	influxConfirm  bool
 }
 
 func (tp *tailProcessor) OnCheckStart() {
 	tp.dataForES = make(chan conversion.OutputRecord, tp.elasticChunkSize*2)
 	tp.dataForInflux = make(chan conversion.OutputRecord, tp.influxChunkSize)
-	tp.confirmChan = make(chan save.ConfirmMsg)
 	tp.outSync = sync.WaitGroup{}
 	tp.outSync.Add(2)
 	go elastic.RunWriteConsumer(tp.appType, &tp.conf.ElasticSearch, tp.dataForES, &tp.outSync, tp.confirmChan)
 	go influx.RunWriteConsumer(&tp.conf.InfluxDB, tp.dataForInflux, &tp.outSync, tp.confirmChan)
 }
 
-func (tp *tailProcessor) OnEntry(item string, lineNum int64) {
+func (tp *tailProcessor) OnEntry(item string, inode int64, seek int64, lineNum int64) {
 	parsed, err := tp.lineParser.ParseLine(item, int(lineNum))
 	if err != nil {
 		switch tErr := err.(type) {
@@ -84,6 +93,15 @@ func (tp *tailProcessor) OnEntry(item string, lineNum int64) {
 			return
 		}
 		applyLocation(parsed, tp.geoDB, outRec)
+		tp.pendingMutex.Lock()
+		tp.pendingRecPosition[outRec.GetID()] = pendingRec{
+			inode:          inode,
+			seek:           seek,
+			line:           lineNum,
+			elasticConfirm: false,
+			influxConfirm:  false,
+		}
+		tp.pendingMutex.Unlock()
 		tp.dataForES <- outRec
 		tp.dataForInflux <- outRec
 	}
@@ -92,7 +110,6 @@ func (tp *tailProcessor) OnEntry(item string, lineNum int64) {
 func (tp *tailProcessor) OnCheckStop() {
 	close(tp.dataForES)
 	close(tp.dataForInflux)
-	close(tp.confirmChan)
 	tp.outSync.Wait()
 	tp.alarm.Evaluate()
 }
@@ -111,6 +128,35 @@ func (tp *tailProcessor) FilePath() string {
 
 func (tp *tailProcessor) CheckIntervalSecs() int {
 	return tp.checkIntervalSecs
+}
+
+func (tp *tailProcessor) ConfirmationChecker(onConfirm func(filePath string, inode int64, seek int64, lineNum int64)) {
+	error := false
+	for confirmMsg := range tp.confirmChan {
+		if confirmMsg.Error == nil && !error {
+			tp.pendingMutex.Lock()
+			for _, recId := range confirmMsg.RecordIds {
+				pending := tp.pendingRecPosition[recId]
+				switch confirmMsg.DBType {
+				case save.Elastic:
+					pending.elasticConfirm = true
+				case save.Influx:
+					pending.influxConfirm = true
+				}
+
+				if pending.elasticConfirm && pending.influxConfirm {
+					onConfirm(tp.filePath, pending.inode, pending.seek, pending.line)
+					delete(tp.pendingRecPosition, recId)
+				} else {
+					tp.pendingRecPosition[recId] = pending
+				}
+			}
+			tp.pendingMutex.Unlock()
+		} else {
+			lastLine := tp.pendingRecPosition[confirmMsg.RecordIds[0]].line
+			log.Printf("ERROR: Save to %s unsuccesful. Stopped on line: %d", confirmMsg.DBType, lastLine)
+		}
+	}
 }
 
 // -----
@@ -147,19 +193,21 @@ func newTailProcessor(tailConf tail.FileConf, conf config.Main, geoDB *geoip2.Re
 	}
 
 	return &tailProcessor{
-		appType:           tailConf.AppType,
-		filePath:          filepath.Clean(tailConf.Path), // note: this is not a full path normalization !
-		version:           tailConf.Version,
-		tzShift:           tailConf.TZShift,
-		checkIntervalSecs: conf.LogTail.IntervalSecs, // TODO maybe per-app type here ??
-		conf:              &conf,
-		lineParser:        lineParser,
-		logTransformer:    logTransformer,
-		geoDB:             geoDB,
-		anonymousUsers:    conf.AnonymousUsers,
-		elasticChunkSize:  conf.ElasticSearch.PushChunkSize,
-		influxChunkSize:   conf.InfluxDB.PushChunkSize,
-		alarm:             procAlarm,
+		appType:            tailConf.AppType,
+		filePath:           filepath.Clean(tailConf.Path), // note: this is not a full path normalization !
+		version:            tailConf.Version,
+		tzShift:            tailConf.TZShift,
+		checkIntervalSecs:  conf.LogTail.IntervalSecs, // TODO maybe per-app type here ??
+		conf:               &conf,
+		lineParser:         lineParser,
+		logTransformer:     logTransformer,
+		geoDB:              geoDB,
+		anonymousUsers:     conf.AnonymousUsers,
+		elasticChunkSize:   conf.ElasticSearch.PushChunkSize,
+		influxChunkSize:    conf.InfluxDB.PushChunkSize,
+		alarm:              procAlarm,
+		pendingRecPosition: make(map[string]pendingRec),
+		confirmChan:        make(chan save.ConfirmMsg, 10),
 	}
 }
 

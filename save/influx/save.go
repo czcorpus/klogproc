@@ -28,7 +28,7 @@ import (
 // to a configured InfluxDB measurement. For performance reasons, the actual
 // database write is performed each time number of added items equals
 // conf.PushChunkSize and also once the incomingData channel is closed.
-func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan conversion.OutputRecord, waitGroup *sync.WaitGroup, confirmChan chan save.ConfirmMsg) {
+func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan conversion.OutputRecord, waitGroup *sync.WaitGroup, confirmChan chan<- save.ConfirmMsg) {
 	// InfluxDB batch writes
 	if waitGroup != nil {
 		defer waitGroup.Done()
@@ -39,12 +39,18 @@ func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan conversion.Outpu
 		if err != nil {
 			log.Printf("ERROR: %s", err)
 		}
+		recIds := make([]string, 0)
 		for rec := range incomingData {
-			err = client.AddRecord(rec)
-			if err != nil {
-				confirmChan <- save.ConfirmMsg{rec.GetID(), save.Influx, false, err}
+			write, err := client.AddRecord(rec)
+			recIds = append(recIds, rec.GetID())
+			if write {
+				confirmMsg := save.ConfirmMsg{recIds, save.Influx, nil}
+				if err != nil {
+					confirmMsg.Error = err
+				}
+				confirmChan <- confirmMsg
+				recIds = make([]string, 0, len(recIds))
 			}
-			confirmChan <- save.ConfirmMsg{rec.GetID(), save.Influx, true, nil}
 		}
 		err = client.Finish()
 		if err != nil {
@@ -52,8 +58,10 @@ func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan conversion.Outpu
 		}
 
 	} else {
+		messageId := make([]string, 1)
 		for rec := range incomingData {
-			confirmChan <- save.ConfirmMsg{rec.GetID(), save.Influx, true, nil}
+			messageId[0] = rec.GetID()
+			confirmChan <- save.ConfirmMsg{messageId, save.Influx, nil}
 		}
 	}
 }

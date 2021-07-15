@@ -235,7 +235,7 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 			go influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux, &wg, channelConfirm)
 			go func() {
 				for confirm := range channelConfirm {
-					if confirm.Saved == false {
+					if confirm.Error != nil {
 						log.Printf("ERROR: failed to save data to %s", confirm.DBType)
 						// TODO
 					}
@@ -288,7 +288,7 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 				go influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux, &wg, channelConfirm)
 				go func() {
 					for confirm := range channelConfirm {
-						if confirm.Saved == false {
+						if confirm.Error != nil {
 							log.Printf("ERROR: failed to save data to %s", confirm.DBType)
 							// TODO
 						}

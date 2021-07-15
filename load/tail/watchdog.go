@@ -67,7 +67,8 @@ type FileTailProcessor interface {
 	FilePath() string
 	CheckIntervalSecs() int
 	OnCheckStart()
-	OnEntry(item string, lineNum int64)
+	OnEntry(item string, inode int64, seek int64, lineNum int64)
+	ConfirmationChecker(onConfirm func(filePath string, inode int64, seek int64, lineNum int64))
 	OnCheckStop()
 	OnQuit()
 }
@@ -116,6 +117,8 @@ func Run(conf *Conf, processors []FileTailProcessor, clientAnalyzer ClientAnalyz
 				quitChan <- true
 			}
 			readers[i] = rdr
+
+			go rdr.processor.ConfirmationChecker(worklog.UpdateFileInfo)
 		}
 	}
 
@@ -128,11 +131,8 @@ func Run(conf *Conf, processors []FileTailProcessor, clientAnalyzer ClientAnalyz
 				go func(rdr *FileTailReader) {
 					rdr.Processor().OnCheckStart()
 					rdr.ApplyNewContent(
-						func(v string, lineNum int64) {
-							rdr.Processor().OnEntry(v, lineNum)
-						},
-						func(inode int64, seek int64, lineNum int64) {
-							worklog.UpdateFileInfo(rdr.FilePath(), inode, seek, lineNum)
+						func(v string, inode int64, seek int64, lineNum int64) {
+							rdr.Processor().OnEntry(v, inode, seek, lineNum)
 						},
 					)
 					rdr.Processor().OnCheckStop()

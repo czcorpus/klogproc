@@ -67,7 +67,7 @@ func (ftw *FileTailReader) Processor() FileTailProcessor {
 }
 
 // ApplyNewContent calls a provided function to newly added lines
-func (ftw *FileTailReader) ApplyNewContent(onLine func(line string, lineNum int64), onDone func(inode int64, seek int64, lineNum int64)) error {
+func (ftw *FileTailReader) ApplyNewContent(onLine func(line string, inode int64, seek int64, lineNum int64)) error {
 	currInode, currSize, err := getFileProps(ftw.processor.FilePath())
 	if err != nil {
 		return err
@@ -94,13 +94,12 @@ func (ftw *FileTailReader) ApplyNewContent(onLine func(line string, lineNum int6
 		sc := bufio.NewScanner(ftw.file)
 		for sc.Scan() {
 			ftw.lastLine++
-			onLine(sc.Text(), ftw.lastLine)
+			onLine(sc.Text(), ftw.lastInode, ftw.lastReadPos, ftw.lastLine)
 		}
 		ftw.lastReadPos, err = ftw.file.Seek(0, os.SEEK_CUR)
 		if err != nil {
 			return err
 		}
-		onDone(ftw.lastInode, ftw.lastReadPos, ftw.lastLine)
 	}
 	return nil
 }

@@ -62,13 +62,14 @@ func BulkWriteRequest(data [][]byte, appType string, esconf *ConnectionConf) err
 // RunWriteConsumer reads incoming records from incomingData channel and writes them
 // chunk by chunk. Once the channel is closed, the rest of items in buffer is writtten
 // and the consumer finishes.
-func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan conversion.OutputRecord, waitGroup *sync.WaitGroup, confirmChan chan save.ConfirmMsg) {
+func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan conversion.OutputRecord, waitGroup *sync.WaitGroup, confirmChan chan<- save.ConfirmMsg) {
 	// Elasticsearch bulk writes
 	defer waitGroup.Done()
 	if conf.IsConfigured() {
 		i := 0
 		data := make([][]byte, conf.PushChunkSize*2+1)
 		failed := make([][]byte, 0, 50)
+		messageIds := make([]string, 0)
 		var esErr error
 		for rec := range incomingData {
 			jsonData, err := rec.ToJSON()
@@ -86,6 +87,7 @@ func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan 
 			jsonMetaES, err2 := (&ESCNKRecordMeta{Index: jsonMeta}).ToJSON()
 
 			if err == nil && err2 == nil {
+				messageIds = append(messageIds, rec.GetID())
 				data[i] = jsonMetaES
 				data[i+1] = jsonData
 				i += 2
@@ -96,10 +98,12 @@ func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan 
 			if i == conf.PushChunkSize*2 {
 				data[i] = []byte("\n")
 				esErr = BulkWriteRequest(data[:i+1], appType, conf)
+				confirmMsg := save.ConfirmMsg{messageIds, save.Elastic, nil}
 				if esErr != nil {
-					confirmChan <- save.ConfirmMsg{rec.GetID(), save.Elastic, false, err}
+					confirmMsg.Error = esErr
 				}
-				confirmChan <- save.ConfirmMsg{rec.GetID(), save.Elastic, true, nil}
+				confirmChan <- confirmMsg
+				messageIds = make([]string, 0, len(messageIds))
 				i = 0
 			}
 		}
@@ -113,8 +117,10 @@ func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan 
 		}
 
 	} else {
+		messageId := make([]string, 1)
 		for rec := range incomingData {
-			confirmChan <- save.ConfirmMsg{rec.GetID(), save.Elastic, true, nil}
+			messageId[0] = rec.GetID()
+			confirmChan <- save.ConfirmMsg{messageId, save.Elastic, nil}
 		}
 	}
 }
