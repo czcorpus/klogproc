@@ -117,8 +117,8 @@ func (w *Worklog) save() error {
 
 // UpdateFileInfo adds individual app reading position info. Please
 // note that this does not save the worklog.
-func (w *Worklog) UpdateFileInfo(filePath string, inode int64, seek int64, line int64) {
-	w.updRequests <- updateRequest{FilePath: filePath, Value: WorklogItem{Inode: inode, Seek: seek, Line: line}}
+func (w *Worklog) UpdateFileInfo(filePath string, logPosition LogPosition) {
+	w.updRequests <- updateRequest{FilePath: filePath, Value: WorklogItem{Inode: logPosition.Inode, Seek: logPosition.Seek, Line: logPosition.Line}}
 }
 
 // GetData retrieves reading info for a provided app

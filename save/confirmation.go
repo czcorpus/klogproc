@@ -1,5 +1,5 @@
-// Copyright 2019 Tomas Machalek <tomas.machalek@gmail.com>
-// Copyright 2019 Institute of the Czech National Corpus,
+// Copyright 2021 Martin Zimandl <martin.zimandl@gmail.com>
+// Copyright 202 Institute of the Czech National Corpus,
 //                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,17 +14,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package save
 
-import (
-	"github.com/czcorpus/klogproc/config"
-	"github.com/czcorpus/klogproc/load/celery"
-	"github.com/czcorpus/klogproc/save"
+type DBType = string
+
+const (
+	Elastic DBType = "ElasticDB"
+	Influx  DBType = "InfluxDB"
 )
 
-func processCeleryStatus(conf *config.Main) {
-	finishEvent := make(chan bool)
-	confirmChan := make(chan save.ConfirmMsg)
-	go celery.Run(&conf.CeleryStatus, finishEvent, &conf.InfluxDB, &conf.ElasticSearch, confirmChan)
-	<-finishEvent
+type ConfirmMsg struct {
+	RecordId string
+	DBType   DBType
+	Error    error
 }
