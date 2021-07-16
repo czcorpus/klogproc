@@ -58,10 +58,7 @@ func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan conversion.Outpu
 		}
 
 	} else {
-		messageId := make([]string, 1)
-		for rec := range incomingData {
-			messageId[0] = rec.GetID()
-			confirmChan <- save.ConfirmMsg{messageId, save.Influx, nil}
+		for range incomingData {
 		}
 	}
 }

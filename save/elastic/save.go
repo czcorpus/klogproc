@@ -117,10 +117,7 @@ func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan 
 		}
 
 	} else {
-		messageId := make([]string, 1)
-		for rec := range incomingData {
-			messageId[0] = rec.GetID()
-			confirmChan <- save.ConfirmMsg{messageId, save.Elastic, nil}
+		for range incomingData {
 		}
 	}
 }

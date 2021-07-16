@@ -130,15 +130,23 @@ func (tp *tailProcessor) CheckIntervalSecs() int {
 
 func (tp *tailProcessor) ConfirmationChecker(onConfirm func(filePath string, inode int64, seek int64, lineNum int64)) {
 	pendingRecPosition := make(map[string]pendingRec)
-	error := false
+	defaultConfirmInflux := !tp.conf.InfluxDB.IsConfigured()
+	defaultConfirmElastic := !tp.conf.ElasticSearch.IsConfigured()
+	var firstError error
 	for {
 		select {
 		case pendingMsg := <-tp.pendingChan:
-			if !error {
-				pendingRecPosition[pendingMsg.recordId] = pendingRec{inode: pendingMsg.inode, seek: pendingMsg.seek, line: pendingMsg.line}
+			if firstError == nil {
+				pendingRecPosition[pendingMsg.recordId] = pendingRec{
+					inode:          pendingMsg.inode,
+					seek:           pendingMsg.seek,
+					line:           pendingMsg.line,
+					influxConfirm:  defaultConfirmInflux,
+					elasticConfirm: defaultConfirmElastic,
+				}
 			}
 		case confirmMsg := <-tp.confirmChan:
-			if !error {
+			if firstError == nil {
 				if confirmMsg.Error == nil {
 					for _, recId := range confirmMsg.RecordIds {
 						pending := pendingRecPosition[recId]
@@ -157,9 +165,10 @@ func (tp *tailProcessor) ConfirmationChecker(onConfirm func(filePath string, ino
 						}
 					}
 				} else {
-					error = true
+					firstError = confirmMsg.Error
 					lastLine := pendingRecPosition[confirmMsg.RecordIds[0]].line
 					log.Printf("ERROR: Save to %s unsuccesful. Stopped on line: %d", confirmMsg.DBType, lastLine)
+					log.Print(firstError)
 				}
 			}
 		}
