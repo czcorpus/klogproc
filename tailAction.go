@@ -18,6 +18,7 @@ package main
 
 import (
 	"log"
+	"math"
 	"path/filepath"
 	"sync"
 
@@ -58,16 +59,12 @@ type tailProcessor struct {
 }
 
 type pendingMsg struct {
-	recordId string
-	inode    int64
-	seek     int64
-	line     int64
+	recordId    string
+	logPosition tail.LogPosition
 }
 
-type pendingRec struct {
-	inode          int64
-	seek           int64
-	line           int64
+type pendingRecItem struct {
+	logPosition    tail.LogPosition
 	elasticConfirm bool
 	influxConfirm  bool
 }
@@ -81,8 +78,8 @@ func (tp *tailProcessor) OnCheckStart() {
 	go influx.RunWriteConsumer(&tp.conf.InfluxDB, tp.dataForInflux, &tp.outSync, tp.confirmChan)
 }
 
-func (tp *tailProcessor) OnEntry(item string, inode int64, seek int64, lineNum int64) {
-	parsed, err := tp.lineParser.ParseLine(item, int(lineNum))
+func (tp *tailProcessor) OnEntry(item string, logPosition tail.LogPosition) {
+	parsed, err := tp.lineParser.ParseLine(item, int(logPosition.Line))
 	if err != nil {
 		switch tErr := err.(type) {
 		case conversion.LineParsingError:
@@ -101,7 +98,7 @@ func (tp *tailProcessor) OnEntry(item string, inode int64, seek int64, lineNum i
 		applyLocation(parsed, tp.geoDB, outRec)
 		tp.dataForES <- outRec
 		tp.dataForInflux <- outRec
-		tp.pendingChan <- pendingMsg{outRec.GetID(), inode, seek, lineNum}
+		tp.pendingChan <- pendingMsg{outRec.GetID(), logPosition}
 	}
 }
 
@@ -128,37 +125,60 @@ func (tp *tailProcessor) CheckIntervalSecs() int {
 	return tp.checkIntervalSecs
 }
 
-func (tp *tailProcessor) ConfirmationChecker(onConfirm func(filePath string, inode int64, seek int64, lineNum int64)) {
-	pendingRecPosition := make(map[string]pendingRec)
-	error := false
+func (tp *tailProcessor) ConfirmationChecker(onConfirm func(filePath string, logPosition tail.LogPosition)) {
+	pendingRecords := make(map[string]pendingRecItem)
+	defaultConfirmInflux := !tp.conf.InfluxDB.IsConfigured()
+	defaultConfirmElastic := !tp.conf.ElasticSearch.IsConfigured()
+	var firstPendingLine int64 = math.MaxInt64
+	var firstError error
 	for {
 		select {
 		case pendingMsg := <-tp.pendingChan:
-			if !error {
-				pendingRecPosition[pendingMsg.recordId] = pendingRec{inode: pendingMsg.inode, seek: pendingMsg.seek, line: pendingMsg.line}
+			if firstError == nil {
+				pendingRecords[pendingMsg.recordId] = pendingRecItem{
+					logPosition:    pendingMsg.logPosition,
+					influxConfirm:  defaultConfirmInflux,
+					elasticConfirm: defaultConfirmElastic,
+				}
+				if firstPendingLine > pendingMsg.logPosition.Line {
+					firstPendingLine = pendingMsg.logPosition.Line
+				}
 			}
 		case confirmMsg := <-tp.confirmChan:
-			if !error {
+			if firstError == nil {
 				if confirmMsg.Error == nil {
-					for _, recId := range confirmMsg.RecordIds {
-						pending := pendingRecPosition[recId]
-						switch confirmMsg.DBType {
-						case save.Elastic:
-							pending.elasticConfirm = true
-						case save.Influx:
-							pending.influxConfirm = true
-						}
-
-						if pending.elasticConfirm && pending.influxConfirm {
-							onConfirm(tp.filePath, pending.inode, pending.seek, pending.line)
-							delete(pendingRecPosition, recId)
-						} else {
-							pendingRecPosition[recId] = pending
+					confirmedLine := pendingRecords[confirmMsg.RecordId].logPosition.Line
+					for k, v := range pendingRecords {
+						if v.logPosition.Line <= confirmedLine {
+							switch confirmMsg.DBType {
+							case save.Elastic:
+								v.elasticConfirm = true
+							case save.Influx:
+								v.influxConfirm = true
+							}
+							pendingRecords[k] = v
 						}
 					}
+
+					confirmed := pendingRecords[confirmMsg.RecordId]
+					if confirmed.elasticConfirm && confirmed.influxConfirm {
+						onConfirm(tp.filePath, confirmed.logPosition)
+						firstPendingLine = math.MaxInt64
+						for k, v := range pendingRecords {
+							if v.elasticConfirm && v.influxConfirm {
+								delete(pendingRecords, k)
+							} else {
+								if firstPendingLine > v.logPosition.Line {
+									firstPendingLine = v.logPosition.Line
+								}
+							}
+						}
+					}
+
 				} else {
-					lastLine := pendingRecPosition[confirmMsg.RecordIds[0]].line
-					log.Printf("ERROR: Save to %s unsuccesful. Stopped on line: %d", confirmMsg.DBType, lastLine)
+					firstError = confirmMsg.Error
+					log.Printf("ERROR: Save to %s unsuccesful. Stopped on line: %d", confirmMsg.DBType, firstPendingLine)
+					log.Print(firstError)
 				}
 			}
 		}

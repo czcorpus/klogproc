@@ -43,13 +43,11 @@ func getFileProps(filePath string) (inode int64, size int64, err error) {
 // 2) during normal operation, the inode of the file remains the same
 // 3) change of inode means we start reading a new file from the beginning
 type FileTailReader struct {
-	processor   FileTailProcessor
-	lastInode   int64
-	lastSize    int64
-	lastLine    int64
-	file        *os.File
-	filePath    string
-	lastReadPos int64
+	processor       FileTailProcessor
+	lastSize        int64
+	lastLogPosition LogPosition
+	file            *os.File
+	filePath        string
 }
 
 // AppType returns app type identifier (kontext, syd, treq,...)
@@ -67,19 +65,19 @@ func (ftw *FileTailReader) Processor() FileTailProcessor {
 }
 
 // ApplyNewContent calls a provided function to newly added lines
-func (ftw *FileTailReader) ApplyNewContent(onLine func(line string, inode int64, seek int64, lineNum int64)) error {
+func (ftw *FileTailReader) ApplyNewContent(onLine func(line string, logPosition LogPosition)) error {
 	currInode, currSize, err := getFileProps(ftw.processor.FilePath())
 	if err != nil {
 		return err
 	}
 	contentChanged := false
 
-	if currInode != ftw.lastInode {
+	if currInode != ftw.lastLogPosition.Inode {
 		contentChanged = true
-		ftw.lastInode = currInode
+		ftw.lastLogPosition.Inode = currInode
 		ftw.lastSize = currSize
-		ftw.lastReadPos = 0
-		ftw.lastLine = 0
+		ftw.lastLogPosition.Seek = 0
+		ftw.lastLogPosition.Line = 0
 		ftw.file.Close()
 		ftw.file, err = os.Open(ftw.processor.FilePath())
 		if err != nil {
@@ -93,10 +91,10 @@ func (ftw *FileTailReader) ApplyNewContent(onLine func(line string, inode int64,
 	if contentChanged {
 		sc := bufio.NewScanner(ftw.file)
 		for sc.Scan() {
-			ftw.lastLine++
-			onLine(sc.Text(), ftw.lastInode, ftw.lastReadPos, ftw.lastLine)
+			ftw.lastLogPosition.Line++
+			onLine(sc.Text(), ftw.lastLogPosition)
 		}
-		ftw.lastReadPos, err = ftw.file.Seek(0, os.SEEK_CUR)
+		ftw.lastLogPosition.Seek, err = ftw.file.Seek(0, os.SEEK_CUR)
 		if err != nil {
 			return err
 		}
@@ -105,23 +103,21 @@ func (ftw *FileTailReader) ApplyNewContent(onLine func(line string, inode int64,
 }
 
 // NewReader creates a new file reader instance
-func NewReader(processor FileTailProcessor, lastInode, lastReadPos int64, lastLineNum int64) (*FileTailReader, error) {
+func NewReader(processor FileTailProcessor, lastLogPosition LogPosition) (*FileTailReader, error) {
 	r := &FileTailReader{
-		processor:   processor,
-		lastInode:   lastInode,
-		lastSize:    -1,
-		lastLine:    lastLineNum,
-		file:        nil,
-		filePath:    processor.FilePath(),
-		lastReadPos: lastReadPos,
+		processor:       processor,
+		lastSize:        -1,
+		lastLogPosition: lastLogPosition,
+		file:            nil,
+		filePath:        processor.FilePath(),
 	}
-	if lastInode > 0 {
+	if lastLogPosition.Inode > 0 {
 		var err error
 		r.file, err = os.Open(processor.FilePath())
 		if err != nil {
 			return nil, err
 		}
-		_, err = r.file.Seek(lastReadPos, os.SEEK_SET)
+		_, err = r.file.Seek(lastLogPosition.Seek, os.SEEK_SET)
 		if err != nil {
 			return nil, err
 		}

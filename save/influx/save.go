@@ -39,17 +39,14 @@ func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan conversion.Outpu
 		if err != nil {
 			log.Printf("ERROR: %s", err)
 		}
-		recIds := make([]string, 0)
 		for rec := range incomingData {
 			write, err := client.AddRecord(rec)
-			recIds = append(recIds, rec.GetID())
 			if write {
-				confirmMsg := save.ConfirmMsg{recIds, save.Influx, nil}
+				confirmMsg := save.ConfirmMsg{rec.GetID(), save.Influx, nil}
 				if err != nil {
 					confirmMsg.Error = err
 				}
 				confirmChan <- confirmMsg
-				recIds = make([]string, 0, len(recIds))
 			}
 		}
 		err = client.Finish()
@@ -58,10 +55,7 @@ func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan conversion.Outpu
 		}
 
 	} else {
-		messageId := make([]string, 1)
-		for rec := range incomingData {
-			messageId[0] = rec.GetID()
-			confirmChan <- save.ConfirmMsg{messageId, save.Influx, nil}
+		for range incomingData {
 		}
 	}
 }

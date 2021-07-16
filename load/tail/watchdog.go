@@ -59,6 +59,12 @@ type Conf struct {
 	ErrCountTimeRangeSecs int        `json:"errCountTimeRangeSecs"`
 }
 
+type LogPosition struct {
+	Inode int64
+	Seek  int64
+	Line  int64
+}
+
 // FileTailProcessor specifies an object which is able to utilize all
 // the "events" watchdog provides when processing a file tail for
 // a concrete appType
@@ -67,8 +73,8 @@ type FileTailProcessor interface {
 	FilePath() string
 	CheckIntervalSecs() int
 	OnCheckStart()
-	OnEntry(item string, inode int64, seek int64, lineNum int64)
-	ConfirmationChecker(onConfirm func(filePath string, inode int64, seek int64, lineNum int64))
+	OnEntry(item string, logPosition LogPosition)
+	ConfirmationChecker(onConfirm func(filePath string, logPosition LogPosition))
 	OnCheckStop()
 	OnQuit()
 }
@@ -111,7 +117,7 @@ func Run(conf *Conf, processors []FileTailProcessor, clientAnalyzer ClientAnalyz
 			if wlItem.Inode > -1 {
 				log.Printf("INFO: Found worklog for %s, inode: %d, seek: %d, line: %d", processor.FilePath(), wlItem.Inode, wlItem.Seek, wlItem.Line)
 			}
-			rdr, err := NewReader(processor, wlItem.Inode, wlItem.Seek, wlItem.Line)
+			rdr, err := NewReader(processor, LogPosition{wlItem.Inode, wlItem.Seek, wlItem.Line})
 			if err != nil {
 				log.Print("ERROR: ", err)
 				quitChan <- true
@@ -131,8 +137,8 @@ func Run(conf *Conf, processors []FileTailProcessor, clientAnalyzer ClientAnalyz
 				go func(rdr *FileTailReader) {
 					rdr.Processor().OnCheckStart()
 					rdr.ApplyNewContent(
-						func(v string, inode int64, seek int64, lineNum int64) {
-							rdr.Processor().OnEntry(v, inode, seek, lineNum)
+						func(v string, logPosition LogPosition) {
+							rdr.Processor().OnEntry(v, logPosition)
 						},
 					)
 					rdr.Processor().OnCheckStop()
