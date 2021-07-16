@@ -59,16 +59,12 @@ type tailProcessor struct {
 }
 
 type pendingMsg struct {
-	recordId string
-	inode    int64
-	seek     int64
-	line     int64
+	recordId    string
+	logPosition tail.LogPosition
 }
 
-type pendingRec struct {
-	inode          int64
-	seek           int64
-	line           int64
+type pendingRecItem struct {
+	logPosition    tail.LogPosition
 	elasticConfirm bool
 	influxConfirm  bool
 }
@@ -82,8 +78,8 @@ func (tp *tailProcessor) OnCheckStart() {
 	go influx.RunWriteConsumer(&tp.conf.InfluxDB, tp.dataForInflux, &tp.outSync, tp.confirmChan)
 }
 
-func (tp *tailProcessor) OnEntry(item string, inode int64, seek int64, lineNum int64) {
-	parsed, err := tp.lineParser.ParseLine(item, int(lineNum))
+func (tp *tailProcessor) OnEntry(item string, logPosition tail.LogPosition) {
+	parsed, err := tp.lineParser.ParseLine(item, int(logPosition.Line))
 	if err != nil {
 		switch tErr := err.(type) {
 		case conversion.LineParsingError:
@@ -102,7 +98,7 @@ func (tp *tailProcessor) OnEntry(item string, inode int64, seek int64, lineNum i
 		applyLocation(parsed, tp.geoDB, outRec)
 		tp.dataForES <- outRec
 		tp.dataForInflux <- outRec
-		tp.pendingChan <- pendingMsg{outRec.GetID(), inode, seek, lineNum}
+		tp.pendingChan <- pendingMsg{outRec.GetID(), logPosition}
 	}
 }
 
@@ -129,8 +125,8 @@ func (tp *tailProcessor) CheckIntervalSecs() int {
 	return tp.checkIntervalSecs
 }
 
-func (tp *tailProcessor) ConfirmationChecker(onConfirm func(filePath string, inode int64, seek int64, lineNum int64)) {
-	pendingRecPosition := make(map[string]pendingRec)
+func (tp *tailProcessor) ConfirmationChecker(onConfirm func(filePath string, logPosition tail.LogPosition)) {
+	pendingRecords := make(map[string]pendingRecItem)
 	defaultConfirmInflux := !tp.conf.InfluxDB.IsConfigured()
 	defaultConfirmElastic := !tp.conf.ElasticSearch.IsConfigured()
 	var firstPendingLine int64 = math.MaxInt64
@@ -139,43 +135,41 @@ func (tp *tailProcessor) ConfirmationChecker(onConfirm func(filePath string, ino
 		select {
 		case pendingMsg := <-tp.pendingChan:
 			if firstError == nil {
-				pendingRecPosition[pendingMsg.recordId] = pendingRec{
-					inode:          pendingMsg.inode,
-					seek:           pendingMsg.seek,
-					line:           pendingMsg.line,
+				pendingRecords[pendingMsg.recordId] = pendingRecItem{
+					logPosition:    pendingMsg.logPosition,
 					influxConfirm:  defaultConfirmInflux,
 					elasticConfirm: defaultConfirmElastic,
 				}
-				if firstPendingLine > pendingMsg.line {
-					firstPendingLine = pendingMsg.line
+				if firstPendingLine > pendingMsg.logPosition.Line {
+					firstPendingLine = pendingMsg.logPosition.Line
 				}
 			}
 		case confirmMsg := <-tp.confirmChan:
 			if firstError == nil {
 				if confirmMsg.Error == nil {
-					confirmedLine := pendingRecPosition[confirmMsg.RecordId].line
-					for k, v := range pendingRecPosition {
-						if v.line <= confirmedLine {
+					confirmedLine := pendingRecords[confirmMsg.RecordId].logPosition.Line
+					for k, v := range pendingRecords {
+						if v.logPosition.Line <= confirmedLine {
 							switch confirmMsg.DBType {
 							case save.Elastic:
 								v.elasticConfirm = true
 							case save.Influx:
 								v.influxConfirm = true
 							}
-							pendingRecPosition[k] = v
+							pendingRecords[k] = v
 						}
 					}
 
-					confirmed := pendingRecPosition[confirmMsg.RecordId]
+					confirmed := pendingRecords[confirmMsg.RecordId]
 					if confirmed.elasticConfirm && confirmed.influxConfirm {
-						onConfirm(tp.filePath, confirmed.inode, confirmed.seek, confirmed.line)
+						onConfirm(tp.filePath, confirmed.logPosition)
 						firstPendingLine = math.MaxInt64
-						for k, v := range pendingRecPosition {
+						for k, v := range pendingRecords {
 							if v.elasticConfirm && v.influxConfirm {
-								delete(pendingRecPosition, k)
+								delete(pendingRecords, k)
 							} else {
-								if firstPendingLine > v.line {
-									firstPendingLine = v.line
+								if firstPendingLine > v.logPosition.Line {
+									firstPendingLine = v.logPosition.Line
 								}
 							}
 						}
