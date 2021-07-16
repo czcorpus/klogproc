@@ -18,6 +18,7 @@ package main
 
 import (
 	"log"
+	"math"
 	"path/filepath"
 	"sync"
 
@@ -132,6 +133,7 @@ func (tp *tailProcessor) ConfirmationChecker(onConfirm func(filePath string, ino
 	pendingRecPosition := make(map[string]pendingRec)
 	defaultConfirmInflux := !tp.conf.InfluxDB.IsConfigured()
 	defaultConfirmElastic := !tp.conf.ElasticSearch.IsConfigured()
+	var firstPendingLine int64 = math.MaxInt64
 	var firstError error
 	for {
 		select {
@@ -144,30 +146,44 @@ func (tp *tailProcessor) ConfirmationChecker(onConfirm func(filePath string, ino
 					influxConfirm:  defaultConfirmInflux,
 					elasticConfirm: defaultConfirmElastic,
 				}
+				if firstPendingLine > pendingMsg.line {
+					firstPendingLine = pendingMsg.line
+				}
 			}
 		case confirmMsg := <-tp.confirmChan:
 			if firstError == nil {
 				if confirmMsg.Error == nil {
-					for _, recId := range confirmMsg.RecordIds {
-						pending := pendingRecPosition[recId]
-						switch confirmMsg.DBType {
-						case save.Elastic:
-							pending.elasticConfirm = true
-						case save.Influx:
-							pending.influxConfirm = true
-						}
-
-						if pending.elasticConfirm && pending.influxConfirm {
-							onConfirm(tp.filePath, pending.inode, pending.seek, pending.line)
-							delete(pendingRecPosition, recId)
-						} else {
-							pendingRecPosition[recId] = pending
+					confirmedLine := pendingRecPosition[confirmMsg.RecordId].line
+					for k, v := range pendingRecPosition {
+						if v.line <= confirmedLine {
+							switch confirmMsg.DBType {
+							case save.Elastic:
+								v.elasticConfirm = true
+							case save.Influx:
+								v.influxConfirm = true
+							}
+							pendingRecPosition[k] = v
 						}
 					}
+
+					confirmed := pendingRecPosition[confirmMsg.RecordId]
+					if confirmed.elasticConfirm && confirmed.influxConfirm {
+						onConfirm(tp.filePath, confirmed.inode, confirmed.seek, confirmed.line)
+						firstPendingLine = math.MaxInt64
+						for k, v := range pendingRecPosition {
+							if v.elasticConfirm && v.influxConfirm {
+								delete(pendingRecPosition, k)
+							} else {
+								if firstPendingLine > v.line {
+									firstPendingLine = v.line
+								}
+							}
+						}
+					}
+
 				} else {
 					firstError = confirmMsg.Error
-					lastLine := pendingRecPosition[confirmMsg.RecordIds[0]].line
-					log.Printf("ERROR: Save to %s unsuccesful. Stopped on line: %d", confirmMsg.DBType, lastLine)
+					log.Printf("ERROR: Save to %s unsuccesful. Stopped on line: %d", confirmMsg.DBType, firstPendingLine)
 					log.Print(firstError)
 				}
 			}

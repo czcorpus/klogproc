@@ -24,7 +24,7 @@ const (
 )
 
 type ConfirmMsg struct {
-	RecordIds []string
-	DBType    DBType
-	Error     error
+	RecordId string
+	DBType   DBType
+	Error    error
 }

@@ -69,7 +69,6 @@ func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan 
 		i := 0
 		data := make([][]byte, conf.PushChunkSize*2+1)
 		failed := make([][]byte, 0, 50)
-		messageIds := make([]string, 0)
 		var esErr error
 		for rec := range incomingData {
 			jsonData, err := rec.ToJSON()
@@ -87,7 +86,6 @@ func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan 
 			jsonMetaES, err2 := (&ESCNKRecordMeta{Index: jsonMeta}).ToJSON()
 
 			if err == nil && err2 == nil {
-				messageIds = append(messageIds, rec.GetID())
 				data[i] = jsonMetaES
 				data[i+1] = jsonData
 				i += 2
@@ -98,12 +96,11 @@ func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan 
 			if i == conf.PushChunkSize*2 {
 				data[i] = []byte("\n")
 				esErr = BulkWriteRequest(data[:i+1], appType, conf)
-				confirmMsg := save.ConfirmMsg{messageIds, save.Elastic, nil}
+				confirmMsg := save.ConfirmMsg{rec.GetID(), save.Elastic, nil}
 				if esErr != nil {
 					confirmMsg.Error = esErr
 				}
 				confirmChan <- confirmMsg
-				messageIds = make([]string, 0, len(messageIds))
 				i = 0
 			}
 		}
