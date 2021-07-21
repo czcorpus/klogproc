@@ -117,7 +117,7 @@ func NewClient6(conf *ConnectionConf, appType string) *ESClient {
 }
 
 func (c ESClient) String() string {
-	return fmt.Sprintf("ElasticSearchClient[server: %s, index; %s]", c.server, c.index)
+	return fmt.Sprintf("ElasticSearchClient{server: %s, index: %s}", c.server, c.index)
 }
 
 // Do sends a general request to ElasticSearch server where

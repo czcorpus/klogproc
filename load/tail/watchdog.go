@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
+	"github.com/czcorpus/klogproc/save"
 )
 
 const (
@@ -66,8 +67,8 @@ type FileTailProcessor interface {
 	AppType() string
 	FilePath() string
 	CheckIntervalSecs() int
-	OnCheckStart()
-	OnEntry(item string, lineNum int64)
+	OnCheckStart() chan interface{}
+	OnEntry(item string, logPosition conversion.LogRange)
 	OnCheckStop()
 	OnQuit()
 }
@@ -78,6 +79,34 @@ type ClientAnalyzer interface {
 	AgentIsMonitor(rec conversion.InputRecord) bool
 	AgentIsBot(rec conversion.InputRecord) bool
 	HasBlacklistedIP(rec conversion.InputRecord) bool
+}
+
+func initReaders(processors []FileTailProcessor, worklog *Worklog) ([]*FileTailReader, error) {
+	readers := make([]*FileTailReader, len(processors))
+	for i, processor := range processors {
+		wlItem := worklog.GetData(processor.FilePath())
+		log.Printf("INFO: Found configuration for file %s", processor.FilePath())
+		if wlItem.Inode > -1 {
+			log.Printf("INFO: Found worklog for %s: %v", processor.FilePath(), wlItem)
+
+		} else {
+			log.Printf("WARNING: no worklog for %s - creating a new one...", processor.FilePath())
+			inode, err := worklog.ResetFile(processor.FilePath())
+			if err != nil {
+				return readers, err
+			}
+			log.Printf("INFO: ... added a worklog record for %s, inode: %d", processor.FilePath(), inode)
+		}
+		rdr, err := NewReader(
+			processor,
+			worklog.GetData(processor.FilePath()),
+		)
+		if err != nil {
+			return readers, err
+		}
+		readers[i] = rdr
+	}
+	return readers, nil
 }
 
 // Run starts the process of (multiple) log watching
@@ -103,19 +132,10 @@ func Run(conf *Conf, processors []FileTailProcessor, clientAnalyzer ClientAnalyz
 		quitChan <- true
 
 	} else {
-		readers = make([]*FileTailReader, len(processors))
-		for i, processor := range processors {
-			wlItem := worklog.GetData(processor.FilePath())
-			log.Printf("INFO: Found configuration for file %s", processor.FilePath())
-			if wlItem.Inode > -1 {
-				log.Printf("INFO: Found worklog for %s, inode: %d, seek: %d, line: %d", processor.FilePath(), wlItem.Inode, wlItem.Seek, wlItem.Line)
-			}
-			rdr, err := NewReader(processor, wlItem.Inode, wlItem.Seek, wlItem.Line)
-			if err != nil {
-				log.Print("ERROR: ", err)
-				quitChan <- true
-			}
-			readers[i] = rdr
+		readers, err = initReaders(processors, worklog)
+		if err != nil {
+			log.Print("ERROR: ", err)
+			quitChan <- true
 		}
 	}
 
@@ -126,17 +146,24 @@ func Run(conf *Conf, processors []FileTailProcessor, clientAnalyzer ClientAnalyz
 			wg.Add(len(readers))
 			for _, reader := range readers {
 				go func(rdr *FileTailReader) {
-					rdr.Processor().OnCheckStart()
-					rdr.ApplyNewContent(
-						func(v string, lineNum int64) {
-							rdr.Processor().OnEntry(v, lineNum)
-						},
-						func(inode int64, seek int64, lineNum int64) {
-							worklog.UpdateFileInfo(rdr.FilePath(), inode, seek, lineNum)
-						},
-					)
+					actionChan := rdr.Processor().OnCheckStart()
+					go func() {
+						for action := range actionChan {
+							switch action := action.(type) {
+							case save.ConfirmMsg:
+								if action.Error != nil {
+									log.Printf("ERROR: failed to write data to one of target databases: %s ...", action.Error)
+								}
+								worklog.UpdateFileInfo(action.FilePath, action.Position)
+							case save.IgnoredItemMsg:
+								worklog.UpdateFileInfo(action.FilePath, action.Position)
+							}
+						}
+						wg.Done()
+					}()
+					prevPos := worklog.GetData(rdr.processor.FilePath())
+					rdr.ApplyNewContent(rdr.Processor(), prevPos)
 					rdr.Processor().OnCheckStop()
-					wg.Done()
 				}(reader)
 			}
 			wg.Wait()
@@ -150,7 +177,7 @@ func Run(conf *Conf, processors []FileTailProcessor, clientAnalyzer ClientAnalyz
 				finishEvent <- true
 			}
 		case <-syscallChan:
-			log.Print("INFO: Caught signal, exiting...")
+			log.Print("WARNING: Caught signal, exiting...")
 			ticker.Stop()
 			for _, reader := range readers {
 				reader.Processor().OnQuit()

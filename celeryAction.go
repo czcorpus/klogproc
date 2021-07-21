@@ -23,6 +23,7 @@ import (
 
 func processCeleryStatus(conf *config.Main) {
 	finishEvent := make(chan bool)
-	go celery.Run(&conf.CeleryStatus, finishEvent, &conf.InfluxDB, &conf.ElasticSearch, &notifyFailedChunks{})
+	confirmChan := make(chan interface{})
+	go celery.Run(&conf.CeleryStatus, finishEvent, &conf.InfluxDB, &conf.ElasticSearch, confirmChan)
 	<-finishEvent
 }

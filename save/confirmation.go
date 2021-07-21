@@ -1,4 +1,4 @@
-// Copyright 2020 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2021 Martin Zimandl <martin.zimandl@gmail.com>
 // Copyright 202 Institute of the Czech National Corpus,
 //                Faculty of Arts, Charles University
 //
@@ -18,27 +18,33 @@ package save
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/czcorpus/klogproc/conversion"
 )
 
-// RunWriteConsumer runs a dummy (null) write consumer
-func RunWriteConsumer(incomingData <-chan *conversion.BoundOutputRecord) <-chan ConfirmMsg {
-	confirmChan := make(chan ConfirmMsg)
-	defer func() {
-		close(confirmChan)
-	}()
-	go func() {
-		for item := range incomingData {
-			out, err := item.ToJSON()
-			if err != nil {
-				log.Print("ERROR: ", err)
+type ConfirmMsg struct {
+	FilePath string
+	Position conversion.LogRange
+	Error    error
+}
 
-			} else {
-				fmt.Println(string(out))
-			}
-		}
-	}()
-	return confirmChan
+func (cm ConfirmMsg) String() string {
+	return fmt.Sprintf("ConfirmMsg{FilePath: %v, Position: %v, Error: %v}", cm.FilePath, cm.Position, cm.Error)
+}
+
+// --------------------
+
+type IgnoredItemMsg struct {
+	FilePath string
+	Position conversion.LogRange
+}
+
+func (iim IgnoredItemMsg) String() string {
+	return fmt.Sprintf("IgnoredItemMsg{FilePath: %v, Position: %v}", iim.FilePath, iim.Position)
+}
+
+func NewIgnoredItemMsg(filePath string, position conversion.LogRange) IgnoredItemMsg {
+	newPos := position
+	newPos.Written = true
+	return IgnoredItemMsg{FilePath: filePath, Position: newPos}
 }

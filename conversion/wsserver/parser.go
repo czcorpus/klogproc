@@ -29,7 +29,7 @@ var (
 type LineParser struct {
 }
 
-func (lp *LineParser) ParseLine(s string, lineNum int) (*InputRecord, error) {
+func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 	srch := recMatch.FindStringSubmatch(s)
 	ans := &InputRecord{isProcessable: false}
 	if len(srch) > 0 {

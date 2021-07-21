@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
-	"sync"
 
 	"github.com/czcorpus/klogproc/config"
 	"github.com/czcorpus/klogproc/conversion"
@@ -114,17 +113,6 @@ func (clp *CNKLogProcessor) GetAppVersion() string {
 	return clp.appVersion
 }
 
-func processRedisLogs(conf *config.Main, queue *sredis.RedisQueue, processor *CNKLogProcessor, destChans ...chan<- conversion.OutputRecord) {
-	for _, item := range queue.GetItems() {
-		rec := processor.ProcItem(item, conf.LogRedis.TZShift)
-		if rec != nil {
-			for _, ch := range destChans {
-				ch <- rec
-			}
-		}
-	}
-}
-
 // ---------
 
 // retryRescuedItems inserts (sychronously) rescued raw bulk
@@ -193,51 +181,6 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 	finishEvent := make(chan bool)
 	go func() {
 		switch action {
-		case actionRedis:
-			if !conf.UsesRedis() {
-				log.Fatal("FATAL: Redis not configured")
-			}
-			lt, err := GetLogTransformer(conf.LogRedis.AppType, conf.LogRedis.Version, userMap)
-			if err != nil {
-				log.Fatal(err)
-			}
-			processor := &CNKLogProcessor{
-				geoIPDb:        geoDb,
-				chunkSize:      conf.ElasticSearch.PushChunkSize,
-				appType:        conf.LogRedis.AppType,
-				appVersion:     conf.LogRedis.Version,
-				logTransformer: lt,
-				anonymousUsers: conf.AnonymousUsers,
-				clientAnalyzer: clientTypeDetector,
-			}
-			channelWriteES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
-			channelWriteInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
-			redisQueue, err := sredis.OpenRedisQueue(
-				conf.LogRedis.Address,
-				conf.LogRedis.Database,
-				conf.LogRedis.QueueKey,
-				0, // TODO
-			)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			err = retryRescuedItems(conf.LogRedis.AppType, redisQueue, &conf.ElasticSearch)
-			if err != nil {
-				log.Printf("ERROR: %s", err)
-			}
-
-			processRedisLogs(conf, redisQueue, processor, channelWriteES, channelWriteInflux)
-			var wg sync.WaitGroup
-			wg.Add(2)
-			go elastic.RunWriteConsumer(conf.LogRedis.AppType, &conf.ElasticSearch, channelWriteES, &wg, redisQueue)
-			go influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux, &wg)
-			wg.Wait()
-			close(channelWriteES)
-			close(channelWriteInflux)
-			finishEvent <- true
-			log.Printf("INFO: Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)
-
 		case actionBatch:
 			lt, err := GetLogTransformer(conf.LogFiles.AppType, conf.LogFiles.Version, userMap)
 			if err != nil {
@@ -252,8 +195,8 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 				anonymousUsers: conf.AnonymousUsers,
 				clientAnalyzer: clientTypeDetector,
 			}
-			channelWriteES := make(chan conversion.OutputRecord, conf.ElasticSearch.PushChunkSize*2)
-			channelWriteInflux := make(chan conversion.OutputRecord, conf.InfluxDB.PushChunkSize)
+			channelWriteES := make(chan *conversion.BoundOutputRecord, conf.ElasticSearch.PushChunkSize*2)
+			channelWriteInflux := make(chan *conversion.BoundOutputRecord, conf.InfluxDB.PushChunkSize)
 			worklog := batch.NewWorklog(conf.LogFiles.WorklogPath)
 			log.Printf("INFO: using worklog %s", conf.LogFiles.WorklogPath)
 			if options.worklogReset {
@@ -265,22 +208,48 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 			}
 			defer worklog.Save()
 
-			var wg sync.WaitGroup
-			wg.Add(2)
-
+			syncChan := make(chan interface{})
 			if options.dryRun {
-				go save.RunWriteConsumer(channelWriteES, channelWriteInflux, &wg)
+				ch1 := save.RunWriteConsumer(channelWriteES)
+				go func() {
+					for m := range ch1 {
+						syncChan <- m
+					}
+				}()
+				ch2 := save.RunWriteConsumer(channelWriteInflux)
+				go func() {
+					for m := range ch2 {
+						syncChan <- m
+					}
+				}()
 				log.Print("WARNING: using dry-run mode, output goes to stdout")
 
 			} else {
-				go elastic.RunWriteConsumer(conf.LogFiles.AppType, &conf.ElasticSearch, channelWriteES, &wg, worklog)
-				go influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux, &wg)
+				ch1 := elastic.RunWriteConsumer(conf.LogFiles.AppType, &conf.ElasticSearch, channelWriteES)
+				ch2 := influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux)
+				go func() {
+					for confirm := range ch1 {
+						if confirm.Error != nil {
+							log.Print("ERROR: failed to save data to ElasticSearch db: ", confirm.Error)
+							// TODO
+						}
+					}
+				}()
+				go func() {
+					for confirm := range ch2 {
+						if confirm.Error != nil {
+							log.Print("ERROR: failed to save data to InfluxDB db: ", confirm.Error)
+							// TODO
+						}
+					}
+				}()
 			}
 			proc := batch.CreateLogFileProcFunc(processor, options.datetimeRange, channelWriteES, channelWriteInflux)
 			proc(&conf.LogFiles, worklog.GetLastRecord())
 			close(channelWriteES)
 			close(channelWriteInflux)
-			wg.Wait()
+			for range syncChan {
+			}
 			finishEvent <- true
 			log.Printf("INFO: Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)
 

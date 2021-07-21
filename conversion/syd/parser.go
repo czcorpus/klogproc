@@ -39,7 +39,7 @@ type LineParser struct {
 // {key}[TAB]
 // {lTool}[TAB]
 // {runScript}
-func (lp *LineParser) ParseLine(s string, lineNum int) (*InputRecord, error) {
+func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 
 	items := strings.Split(s, "\t")
 	var err error

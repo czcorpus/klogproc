@@ -10,6 +10,9 @@ all: test build
 build:
 	go build ${LDFLAGS}
 
+build-race:
+	go build -race ${LDFLAGS}
+
 install:
 	go install ${LDFLAGS}
 

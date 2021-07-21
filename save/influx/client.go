@@ -94,7 +94,7 @@ type RecordWriter struct {
 // it also stores the record to a configured database and
 // measurement. Please note that without calling Finish() at
 // the end of an operation, stale records may remain.
-func (c *RecordWriter) AddRecord(rec conversion.OutputRecord) error {
+func (c *RecordWriter) AddRecord(rec conversion.OutputRecord) (bool, error) {
 	tags, values := rec.ToInfluxDB()
 	point, err := client.NewPoint(c.measurement, tags, values, rec.GetTime())
 	if err != nil {
@@ -102,9 +102,9 @@ func (c *RecordWriter) AddRecord(rec conversion.OutputRecord) error {
 	}
 	c.bp.AddPoint(point)
 	if len(c.bp.Points()) == c.pushChunkSize {
-		return c.writeCurrBatch()
+		return true, c.writeCurrBatch()
 	}
-	return nil
+	return false, nil
 }
 
 // Finish ensures that the current operation is fully

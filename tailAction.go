@@ -27,20 +27,12 @@ import (
 	"github.com/czcorpus/klogproc/load/alarm"
 	"github.com/czcorpus/klogproc/load/batch"
 	"github.com/czcorpus/klogproc/load/tail"
+	"github.com/czcorpus/klogproc/save"
 	"github.com/czcorpus/klogproc/save/elastic"
 	"github.com/czcorpus/klogproc/save/influx"
 	"github.com/czcorpus/klogproc/users"
 	"github.com/oschwald/geoip2-golang"
 )
-
-type notifyFailedChunks struct{}
-
-func (n *notifyFailedChunks) RescueFailedChunks(chunk [][]byte) error {
-	if len(chunk) > 0 {
-		log.Print("ERROR: failed to insert a chunk of size ", len(chunk))
-	}
-	return nil
-}
 
 // -----
 
@@ -54,26 +46,53 @@ type tailProcessor struct {
 	lineParser        batch.LineParser
 	logTransformer    conversion.LogItemTransformer
 	geoDB             *geoip2.Reader
-	dataForES         chan conversion.OutputRecord
-	dataForInflux     chan conversion.OutputRecord
+	dataForES         chan *conversion.BoundOutputRecord
+	dataForInflux     chan *conversion.BoundOutputRecord
+	dataIgnored       chan save.IgnoredItemMsg
 	anonymousUsers    []int
 	elasticChunkSize  int
 	influxChunkSize   int
-	outSync           sync.WaitGroup
+	itemConfirm       chan interface{}
 	alarm             conversion.AppErrorRegister
 }
 
-func (tp *tailProcessor) OnCheckStart() {
-	tp.dataForES = make(chan conversion.OutputRecord, tp.elasticChunkSize*2)
-	tp.dataForInflux = make(chan conversion.OutputRecord, tp.influxChunkSize)
-	tp.outSync = sync.WaitGroup{}
-	tp.outSync.Add(2)
-	go elastic.RunWriteConsumer(tp.appType, &tp.conf.ElasticSearch, tp.dataForES, &tp.outSync, &notifyFailedChunks{})
-	go influx.RunWriteConsumer(&tp.conf.InfluxDB, tp.dataForInflux, &tp.outSync)
+func (tp *tailProcessor) OnCheckStart() chan interface{} {
+	tp.dataForES = make(chan *conversion.BoundOutputRecord, tp.elasticChunkSize*2)
+	tp.dataForInflux = make(chan *conversion.BoundOutputRecord, tp.influxChunkSize)
+	tp.dataIgnored = make(chan save.IgnoredItemMsg)
+
+	var waitMergeEnd sync.WaitGroup
+	waitMergeEnd.Add(3)
+	tp.itemConfirm = make(chan interface{}, 10)
+	confirmChan1 := elastic.RunWriteConsumer(tp.appType, &tp.conf.ElasticSearch, tp.dataForES)
+	go func() {
+		for item := range confirmChan1 {
+			tp.itemConfirm <- item
+		}
+		waitMergeEnd.Done()
+	}()
+	confirmChan2 := influx.RunWriteConsumer(&tp.conf.InfluxDB, tp.dataForInflux)
+	go func() {
+		for item := range confirmChan2 {
+			tp.itemConfirm <- item
+		}
+		waitMergeEnd.Done()
+	}()
+	go func() {
+		for msg := range tp.dataIgnored {
+			tp.itemConfirm <- msg
+		}
+		waitMergeEnd.Done()
+	}()
+	go func() {
+		waitMergeEnd.Wait()
+		close(tp.itemConfirm)
+	}()
+	return tp.itemConfirm
 }
 
-func (tp *tailProcessor) OnEntry(item string, lineNum int64) {
-	parsed, err := tp.lineParser.ParseLine(item, int(lineNum))
+func (tp *tailProcessor) OnEntry(item string, logPosition conversion.LogRange) {
+	parsed, err := tp.lineParser.ParseLine(item, -1) // TODO
 	if err != nil {
 		switch tErr := err.(type) {
 		case conversion.LineParsingError:
@@ -81,24 +100,37 @@ func (tp *tailProcessor) OnEntry(item string, lineNum int64) {
 		default:
 			log.Print("ERROR: ", tErr)
 		}
+		tp.dataIgnored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 		return
 	}
 	if parsed.IsProcessable() {
 		outRec, err := tp.logTransformer.Transform(parsed, tp.appType, tp.tzShift, tp.anonymousUsers)
 		if err != nil {
 			log.Printf("ERROR: %s", err)
+			tp.dataIgnored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 			return
 		}
 		applyLocation(parsed, tp.geoDB, outRec)
-		tp.dataForES <- outRec
-		tp.dataForInflux <- outRec
+		tp.dataForES <- &conversion.BoundOutputRecord{
+			FilePath: tp.filePath,
+			Rec:      outRec,
+			FilePos:  logPosition,
+		}
+		tp.dataForInflux <- &conversion.BoundOutputRecord{
+			FilePath: tp.filePath,
+			Rec:      outRec,
+			FilePos:  logPosition,
+		}
+
+	} else {
+		tp.dataIgnored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 	}
 }
 
 func (tp *tailProcessor) OnCheckStop() {
 	close(tp.dataForES)
 	close(tp.dataForInflux)
-	tp.outSync.Wait()
+	close(tp.dataIgnored)
 	tp.alarm.Evaluate()
 }
 

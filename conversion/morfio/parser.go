@@ -34,7 +34,7 @@ type LineParser struct {
 // {datetime_ISO8601}[TAB]{ipAddress}[TAB]{userId}[TAB]{keyReq}[TAB]{keyUsed}[TAB]
 // {key}[TAB]{runScript}[TAB]{corpus}[TAB]{minFreq}[TAB]{inputAttr}[TAB]{outputAttr}[TAB]
 // {caseInsensitive}[TAB].*
-func (lp *LineParser) ParseLine(s string, lineNum int) (*InputRecord, error) {
+func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 
 	items := strings.Split(s, "\t")
 	var err error

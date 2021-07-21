@@ -45,7 +45,7 @@ type kontext013LineParser struct {
 }
 
 // ParseLine parses a passed line of a respective log
-func (parser *kontext013LineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+func (parser *kontext013LineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -58,7 +58,7 @@ type kontext015LineParser struct {
 }
 
 // ParseLine parses a passed line of a respective log
-func (parser *kontext015LineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+func (parser *kontext015LineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -68,7 +68,7 @@ type kwordsLineParser struct {
 	lp *kwords.LineParser
 }
 
-func (parser *kwordsLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+func (parser *kwordsLineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -78,7 +78,7 @@ type korpusDBLineParser struct {
 	lp *korpusdb.LineParser
 }
 
-func (parser *korpusDBLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+func (parser *korpusDBLineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -88,7 +88,7 @@ type mapkaLineParser struct {
 	lp *mapka.LineParser
 }
 
-func (parser *mapkaLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+func (parser *mapkaLineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -98,7 +98,7 @@ type morfioLineParser struct {
 	lp *morfio.LineParser
 }
 
-func (parser *morfioLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+func (parser *morfioLineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -108,7 +108,7 @@ type shinyLineParser struct {
 	lp *shiny.LineParser
 }
 
-func (parser *shinyLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+func (parser *shinyLineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -118,7 +118,7 @@ type skeLineParser struct {
 	lp *ske.LineParser
 }
 
-func (parser *skeLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+func (parser *skeLineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -129,7 +129,7 @@ type sydLineParser struct {
 }
 
 // ParseLine parses a passed line of a respective log
-func (parser *sydLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+func (parser *sydLineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -139,7 +139,7 @@ type treqLineParser struct {
 	lp *treq.LineParser
 }
 
-func (parser *treqLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+func (parser *treqLineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -149,7 +149,7 @@ type wag06LineParser struct {
 	lp *wag06.LineParser
 }
 
-func (parser *wag06LineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+func (parser *wag06LineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -159,7 +159,7 @@ type wag07LineParser struct {
 	lp *wag07.LineParser
 }
 
-func (parser *wag07LineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+func (parser *wag07LineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -169,7 +169,7 @@ type wsserverLineParser struct {
 	lp *wsserver.LineParser
 }
 
-func (parser *wsserverLineParser) ParseLine(s string, lineNum int) (conversion.InputRecord, error) {
+func (parser *wsserverLineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 

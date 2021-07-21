@@ -85,17 +85,31 @@ const (
 // case an error occurs, it just dumps a standard Python error
 // message along with stack trace (multi-line).
 type LineParsingError struct {
-	LineNumber int
+	LineNumber int64
 	Message    string
 }
 
 func (m LineParsingError) Error() string {
-	return fmt.Sprintf("line %d: %s", m.LineNumber, m.Message)
+	return fmt.Sprintf("%s: LineParsingError at line %d", m.Message, m.LineNumber)
 }
 
 // NewLineParsingError is a constructor for LineParsingError
-func NewLineParsingError(lineNumber int, message string) LineParsingError {
+func NewLineParsingError(lineNumber int64, message string) LineParsingError {
 	return LineParsingError{LineNumber: lineNumber, Message: message}
+}
+
+type StreamedLineParsingError struct {
+	RecordPrefix string
+	Message      string
+}
+
+func (m StreamedLineParsingError) Error() string {
+	return fmt.Sprintf("%s: StreamedLineParsingError at \"%s...\"", m.Message, m.RecordPrefix)
+}
+
+// NewStreamedLineParsingError is a constructor for StreamedLineParsingError
+func NewStreamedLineParsingError(line string, message string) StreamedLineParsingError {
+	return StreamedLineParsingError{RecordPrefix: line[:35], Message: message}
 }
 
 // InputRecord describes a common behavior for objects extracted
@@ -148,6 +162,40 @@ type OutputRecord interface {
 
 	// Get time of the log record
 	GetTime() time.Time
+}
+
+type LogRange struct {
+	Inode     int64 `json:"inode"`
+	SeekStart int64 `json:"seekStart"`
+	SeekEnd   int64 `json:"seekEnd"`
+	Written   bool  `json:"written"`
+}
+
+func (p LogRange) String() string {
+	return fmt.Sprintf("LogRange{Inode: %d, Seek: %d-%d, Written: %t}",
+		p.Inode, p.SeekStart, p.SeekEnd, p.Written)
+}
+
+type BoundOutputRecord struct {
+	Rec      OutputRecord
+	FilePos  LogRange
+	FilePath string
+}
+
+func (r *BoundOutputRecord) ToJSON() ([]byte, error) {
+	return r.Rec.ToJSON()
+}
+
+func (r *BoundOutputRecord) GetTime() time.Time {
+	return r.Rec.GetTime()
+}
+
+func (r *BoundOutputRecord) GetID() string {
+	return r.Rec.GetID()
+}
+
+func (r *BoundOutputRecord) GetType() string {
+	return r.Rec.GetType()
 }
 
 // LogItemTransformer defines a general object able to transform

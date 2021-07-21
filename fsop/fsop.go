@@ -20,7 +20,11 @@
 
 package fsop
 
-import "os"
+import (
+	"fmt"
+	"os"
+	"syscall"
+)
 
 // GetFileMtime returns file's UNIX mtime (in secods).
 // In case of an error, -1 is returned
@@ -64,4 +68,18 @@ func IsFile(path string) bool {
 		return false
 	}
 	return finfo.Mode().IsRegular()
+}
+
+func GetFileProps(filePath string) (inode int64, size int64, err error) {
+	st, err := os.Stat(filePath)
+	if err != nil {
+		return -1, -1, err
+	}
+	stat, ok := st.Sys().(*syscall.Stat_t)
+	if !ok {
+		return -1, -1, fmt.Errorf("Problem using syscall.Stat_t for file %s", filePath)
+	}
+	inode = int64(stat.Ino)
+	size = st.Size()
+	return
 }

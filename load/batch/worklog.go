@@ -44,7 +44,7 @@ type Worklog struct {
 }
 
 func (w *Worklog) String() string {
-	return fmt.Sprintf("Worklog[filePath: %s]", w.filePath)
+	return fmt.Sprintf("Worklog{filePath: %s}", w.filePath)
 }
 
 // GetLastRecord returns a last UNIX timestamp
