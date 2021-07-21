@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"sync"
 
 	"github.com/czcorpus/klogproc/conversion"
 	"github.com/czcorpus/klogproc/save"
@@ -62,59 +61,74 @@ func BulkWriteRequest(data [][]byte, appType string, esconf *ConnectionConf) err
 // RunWriteConsumer reads incoming records from incomingData channel and writes them
 // chunk by chunk. Once the channel is closed, the rest of items in buffer is writtten
 // and the consumer finishes.
-func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan conversion.OutputRecord, waitGroup *sync.WaitGroup, confirmChan chan<- save.ConfirmMsg) {
+func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan *conversion.BoundOutputRecord) <-chan save.ConfirmMsg {
 	// Elasticsearch bulk writes
-	defer waitGroup.Done()
-	if conf.IsConfigured() {
-		i := 0
-		data := make([][]byte, conf.PushChunkSize*2+1)
-		failed := make([][]byte, 0, 50)
-		var esErr error
-		for rec := range incomingData {
-			jsonData, err := rec.ToJSON()
-			recType := es6DocType
-			index := fmt.Sprintf("%s_%s", conf.Index, appType)
-			if conf.MajorVersion < 6 {
-				recType = rec.GetType()
-				index = conf.Index
-			}
-			jsonMeta := CNKRecordMeta{
-				ID:    rec.GetID(),
-				Type:  recType,
-				Index: index,
-			}
-			jsonMetaES, err2 := (&ESCNKRecordMeta{Index: jsonMeta}).ToJSON()
+	confirmChan := make(chan save.ConfirmMsg)
+	go func() {
+		if conf.IsConfigured() {
+			i := 0
+			data := make([][]byte, conf.PushChunkSize*2+1)
+			var chunkPosition *conversion.LogRange
+			var esErr error
+			var rec *conversion.BoundOutputRecord
+			for rec = range incomingData {
+				if chunkPosition == nil {
+					chunkPosition = &rec.FilePos
+				}
+				chunkPosition.SeekEnd = rec.FilePos.SeekEnd
+				jsonData, err := rec.ToJSON()
+				recType := es6DocType
+				index := fmt.Sprintf("%s_%s", conf.Index, appType)
+				if conf.MajorVersion < 6 {
+					recType = rec.GetType()
+					index = conf.Index
+				}
+				jsonMeta := CNKRecordMeta{
+					ID:    rec.GetID(),
+					Type:  recType,
+					Index: index,
+				}
+				jsonMetaES, err2 := (&ESCNKRecordMeta{Index: jsonMeta}).ToJSON()
 
-			if err == nil && err2 == nil {
-				data[i] = jsonMetaES
-				data[i+1] = jsonData
-				i += 2
+				if err == nil && err2 == nil {
+					data[i] = jsonMetaES
+					data[i+1] = jsonData
+					i += 2
 
-			} else {
-				log.Print("ERROR: Failed to encode item ", rec.GetTime())
+				} else {
+					log.Print("ERROR: Failed to encode item ", rec.GetTime())
+				}
+				if i == conf.PushChunkSize*2 {
+					data[i] = []byte("\n")
+					esErr = BulkWriteRequest(data[:i+1], appType, conf)
+					chunkPosition.Written = esErr == nil
+					confirmMsg := save.ConfirmMsg{
+						FilePath: rec.FilePath,
+						Position: *chunkPosition,
+						Error:    esErr,
+					}
+					confirmChan <- confirmMsg
+					i = 0
+				}
 			}
-			if i == conf.PushChunkSize*2 {
+			if i > 0 {
 				data[i] = []byte("\n")
 				esErr = BulkWriteRequest(data[:i+1], appType, conf)
-				confirmMsg := save.ConfirmMsg{rec.GetID(), save.Elastic, nil}
-				if esErr != nil {
-					confirmMsg.Error = esErr
+				chunkPosition.Written = esErr == nil
+				confirmMsg := save.ConfirmMsg{
+					FilePath: rec.FilePath,
+					Position: *chunkPosition,
+					Error:    esErr,
 				}
 				confirmChan <- confirmMsg
-				i = 0
 			}
-		}
-		if i > 0 {
-			data[i] = []byte("\n")
-			esErr = BulkWriteRequest(data[:i+1], appType, conf)
-			if esErr != nil {
-				log.Printf("ERROR: %s", esErr)
-				failed = append(failed, data[:i+1]...)
-			}
-		}
+			close(confirmChan)
 
-	} else {
-		for range incomingData {
+		} else {
+			for range incomingData {
+			}
+			close(confirmChan)
 		}
-	}
+	}()
+	return confirmChan
 }

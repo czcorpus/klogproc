@@ -34,7 +34,7 @@ type LineParser struct {
 // type D:  leftLang[TAB]rightLang[TAB]viceslovne[TAB]lemma[TAB]dataPack[TAB]regularni[TAB]caseInsen[TAB]hledejCo[TAB]...[TAB]
 // type L:  Gleft   [TAB]Gright   [TAB               ]lemma[TAB]dataPack[TAB].........[TAB].........[TAB]Gquery1[TAB]Gquery2
 // please note that for the two query types, the columns are shifted
-func (lp *LineParser) ParseLine(s string, lineNum int) (*InputRecord, error) {
+func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 
 	items := strings.Split(s, "\t")
 	var err error

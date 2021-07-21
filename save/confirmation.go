@@ -16,15 +16,35 @@
 
 package save
 
-type DBType = string
+import (
+	"fmt"
 
-const (
-	Elastic DBType = "ElasticDB"
-	Influx  DBType = "InfluxDB"
+	"github.com/czcorpus/klogproc/conversion"
 )
 
 type ConfirmMsg struct {
-	RecordId string
-	DBType   DBType
+	FilePath string
+	Position conversion.LogRange
 	Error    error
+}
+
+func (cm ConfirmMsg) String() string {
+	return fmt.Sprintf("ConfirmMsg{FilePath: %v, Position: %v, Error: %v}", cm.FilePath, cm.Position, cm.Error)
+}
+
+// --------------------
+
+type IgnoredItemMsg struct {
+	FilePath string
+	Position conversion.LogRange
+}
+
+func (iim IgnoredItemMsg) String() string {
+	return fmt.Sprintf("IgnoredItemMsg{FilePath: %v, Position: %v}", iim.FilePath, iim.Position)
+}
+
+func NewIgnoredItemMsg(filePath string, position conversion.LogRange) IgnoredItemMsg {
+	newPos := position
+	newPos.Written = true
+	return IgnoredItemMsg{FilePath: filePath, Position: newPos}
 }

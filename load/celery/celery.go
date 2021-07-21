@@ -26,7 +26,6 @@ import (
 
 	"github.com/czcorpus/klogproc/conversion"
 	"github.com/czcorpus/klogproc/conversion/celery"
-	"github.com/czcorpus/klogproc/save"
 	"github.com/czcorpus/klogproc/save/elastic"
 	"github.com/czcorpus/klogproc/save/influx"
 )
@@ -94,7 +93,7 @@ func (p *Processor) Process() (*celery.OutputRecord, error) {
 
 // Run controls regular checking of one or more Celery apps
 func Run(conf *Conf, finishEvent chan<- bool, influxConf *influx.ConnectionConf, esConf *elastic.ConnectionConf,
-	confirmChan chan save.ConfirmMsg) {
+	confirmChan chan interface{}) {
 	tickerInterval := time.Duration(conf.IntervalSecs)
 	if tickerInterval == 0 {
 		log.Printf("WARNING: intervalSecs for Celery status mode not set, using default %ds", defaultTickerIntervalSecs)
@@ -120,12 +119,12 @@ func Run(conf *Conf, finishEvent chan<- bool, influxConf *influx.ConnectionConf,
 		case <-ticker.C:
 			var readSync sync.WaitGroup
 			readSync.Add(len(processors))
-			saveChannelInflux := make(chan conversion.OutputRecord, influxConf.PushChunkSize)
-			saveChannelES := make(chan conversion.OutputRecord, esConf.PushChunkSize)
+			saveChannelInflux := make(chan *conversion.BoundOutputRecord, influxConf.PushChunkSize)
+			saveChannelES := make(chan *conversion.BoundOutputRecord, esConf.PushChunkSize)
 			var writeSync sync.WaitGroup
 			writeSync.Add(2)
-			go influx.RunWriteConsumer(influxConf, saveChannelInflux, &writeSync, confirmChan) // nil => no need to synchronize with other stuff
-			go elastic.RunWriteConsumer("celery", esConf, saveChannelES, &writeSync, confirmChan)
+			go influx.RunWriteConsumer(influxConf, saveChannelInflux) // nil => no need to synchronize with other stuff
+			go elastic.RunWriteConsumer("celery", esConf, saveChannelES)
 
 			for _, proc := range processors {
 				go func(proc *Processor) {
@@ -133,8 +132,8 @@ func Run(conf *Conf, finishEvent chan<- bool, influxConf *influx.ConnectionConf,
 					if err != nil {
 						log.Print("ERROR: failed to process Celery status item - ", err)
 					}
-					saveChannelInflux <- out
-					saveChannelES <- out
+					saveChannelInflux <- &conversion.BoundOutputRecord{Rec: out}
+					saveChannelES <- &conversion.BoundOutputRecord{Rec: out}
 					readSync.Done()
 				}(proc)
 			}

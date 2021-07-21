@@ -40,7 +40,7 @@ type LineParser struct {
 	parser accesslog.LineParser
 }
 
-func (lp *LineParser) ParseLine(s string, lineNum int) (*InputRecord, error) {
+func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 	var record InputRecord
 	err := json.Unmarshal([]byte(s), &record)
 	if err != nil {

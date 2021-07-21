@@ -19,30 +19,26 @@ package save
 import (
 	"fmt"
 	"log"
-	"sync"
 
 	"github.com/czcorpus/klogproc/conversion"
 )
 
-// RunWriteConsumer reads from incomingData channel and stores the data
-// to a configured InfluxDB measurement. For performance reasons, the actual
-// database write is performed each time number of added items equals
-// conf.PushChunkSize and also once the incomingData channel is closed.
-func RunWriteConsumer(incomingESData <-chan conversion.OutputRecord, incomingInfluxData <-chan conversion.OutputRecord, waitGroup *sync.WaitGroup, confirmChan chan ConfirmMsg) {
-	go func() {
-		for range incomingInfluxData {
-		}
-		waitGroup.Done()
+// RunWriteConsumer runs a dummy (null) write consumer
+func RunWriteConsumer(incomingData <-chan *conversion.BoundOutputRecord) <-chan ConfirmMsg {
+	confirmChan := make(chan ConfirmMsg)
+	defer func() {
+		close(confirmChan)
 	}()
+	go func() {
+		for item := range incomingData {
+			out, err := item.ToJSON()
+			if err != nil {
+				log.Print("ERROR: ", err)
 
-	defer waitGroup.Done()
-	for item := range incomingESData {
-		out, err := item.ToJSON()
-		if err != nil {
-			log.Print("ERROR: ", err)
-
-		} else {
-			fmt.Println(string(out))
+			} else {
+				fmt.Println(string(out))
+			}
 		}
-	}
+	}()
+	return confirmChan
 }

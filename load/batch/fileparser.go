@@ -57,7 +57,7 @@ func newParser(path string, tzShift int, appType string, version string, appErrR
 // LineParser represents an object able to parse an individual
 // line from a specific application log.
 type LineParser interface {
-	ParseLine(s string, lineNum int) (conversion.InputRecord, error)
+	ParseLine(s string, lineNum int64) (conversion.InputRecord, error)
 }
 
 // Parser parses a single file represented by fr Scanner.
@@ -74,8 +74,8 @@ type Parser struct {
 // Parse runs the parsing process based on provided minimum accepted record
 // time, record type (which is just passed to ElasticSearch) and a
 // provided LogInterceptor).
-func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, datetimeRange DatetimeRange, outputs ...chan conversion.OutputRecord) {
-	for i := 0; p.fr.Scan(); i++ {
+func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, datetimeRange DatetimeRange, outputs ...chan *conversion.BoundOutputRecord) {
+	for i := int64(0); p.fr.Scan(); i++ {
 		rec, err := p.lineParser.ParseLine(p.fr.Text(), i)
 		if err == nil {
 			recTime := rec.GetTime()
@@ -92,7 +92,7 @@ func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, datetimeRange
 				outRec := proc.ProcItem(rec, p.tzShift)
 				if outRec != nil {
 					for _, output := range outputs {
-						output <- outRec
+						output <- &conversion.BoundOutputRecord{Rec: outRec, FilePath: p.fileName}
 					}
 				}
 			}

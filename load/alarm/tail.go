@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -56,6 +57,7 @@ type TailProcAlarm struct {
 	lastErrors            []errorRecord
 	errIdx                int
 	fileInfo              tailFileDescriber
+	mutex                 sync.Mutex
 }
 
 // OnError inserts timestamp of the error detection event.
@@ -68,6 +70,7 @@ func (tpa *TailProcAlarm) OnError(message string) {
 // the internal slots are full and the interval is smaller
 // or equal of a defined value, an alarm e-mail is sent.
 func (tpa *TailProcAlarm) Evaluate() {
+	tpa.mutex.Lock()
 	oldest, newest := findRange(tpa.lastErrors)
 	if oldest > 0 && newest-oldest <= int64(tpa.errCountTimeRangeSecs) {
 		msg := strings.Builder{}
@@ -100,14 +103,17 @@ func (tpa *TailProcAlarm) Evaluate() {
 		}
 		tpa.Reset()
 	}
+	tpa.mutex.Unlock()
 }
 
 // Reset clears the whole state of the alarm.
 func (tpa *TailProcAlarm) Reset() {
+	tpa.mutex.Lock()
 	for i := range tpa.lastErrors {
 		tpa.lastErrors[i] = errorRecord{timestamp: 0, message: ""}
 	}
 	tpa.errIdx = 1
+	tpa.mutex.Unlock()
 }
 
 // NewTailProcAlarm is a recommended factory for TailProcAlarm type

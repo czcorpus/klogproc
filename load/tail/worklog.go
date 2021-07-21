@@ -22,30 +22,31 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-)
+	"sync"
 
-// WorklogItem stores inode & seek position of last read operation
-type WorklogItem struct {
-	Inode int64 `json:"inode"`
-	Seek  int64 `json:"seek"`
-	Line  int64 `json:"line"`
-}
+	"github.com/czcorpus/klogproc/conversion"
+	"github.com/czcorpus/klogproc/fsop"
+)
 
 type updateRequest struct {
 	FilePath string
-	Value    WorklogItem
+	Value    conversion.LogRange
 }
 
-// WorklogRecord provides WorkLogItem info for all configured apps
-type WorklogRecord = map[string]WorklogItem
+// WorklogRecord provides log reading position info for all configured apps
+type WorklogRecord = map[string]conversion.LogRange
 
 // Worklog provides functions to store/retrieve information about
 // file reading operations to be able to continue in case of an
-// interruption
+// interruption/error. Worklog can handle incoming status updates
+// even if they arrive out of order - which is rather a typical
+// situation (e.g. ignored lines are confirmed sooner that the ones
+// send to Elastic/Influx).
 type Worklog struct {
 	filePath    string
 	fr          *os.File
-	rec         WorklogRecord
+	rec         map[string]conversion.LogRange
+	mutex       sync.Mutex
 	updRequests chan updateRequest
 }
 
@@ -56,7 +57,7 @@ func (w *Worklog) Init() error {
 	if w.filePath == "" {
 		return fmt.Errorf("Failed to initialize tail worklog - no path specified")
 	}
-	log.Printf("Initializing worklog %s", w.filePath)
+	log.Printf("INFO: Initializing worklog %s", w.filePath)
 	w.fr, err = os.OpenFile(w.filePath, os.O_CREATE|os.O_RDWR, 0644)
 	byteValue, err := ioutil.ReadAll(w.fr)
 	if err != nil {
@@ -71,8 +72,28 @@ func (w *Worklog) Init() error {
 	w.updRequests = make(chan updateRequest)
 	go func() {
 		for req := range w.updRequests {
-			w.rec[req.FilePath] = req.Value
-			w.save()
+			curr := w.rec[req.FilePath]
+			if curr.Inode != req.Value.Inode {
+				log.Printf("WARNING: inode for %s has changed from %d to %d", req.FilePath, curr.Inode, req.Value.Inode)
+			}
+			// rules for worklog update:
+			// 1) if inodes differ then write the new record
+			// 2) non-written incoming item always overwrites a written one (to make sure we try again from its position)
+			// 3) non-written incoming rewrites the current written no matter how old it is
+			// 4) written incoming item can fix current non-written if its older or of the same age
+			// 5) if both are written then only more recent (higher seek) can overwrite the current one
+			if curr.Inode != req.Value.Inode ||
+				!curr.Written && curr.SeekStart >= req.Value.SeekStart ||
+				curr.Written && req.Value.SeekEnd >= curr.SeekEnd ||
+				!req.Value.Written && (curr.Written || req.Value.SeekEnd < curr.SeekEnd) {
+				w.mutex.Lock()
+				w.rec[req.FilePath] = req.Value
+				w.mutex.Unlock()
+				w.save()
+
+			} else {
+				log.Printf("DEBUG: worklog[%s] item %v won't be saved due to the current %v", req.FilePath, req.Value, curr)
+			}
 		}
 	}()
 	return nil
@@ -117,21 +138,45 @@ func (w *Worklog) save() error {
 
 // UpdateFileInfo adds individual app reading position info. Please
 // note that this does not save the worklog.
-func (w *Worklog) UpdateFileInfo(filePath string, logPosition LogPosition) {
-	w.updRequests <- updateRequest{FilePath: filePath, Value: WorklogItem{Inode: logPosition.Inode, Seek: logPosition.Seek, Line: logPosition.Line}}
+func (w *Worklog) UpdateFileInfo(filePath string, logPosition conversion.LogRange) {
+	w.updRequests <- updateRequest{
+		FilePath: filePath,
+		Value:    logPosition,
+	}
+}
+
+// ResetFile sets a zero seek and line for a new or an existing file.
+// Returns an inode of a respective file and a possible error
+func (w *Worklog) ResetFile(filePath string) (int64, error) {
+	inode, _, err := fsop.GetFileProps(filePath)
+	if err != nil {
+		return -1, err
+	}
+	w.updRequests <- updateRequest{
+		FilePath: filePath,
+		Value: conversion.LogRange{
+			Inode:     inode,
+			SeekStart: 0,
+			SeekEnd:   0,
+			Written:   true, // otherwise update request won't be accepted
+		},
+	}
+	return inode, nil
 }
 
 // GetData retrieves reading info for a provided app
-func (w *Worklog) GetData(filePath string) WorklogItem {
+func (w *Worklog) GetData(filePath string) conversion.LogRange {
+	w.mutex.Lock()
 	v, ok := w.rec[filePath]
+	w.mutex.Unlock()
 	if ok {
 		return v
 	}
-	return WorklogItem{Inode: -1, Seek: 0, Line: 0}
+	return conversion.LogRange{Inode: -1, SeekStart: 0, SeekEnd: 0}
 }
 
 // NewWorklog creates a new Worklog instance. Please note that
 // Init() must be called before you can begin using the worklog.
 func NewWorklog(path string) *Worklog {
-	return &Worklog{filePath: path, rec: make(map[string]WorklogItem)}
+	return &Worklog{filePath: path, rec: make(map[string]conversion.LogRange)}
 }

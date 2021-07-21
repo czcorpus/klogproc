@@ -30,7 +30,7 @@ type LineParser struct {
 	AnonymousUserID int
 }
 
-func (lp *LineParser) ParseLine(s string, lineNum int) (*InputRecord, error) {
+func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 	rec := &InputRecord{}
 	err := json.Unmarshal([]byte(s), rec)
 	if err != nil {

@@ -57,7 +57,7 @@ func (lp *LineParser) isIgnoredError(s string) bool {
 
 // ParseLine parses a query log line - i.e. it expects
 // that the line contains user interaction log
-func (lp *LineParser) ParseLine(s string, lineNum int) (*InputRecord, error) {
+func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 	jsonLine := parseRawLine(s)
 	if jsonLine != "" {
 		return ImportJSONLog([]byte(jsonLine))

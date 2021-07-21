@@ -167,7 +167,7 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, tzShift
 	return []string{}
 }
 
-// LogItemProcessor is an object handling individual
+// LogItemProcessor is an object handling a specific log file with a specific format
 type LogItemProcessor interface {
 	ProcItem(logRec conversion.InputRecord, tzShiftMin int) conversion.OutputRecord
 	GetAppType() string
@@ -179,7 +179,7 @@ type LogFileProcFunc = func(conf *Conf, minTimestamp int64)
 
 // CreateLogFileProcFunc connects a defined log transformer with output channels and
 // returns a customized function for file/directory processing.
-func CreateLogFileProcFunc(processor LogItemProcessor, datetimeRange DatetimeRange, destChans ...chan conversion.OutputRecord) LogFileProcFunc {
+func CreateLogFileProcFunc(processor LogItemProcessor, datetimeRange DatetimeRange, destChans ...chan *conversion.BoundOutputRecord) LogFileProcFunc {
 	return func(conf *Conf, minTimestamp int64) {
 		var files []string
 		if fsop.IsDir(conf.SrcPath) {

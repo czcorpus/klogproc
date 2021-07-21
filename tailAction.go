@@ -18,7 +18,6 @@ package main
 
 import (
 	"log"
-	"math"
 	"path/filepath"
 	"sync"
 
@@ -47,39 +46,53 @@ type tailProcessor struct {
 	lineParser        batch.LineParser
 	logTransformer    conversion.LogItemTransformer
 	geoDB             *geoip2.Reader
-	dataForES         chan conversion.OutputRecord
-	dataForInflux     chan conversion.OutputRecord
-	pendingChan       chan pendingMsg
-	confirmChan       chan save.ConfirmMsg
+	dataForES         chan *conversion.BoundOutputRecord
+	dataForInflux     chan *conversion.BoundOutputRecord
+	dataIgnored       chan save.IgnoredItemMsg
 	anonymousUsers    []int
 	elasticChunkSize  int
 	influxChunkSize   int
-	outSync           sync.WaitGroup
+	itemConfirm       chan interface{}
 	alarm             conversion.AppErrorRegister
 }
 
-type pendingMsg struct {
-	recordId    string
-	logPosition tail.LogPosition
+func (tp *tailProcessor) OnCheckStart() chan interface{} {
+	tp.dataForES = make(chan *conversion.BoundOutputRecord, tp.elasticChunkSize*2)
+	tp.dataForInflux = make(chan *conversion.BoundOutputRecord, tp.influxChunkSize)
+	tp.dataIgnored = make(chan save.IgnoredItemMsg)
+
+	var waitMergeEnd sync.WaitGroup
+	waitMergeEnd.Add(3)
+	tp.itemConfirm = make(chan interface{}, 10)
+	confirmChan1 := elastic.RunWriteConsumer(tp.appType, &tp.conf.ElasticSearch, tp.dataForES)
+	go func() {
+		for item := range confirmChan1 {
+			tp.itemConfirm <- item
+		}
+		waitMergeEnd.Done()
+	}()
+	confirmChan2 := influx.RunWriteConsumer(&tp.conf.InfluxDB, tp.dataForInflux)
+	go func() {
+		for item := range confirmChan2 {
+			tp.itemConfirm <- item
+		}
+		waitMergeEnd.Done()
+	}()
+	go func() {
+		for msg := range tp.dataIgnored {
+			tp.itemConfirm <- msg
+		}
+		waitMergeEnd.Done()
+	}()
+	go func() {
+		waitMergeEnd.Wait()
+		close(tp.itemConfirm)
+	}()
+	return tp.itemConfirm
 }
 
-type pendingRecItem struct {
-	logPosition    tail.LogPosition
-	elasticConfirm bool
-	influxConfirm  bool
-}
-
-func (tp *tailProcessor) OnCheckStart() {
-	tp.dataForES = make(chan conversion.OutputRecord, tp.elasticChunkSize*2)
-	tp.dataForInflux = make(chan conversion.OutputRecord, tp.influxChunkSize)
-	tp.outSync = sync.WaitGroup{}
-	tp.outSync.Add(2)
-	go elastic.RunWriteConsumer(tp.appType, &tp.conf.ElasticSearch, tp.dataForES, &tp.outSync, tp.confirmChan)
-	go influx.RunWriteConsumer(&tp.conf.InfluxDB, tp.dataForInflux, &tp.outSync, tp.confirmChan)
-}
-
-func (tp *tailProcessor) OnEntry(item string, logPosition tail.LogPosition) {
-	parsed, err := tp.lineParser.ParseLine(item, int(logPosition.Line))
+func (tp *tailProcessor) OnEntry(item string, logPosition conversion.LogRange) {
+	parsed, err := tp.lineParser.ParseLine(item, -1) // TODO
 	if err != nil {
 		switch tErr := err.(type) {
 		case conversion.LineParsingError:
@@ -87,25 +100,37 @@ func (tp *tailProcessor) OnEntry(item string, logPosition tail.LogPosition) {
 		default:
 			log.Print("ERROR: ", tErr)
 		}
+		tp.dataIgnored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 		return
 	}
 	if parsed.IsProcessable() {
 		outRec, err := tp.logTransformer.Transform(parsed, tp.appType, tp.tzShift, tp.anonymousUsers)
 		if err != nil {
 			log.Printf("ERROR: %s", err)
+			tp.dataIgnored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 			return
 		}
 		applyLocation(parsed, tp.geoDB, outRec)
-		tp.dataForES <- outRec
-		tp.dataForInflux <- outRec
-		tp.pendingChan <- pendingMsg{outRec.GetID(), logPosition}
+		tp.dataForES <- &conversion.BoundOutputRecord{
+			FilePath: tp.filePath,
+			Rec:      outRec,
+			FilePos:  logPosition,
+		}
+		tp.dataForInflux <- &conversion.BoundOutputRecord{
+			FilePath: tp.filePath,
+			Rec:      outRec,
+			FilePos:  logPosition,
+		}
+
+	} else {
+		tp.dataIgnored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 	}
 }
 
 func (tp *tailProcessor) OnCheckStop() {
 	close(tp.dataForES)
 	close(tp.dataForInflux)
-	tp.outSync.Wait()
+	close(tp.dataIgnored)
 	tp.alarm.Evaluate()
 }
 
@@ -123,66 +148,6 @@ func (tp *tailProcessor) FilePath() string {
 
 func (tp *tailProcessor) CheckIntervalSecs() int {
 	return tp.checkIntervalSecs
-}
-
-func (tp *tailProcessor) ConfirmationChecker(onConfirm func(filePath string, logPosition tail.LogPosition)) {
-	pendingRecords := make(map[string]pendingRecItem)
-	defaultConfirmInflux := !tp.conf.InfluxDB.IsConfigured()
-	defaultConfirmElastic := !tp.conf.ElasticSearch.IsConfigured()
-	var firstPendingLine int64 = math.MaxInt64
-	var firstError error
-	for {
-		select {
-		case pendingMsg := <-tp.pendingChan:
-			if firstError == nil {
-				pendingRecords[pendingMsg.recordId] = pendingRecItem{
-					logPosition:    pendingMsg.logPosition,
-					influxConfirm:  defaultConfirmInflux,
-					elasticConfirm: defaultConfirmElastic,
-				}
-				if firstPendingLine > pendingMsg.logPosition.Line {
-					firstPendingLine = pendingMsg.logPosition.Line
-				}
-			}
-		case confirmMsg := <-tp.confirmChan:
-			if firstError == nil {
-				if confirmMsg.Error == nil {
-					confirmedLine := pendingRecords[confirmMsg.RecordId].logPosition.Line
-					for k, v := range pendingRecords {
-						if v.logPosition.Line <= confirmedLine {
-							switch confirmMsg.DBType {
-							case save.Elastic:
-								v.elasticConfirm = true
-							case save.Influx:
-								v.influxConfirm = true
-							}
-							pendingRecords[k] = v
-						}
-					}
-
-					confirmed := pendingRecords[confirmMsg.RecordId]
-					if confirmed.elasticConfirm && confirmed.influxConfirm {
-						onConfirm(tp.filePath, confirmed.logPosition)
-						firstPendingLine = math.MaxInt64
-						for k, v := range pendingRecords {
-							if v.elasticConfirm && v.influxConfirm {
-								delete(pendingRecords, k)
-							} else {
-								if firstPendingLine > v.logPosition.Line {
-									firstPendingLine = v.logPosition.Line
-								}
-							}
-						}
-					}
-
-				} else {
-					firstError = confirmMsg.Error
-					log.Printf("ERROR: Save to %s unsuccesful. Stopped on line: %d", confirmMsg.DBType, firstPendingLine)
-					log.Print(firstError)
-				}
-			}
-		}
-	}
 }
 
 // -----
@@ -232,8 +197,6 @@ func newTailProcessor(tailConf tail.FileConf, conf config.Main, geoDB *geoip2.Re
 		elasticChunkSize:  conf.ElasticSearch.PushChunkSize,
 		influxChunkSize:   conf.InfluxDB.PushChunkSize,
 		alarm:             procAlarm,
-		pendingChan:       make(chan pendingMsg),
-		confirmChan:       make(chan save.ConfirmMsg),
 	}
 }
 
