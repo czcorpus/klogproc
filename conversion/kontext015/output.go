@@ -38,7 +38,7 @@ func importQueryType(record *InputRecord) string {
 func importCorpname(record *InputRecord) string {
 	var corpname string
 
-	if record.HasArg("corpname") {
+	if record.HasArg("corpname") && record.GetStringArg("corpname") != "" {
 		corpname = record.GetStringArg("corpname")
 		corpname, _ = url.QueryUnescape(corpname)
 		return corpname

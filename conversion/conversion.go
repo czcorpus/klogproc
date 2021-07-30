@@ -109,7 +109,14 @@ func (m StreamedLineParsingError) Error() string {
 
 // NewStreamedLineParsingError is a constructor for StreamedLineParsingError
 func NewStreamedLineParsingError(line string, message string) StreamedLineParsingError {
-	return StreamedLineParsingError{RecordPrefix: line[:35], Message: message}
+	var sample string
+	if len(line) > 35 {
+		sample = line[:35]
+
+	} else {
+		sample = line
+	}
+	return StreamedLineParsingError{RecordPrefix: sample, Message: message}
 }
 
 // InputRecord describes a common behavior for objects extracted
