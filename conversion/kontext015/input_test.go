@@ -160,7 +160,7 @@ func TestGetClientIPProxy(t *testing.T) {
 
 func TestGetAlignedCorpora(t *testing.T) {
 	rec := InputRecord{
-		Action: "query_submit",
+		Action: "any_action",
 		Date:   "2019-06-25T14:04:50.23-01:00",
 		Args: map[string]interface{}{
 			"corpora": []interface{}{"intercorp_v11_cs", "intercorp_v11_en", "intercorp_v11_de"},
@@ -170,16 +170,4 @@ func TestGetAlignedCorpora(t *testing.T) {
 	assert.Contains(t, ac, "intercorp_v11_en")
 	assert.Contains(t, ac, "intercorp_v11_de")
 	assert.Equal(t, 2, len(ac))
-}
-
-func TestGetAlignedCorporaNonQueryAction(t *testing.T) {
-	rec := InputRecord{
-		Action: "wordlist",
-		Date:   "2019-06-25T14:04:50.23-01:00",
-		Args: map[string]interface{}{
-			"corpora": []interface{}{"intercorp_v11_cs", "intercorp_v11_en", "intercorp_v11_de"},
-		},
-	}
-	ac := rec.GetAlignedCorpora()
-	assert.Equal(t, 0, len(ac))
 }

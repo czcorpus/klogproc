@@ -197,13 +197,9 @@ func (rec *InputRecord) GetIntArg(name string) int {
 // (i.e. not the first corpus but possible other corpora aligned
 // with the main one)
 func (rec *InputRecord) GetAlignedCorpora() []string {
-	switch rec.Action {
-	case "query_submit":
-		corpora, _ := getSliceOfStrings(rec.Args, "corpora")
-		if len(corpora) > 0 {
-			return corpora[1:]
-		}
-
+	corpora, _ := getSliceOfStrings(rec.Args, "corpora")
+	if len(corpora) > 0 {
+		return corpora[1:]
 	}
 	return []string{}
 }
