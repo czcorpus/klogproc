@@ -85,7 +85,7 @@ func initReaders(processors []FileTailProcessor, worklog *Worklog) ([]*FileTailR
 	readers := make([]*FileTailReader, len(processors))
 	for i, processor := range processors {
 		wlItem := worklog.GetData(processor.FilePath())
-		log.Printf("INFO: Found configuration for file %s", processor.FilePath())
+		log.Printf("INFO: Found log file %s", processor.FilePath())
 		if wlItem.Inode > -1 {
 			log.Printf("INFO: Found worklog for %s: %v", processor.FilePath(), wlItem)
 

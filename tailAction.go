@@ -182,7 +182,9 @@ func newTailProcessor(tailConf tail.FileConf, conf config.Main, geoDB *geoip2.Re
 	if err != nil {
 		log.Fatal("FATAL: Failed to initialize transformer: ", err)
 	}
-
+	log.Printf(
+		"Creating tail processor for %s, app type: %s, app version: %s, tzShift: %d",
+		filepath.Clean(tailConf.Path), tailConf.AppType, tailConf.Version, tailConf.TZShift)
 	return &tailProcessor{
 		appType:           tailConf.AppType,
 		filePath:          filepath.Clean(tailConf.Path), // note: this is not a full path normalization !
