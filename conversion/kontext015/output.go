@@ -21,7 +21,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/url"
-	"strconv"
 	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
@@ -68,7 +67,7 @@ type OutputRecord struct {
 	ProcTime       float32                  `json:"procTime"`
 	QueryType      string                   `json:"queryType"`
 	UserAgent      string                   `json:"userAgent"`
-	UserID         int                      `json:"userId"`
+	UserID         string                   `json:"userId"`
 	GeoIP          conversion.GeoDataRecord `json:"geoip"`
 	Error          ErrorRecord              `json:"error"`
 	Args           map[string]interface{}   `json:"args"`
@@ -117,7 +116,7 @@ func (cnkr *OutputRecord) SetLocation(countryName string, latitude float32, long
 
 func createID(cnkr *OutputRecord) string {
 	str := cnkr.Action + cnkr.Corpus + cnkr.Datetime + cnkr.IPAddress +
-		cnkr.Type + cnkr.UserAgent + strconv.Itoa(cnkr.UserID)
+		cnkr.Type + cnkr.UserAgent + cnkr.UserID
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }

@@ -37,7 +37,7 @@ type OutputRecord struct {
 	IPAddress           string                   `json:"ipAddress"`
 	UserAgent           string                   `json:"userAgent"`
 	ReferringDomain     string                   `json:"referringDomain"`
-	UserID              int                      `json:"userId"`
+	UserID              string                   `json:"userId"`
 	IsAnonymous         bool                     `json:"isAnonymous"`
 	IsQuery             bool                     `json:"isQuery"`
 	IsMobileClient      bool                     `json:"isMobileClient"`
@@ -101,8 +101,7 @@ func NewTimedOutputRecord(t time.Time, tzShiftMin int) *OutputRecord {
 // CreateID creates an idempotent ID of rec based on its properties.
 func CreateID(rec *OutputRecord) string {
 	str := rec.Type + rec.Action + strconv.FormatBool(rec.IsAnonymous) + rec.Datetime + rec.IPAddress +
-		strconv.Itoa(rec.UserID) + rec.QueryType + strings.Join(rec.Queries, "--") + rec.Lang1 +
-		rec.Lang2
+		rec.UserID + rec.QueryType + strings.Join(rec.Queries, "--") + rec.Lang1 + rec.Lang2
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }

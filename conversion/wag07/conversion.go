@@ -17,20 +17,11 @@
 package wag07
 
 import (
+	"strconv"
+
 	"github.com/czcorpus/klogproc/conversion"
 	"github.com/czcorpus/klogproc/conversion/wag06"
 )
-
-// UserBelongsToList tests whether a provided user can be
-// found in a provided array of users.
-func userBelongsToList(userID int, anonymousUsers []int) bool {
-	for _, v := range anonymousUsers {
-		if v == userID {
-			return true
-		}
-	}
-	return false
-}
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
@@ -43,7 +34,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 	rec.IPAddress = logRecord.Request.Origin
 	rec.UserAgent = logRecord.Request.HTTPUserAgent
 	rec.ReferringDomain = logRecord.Request.Referer
-	rec.UserID = logRecord.UserID
+	rec.UserID = strconv.Itoa(logRecord.UserID)
 	rec.IsAnonymous = conversion.UserBelongsToList(logRecord.UserID, anonymousUsers)
 	rec.IsQuery = logRecord.IsQuery
 	rec.IsMobileClient = logRecord.IsMobileClient

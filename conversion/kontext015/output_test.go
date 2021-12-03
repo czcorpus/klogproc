@@ -37,7 +37,7 @@ func createRecord() *OutputRecord {
 		ProcTime:    0.712,
 		QueryType:   "cql",
 		UserAgent:   "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:51.0) Gecko/20100101 Firefox/51.0",
-		UserID:      100,
+		UserID:      "100",
 		GeoIP: conversion.GeoDataRecord{
 			CountryCode2: "CZ",
 			CountryName:  "Czech Republic",

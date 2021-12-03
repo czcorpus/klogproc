@@ -17,6 +17,7 @@
 package kontext013
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/czcorpus/klogproc/conversion"
@@ -42,7 +43,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 		ProcTime:       logRecord.ProcTime,
 		QueryType:      importQueryType(logRecord),
 		UserAgent:      logRecord.Request.HTTPUserAgent,
-		UserID:         logRecord.UserID,
+		UserID:         strconv.Itoa(logRecord.UserID),
 		Error:          logRecord.Error,
 	}
 	r.ID = createID(r)
