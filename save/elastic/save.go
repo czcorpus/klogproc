@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	es6DocType = "query"
+	es6DocType = "_doc"
 )
 
 // ESImportFailHandler represents an object able to handle (valid)
