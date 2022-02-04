@@ -19,7 +19,7 @@ package save
 import (
 	"fmt"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 type ConfirmMsg struct {

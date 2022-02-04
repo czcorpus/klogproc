@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 // RunWriteConsumer runs a dummy (null) write consumer

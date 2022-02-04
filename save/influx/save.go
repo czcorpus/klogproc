@@ -19,8 +19,8 @@ package influx
 import (
 	"log"
 
-	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/save"
+	"klogproc/conversion"
+	"klogproc/save"
 )
 
 // RunWriteConsumer reads from incomingData channel and stores the data

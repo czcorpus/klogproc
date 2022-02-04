@@ -27,7 +27,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 // newParser creates a new instance of the Parser.

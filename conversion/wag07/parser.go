@@ -19,7 +19,7 @@ package wag07
 import (
 	"encoding/json"
 
-	"github.com/czcorpus/klogproc/load/accesslog"
+	"klogproc/load/accesslog"
 )
 
 const (

@@ -23,8 +23,8 @@ import (
 	"net"
 	"strings"
 
-	"github.com/czcorpus/klogproc/config"
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/config"
+	"klogproc/conversion"
 )
 
 type BotInfo struct {

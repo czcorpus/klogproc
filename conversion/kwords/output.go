@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 func createID(rec *OutputRecord) string {

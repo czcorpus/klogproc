@@ -24,13 +24,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/czcorpus/klogproc/fsop"
-	"github.com/czcorpus/klogproc/load/batch"
-	"github.com/czcorpus/klogproc/load/celery"
-	"github.com/czcorpus/klogproc/load/sredis"
-	"github.com/czcorpus/klogproc/load/tail"
-	"github.com/czcorpus/klogproc/save/elastic"
-	"github.com/czcorpus/klogproc/save/influx"
+	"klogproc/fsop"
+	"klogproc/load/batch"
+	"klogproc/load/celery"
+	"klogproc/load/sredis"
+	"klogproc/load/tail"
+	"klogproc/save/elastic"
+	"klogproc/save/influx"
 )
 
 // Email configures e-mail client for sending misc. notifications and alarms

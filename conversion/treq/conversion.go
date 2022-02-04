@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 const (

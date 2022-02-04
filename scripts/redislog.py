@@ -41,7 +41,7 @@ import urllib
 import urlparse
 
 
-KLOGPROC_CONF_PATH = '/home/tomas/work/go/src/github.com/czcorpus/klogproc/conf.json'
+KLOGPROC_CONF_PATH = '/home/tomas/work/go/src/klogproc/conf.json'
 DEFAULT_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 ERROR_LOG_PATH = '/var/log/klogproc/ske_errors.txt'
 

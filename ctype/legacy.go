@@ -19,7 +19,7 @@ package ctype
 import (
 	"strings"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 type LegacyClientTypeAnalyzer struct {

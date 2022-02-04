@@ -20,8 +20,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/conversion/kontext013"
+	"klogproc/conversion"
+	"klogproc/conversion/kontext013"
+
 	"github.com/go-redis/redis"
 )
 

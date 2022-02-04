@@ -24,10 +24,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/conversion/celery"
-	"github.com/czcorpus/klogproc/save/elastic"
-	"github.com/czcorpus/klogproc/save/influx"
+	"klogproc/conversion"
+	"klogproc/conversion/celery"
+	"klogproc/save/elastic"
+	"klogproc/save/influx"
 )
 
 const (

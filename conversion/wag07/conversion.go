@@ -19,8 +19,8 @@ package wag07
 import (
 	"strconv"
 
-	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/conversion/wag06"
+	"klogproc/conversion"
+	"klogproc/conversion/wag06"
 )
 
 // Transformer converts a source log object into a destination one

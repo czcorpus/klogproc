@@ -21,16 +21,17 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/czcorpus/klogproc/config"
-	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/email"
-	"github.com/czcorpus/klogproc/load/alarm"
-	"github.com/czcorpus/klogproc/load/batch"
-	"github.com/czcorpus/klogproc/load/tail"
-	"github.com/czcorpus/klogproc/save"
-	"github.com/czcorpus/klogproc/save/elastic"
-	"github.com/czcorpus/klogproc/save/influx"
-	"github.com/czcorpus/klogproc/users"
+	"klogproc/config"
+	"klogproc/conversion"
+	"klogproc/email"
+	"klogproc/load/alarm"
+	"klogproc/load/batch"
+	"klogproc/load/tail"
+	"klogproc/save"
+	"klogproc/save/elastic"
+	"klogproc/save/influx"
+	"klogproc/users"
+
 	"github.com/oschwald/geoip2-golang"
 )
 

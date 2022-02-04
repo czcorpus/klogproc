@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 type OutputRecord struct {

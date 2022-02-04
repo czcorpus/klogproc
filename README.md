@@ -73,7 +73,7 @@ available on your system.
 
 Clone the *klogproc* project:
 
-`git clone https://github.com/czcorpus/klogproc.git`
+`git clone https://klogproc.git`
 
 Build the project:
 

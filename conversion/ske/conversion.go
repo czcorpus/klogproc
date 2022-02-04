@@ -21,8 +21,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/users"
+	"klogproc/conversion"
+	"klogproc/users"
 )
 
 // Transformer converts a source log object into a destination one

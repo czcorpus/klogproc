@@ -29,7 +29,7 @@ import (
 	"net/smtp"
 	"strings"
 
-	"github.com/czcorpus/klogproc/config"
+	"klogproc/config"
 )
 
 const (

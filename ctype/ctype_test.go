@@ -19,7 +19,8 @@ package ctype
 import (
 	"testing"
 
-	"github.com/czcorpus/klogproc/conversion/kontext015"
+	"klogproc/conversion/kontext015"
+
 	"github.com/stretchr/testify/assert"
 )
 

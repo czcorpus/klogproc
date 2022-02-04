@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 // isEntryQuery returns true if the action is one of

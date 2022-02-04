@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/save"
+	"klogproc/conversion"
+	"klogproc/save"
 )
 
 const (

@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 // OutputRecord represents a polished version of WaG's access log.

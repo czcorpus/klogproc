@@ -20,7 +20,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 // InputRecord represents a raw-parsed version of Word-Sim-Server's access log

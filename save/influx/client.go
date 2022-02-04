@@ -20,7 +20,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
+
 	client "github.com/influxdata/influxdb1-client/v2"
 )
 

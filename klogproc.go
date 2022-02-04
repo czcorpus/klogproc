@@ -23,9 +23,9 @@ import (
 
 	"os"
 
-	"github.com/czcorpus/klogproc/config"
-	"github.com/czcorpus/klogproc/load/batch"
-	"github.com/czcorpus/klogproc/save/elastic"
+	"klogproc/config"
+	"klogproc/load/batch"
+	"klogproc/save/elastic"
 )
 
 const (
