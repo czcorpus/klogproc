@@ -24,6 +24,7 @@ import (
 	"syscall"
 	"time"
 
+	"klogproc/botwatch"
 	"klogproc/conversion"
 	"klogproc/save"
 )
@@ -79,6 +80,11 @@ type ClientAnalyzer interface {
 	AgentIsMonitor(rec conversion.InputRecord) bool
 	AgentIsBot(rec conversion.InputRecord) bool
 	HasBlacklistedIP(rec conversion.InputRecord) bool
+	Add(rec conversion.InputRecord)
+	GetBotCandidates() []botwatch.IPStats
+	StoreBotCandidates()
+	ResetBotCandidates()
+	Close()
 }
 
 func initReaders(processors []FileTailProcessor, worklog *Worklog) ([]*FileTailReader, error) {
@@ -110,7 +116,7 @@ func initReaders(processors []FileTailProcessor, worklog *Worklog) ([]*FileTailR
 }
 
 // Run starts the process of (multiple) log watching
-func Run(conf *Conf, processors []FileTailProcessor, clientAnalyzer ClientAnalyzer, finishEvent chan<- bool) {
+func Run(conf *Conf, processors []FileTailProcessor, analyzer ClientAnalyzer, finishEvent chan<- bool) {
 	tickerInterval := time.Duration(conf.IntervalSecs)
 	if tickerInterval == 0 {
 		log.Printf("WARNING: intervalSecs for tail mode not set, using default %ds", defaultTickerIntervalSecs)
@@ -167,6 +173,11 @@ func Run(conf *Conf, processors []FileTailProcessor, clientAnalyzer ClientAnalyz
 				}(reader)
 			}
 			wg.Wait()
+			// all processors are done for this checking period, now let's store bot candidates
+			// and reset bot candidates (IP request statistics are not affected)
+			analyzer.StoreBotCandidates()
+			analyzer.ResetBotCandidates()
+
 		case quit := <-quitChan:
 			if quit {
 				ticker.Stop()

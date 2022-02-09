@@ -116,7 +116,7 @@ func main() {
 	flag.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
 	fromTimestamp := flag.String("from-time", "", "Batch process only the records with datetime greater or equal to this time (UNIX timestamp, or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm)")
 	toTimestamp := flag.String("to-time", "", "Batch process only the records with datetime less or equal to this UNIX timestamp, or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm)")
-	examineIP := flag.String("examine-ip", "", "In batch mode, report activity of a specific IP address")
+	flag.BoolVar(&procOpts.analysisOnly, "analysis-only", false, "In batch mode, analyze logs for bots etc.")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending CNC app logs to ElasticSearch & InfluxDB\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\t%s\n\nOptions:\n",
@@ -125,7 +125,6 @@ func main() {
 	}
 	flag.Parse()
 
-	procOpts.examineIP = *examineIP
 	var err error
 	procOpts.datetimeRange, err = batch.NewDateTimeRange(fromTimestamp, toTimestamp)
 	if err != nil {

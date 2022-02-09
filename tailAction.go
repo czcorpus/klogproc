@@ -55,6 +55,7 @@ type tailProcessor struct {
 	influxChunkSize   int
 	itemConfirm       chan interface{}
 	alarm             conversion.AppErrorRegister
+	analysis          chan<- conversion.InputRecord
 }
 
 func (tp *tailProcessor) OnCheckStart() chan interface{} {
@@ -93,7 +94,7 @@ func (tp *tailProcessor) OnCheckStart() chan interface{} {
 }
 
 func (tp *tailProcessor) OnEntry(item string, logPosition conversion.LogRange) {
-	parsed, err := tp.lineParser.ParseLine(item, -1) // TODO
+	parsed, err := tp.lineParser.ParseLine(item, -1) // TODO (line num - hard to keep track)
 	if err != nil {
 		switch tErr := err.(type) {
 		case conversion.LineParsingError:
@@ -104,6 +105,7 @@ func (tp *tailProcessor) OnEntry(item string, logPosition conversion.LogRange) {
 		tp.dataIgnored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 		return
 	}
+	tp.analysis <- parsed
 	if parsed.IsProcessable() {
 		outRec, err := tp.logTransformer.Transform(parsed, tp.appType, tp.tzShift, tp.anonymousUsers)
 		if err != nil {
@@ -137,6 +139,7 @@ func (tp *tailProcessor) OnCheckStop() {
 
 func (tp *tailProcessor) OnQuit() {
 	tp.alarm.Reset()
+	close(tp.analysis)
 }
 
 func (tp *tailProcessor) AppType() string {
@@ -170,7 +173,13 @@ func newProcAlarm(tailConf *tail.FileConf, conf *tail.Conf, mailConf *config.Ema
 	return &alarm.NullAlarm{}, nil
 }
 
-func newTailProcessor(tailConf tail.FileConf, conf config.Main, geoDB *geoip2.Reader, userMap *users.UserMap) *tailProcessor {
+func newTailProcessor(
+	tailConf tail.FileConf,
+	conf config.Main,
+	geoDB *geoip2.Reader,
+	userMap *users.UserMap,
+	analysis chan<- conversion.InputRecord,
+) *tailProcessor {
 	procAlarm, err := newProcAlarm(&tailConf, &conf.LogTail, &conf.EmailNotification)
 	if err != nil {
 		log.Fatal("FATAL: Failed to initialize alarm: ", err)
@@ -186,6 +195,7 @@ func newTailProcessor(tailConf tail.FileConf, conf config.Main, geoDB *geoip2.Re
 	log.Printf(
 		"Creating tail processor for %s, app type: %s, app version: %s, tzShift: %d",
 		filepath.Clean(tailConf.Path), tailConf.AppType, tailConf.Version, tailConf.TZShift)
+
 	return &tailProcessor{
 		appType:           tailConf.AppType,
 		filePath:          filepath.Clean(tailConf.Path), // note: this is not a full path normalization !
@@ -200,16 +210,36 @@ func newTailProcessor(tailConf tail.FileConf, conf config.Main, geoDB *geoip2.Re
 		elasticChunkSize:  conf.ElasticSearch.PushChunkSize,
 		influxChunkSize:   conf.InfluxDB.PushChunkSize,
 		alarm:             procAlarm,
+		analysis:          analysis,
 	}
 }
 
 // -----
 
-func runTailAction(conf *config.Main, geoDB *geoip2.Reader, userMap *users.UserMap, clientAnalyzer ClientAnalyzer, finishEvt chan bool) {
+func runTailAction(
+	conf *config.Main,
+	geoDB *geoip2.Reader,
+	userMap *users.UserMap,
+	analyzer ClientAnalyzer,
+	finishEvt chan bool,
+) {
 	tailProcessors := make([]tail.FileTailProcessor, len(conf.LogTail.Files))
-	for i, f := range conf.LogTail.Files {
-		tailProcessors[i] = newTailProcessor(f, *conf, geoDB, userMap)
+	var wg sync.WaitGroup
+	wg.Add(len(conf.LogTail.Files))
 
+	for i, f := range conf.LogTail.Files {
+		tpAnalysis := make(chan conversion.InputRecord, 50)
+		go func(items chan conversion.InputRecord) {
+			for item := range items {
+				analyzer.Add(item)
+			}
+			wg.Done()
+		}(tpAnalysis)
+		tailProcessors[i] = newTailProcessor(f, *conf, geoDB, userMap, tpAnalysis)
 	}
-	go tail.Run(&conf.LogTail, tailProcessors, clientAnalyzer, finishEvt)
+	go func() {
+		wg.Wait()
+		analyzer.Close()
+	}()
+	go tail.Run(&conf.LogTail, tailProcessors, analyzer, finishEvt)
 }

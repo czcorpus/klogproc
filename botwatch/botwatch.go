@@ -17,84 +17,61 @@
 package botwatch
 
 import (
-	"encoding/json"
 	"klogproc/conversion"
-	"math"
+	"sync"
 	"time"
 )
 
-const (
-	minSuspicionLogItems      = 5
-	suspiciousStdevRatio      = 0.3
-	logRecordsMaxDistanceSecs = 60
-)
-
-type IPStats struct {
-	IP           string  `json:"ip"`
-	Mean         float64 `json:"mean"`
-	Stdev        float64 `json:"stdev"`
-	Count        int     `json:"count"`
-	FirstRequest string  `json:"firstRequest"`
-	LastRequest  string  `json:"lastRequest"`
-}
-
-func (r *IPStats) ToJSON() ([]byte, error) {
-	return json.Marshal(r)
-}
-
-// --------------
-
-type IPProcData struct {
-	count       int
-	mean        float64
-	m2          float64
-	firstAccess time.Time
-	lastAccess  time.Time
-}
-
-func (ips *IPProcData) Variance() float64 {
-	if ips.count == 0 {
-		return 0
-	}
-	return ips.m2 / float64(ips.count)
-}
-
-func (ips *IPProcData) Stdev() float64 {
-	return math.Sqrt(ips.Variance())
-}
-
-func (ips *IPProcData) IsSuspicious() bool {
-	return ips.Stdev()/ips.mean <= suspiciousStdevRatio && ips.count >= minSuspicionLogItems
-}
-
-func (ips *IPProcData) ToIPStats(ip string) IPStats {
-	return IPStats{
-		IP:           ip,
-		Mean:         ips.mean,
-		Stdev:        ips.Stdev(),
-		Count:        ips.count,
-		FirstRequest: ips.firstAccess.Format(time.RFC3339),
-		LastRequest:  ips.lastAccess.Format(time.RFC3339),
-	}
-}
-
 type Watchdog struct {
-	statistics map[string]*IPProcData
-	suspicions map[string][]IPProcData
+	statistics     map[string]*IPProcData
+	suspicions     map[string]IPProcData
+	conf           BotDetectionConf
+	onlineAnalysis chan conversion.InputRecord
+	mutex          sync.Mutex
 }
 
-func (wd *Watchdog) Register(rec conversion.InputRecord) {
+func (wd *Watchdog) maxLogRecordsDistance() time.Duration {
+	return time.Duration(wd.conf.WatchedTimeWindowSecs/wd.conf.NumRequestsThreshold) * time.Second
+}
+
+func (wd *Watchdog) Add(rec conversion.InputRecord) {
+	wd.onlineAnalysis <- rec
+}
+
+func (wd *Watchdog) Close() {
+	close(wd.onlineAnalysis)
+}
+
+func (wd *Watchdog) ResetAll() {
+	wd.mutex.Lock()
+	wd.statistics = make(map[string]*IPProcData)
+	wd.suspicions = make(map[string]IPProcData)
+	wd.mutex.Unlock()
+}
+
+func (wd *Watchdog) ResetBotCandidates() {
+	wd.mutex.Lock()
+	wd.suspicions = make(map[string]IPProcData)
+	wd.mutex.Unlock()
+}
+
+func (wd *Watchdog) Conf() BotDetectionConf {
+	return wd.conf
+}
+
+func (wd *Watchdog) analyze(rec conversion.InputRecord) {
 	srec, ok := wd.statistics[rec.GetClientIP().String()]
 	if !ok {
 		srec = &IPProcData{}
 		wd.statistics[rec.GetClientIP().String()] = srec
 	}
-	// here we use Welford algorithm (https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm)
+	// here we use Welford algorithm for online variance calculation
+	// more info: (https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm)
 	if srec.lastAccess.IsZero() {
 		srec.firstAccess = rec.GetTime()
 
 	} else {
-		if rec.GetTime().Sub(srec.lastAccess) <= logRecordsMaxDistanceSecs*time.Second {
+		if rec.GetTime().Sub(srec.lastAccess) <= wd.maxLogRecordsDistance() {
 			srec.count++
 			timeDist := float64(rec.GetTime().Sub(srec.lastAccess).Milliseconds()) / 1000
 			delta := timeDist - srec.mean
@@ -102,14 +79,13 @@ func (wd *Watchdog) Register(rec conversion.InputRecord) {
 			delta2 := timeDist - srec.mean
 			srec.m2 += delta * delta2
 		}
-		if srec.IsSuspicious() {
-			_, ok := wd.suspicions[rec.GetClientIP().String()]
-			if !ok {
-				wd.suspicions[rec.GetClientIP().String()] = make([]IPProcData, 0, 5)
+		if srec.IsSuspicious(wd.conf) {
+			prev, ok := wd.suspicions[rec.GetClientIP().String()]
+			if !ok || srec.ReqPerSecod() > prev.ReqPerSecod() {
+				wd.suspicions[rec.GetClientIP().String()] = *srec
 			}
-			wd.suspicions[rec.GetClientIP().String()] = append(wd.suspicions[rec.GetClientIP().String()], *srec)
 		}
-		if srec.IsSuspicious() || rec.GetTime().Sub(srec.lastAccess) > logRecordsMaxDistanceSecs*time.Second {
+		if srec.IsSuspicious(wd.conf) || rec.GetTime().Sub(srec.firstAccess) > time.Duration(wd.conf.WatchedTimeWindowSecs)*time.Second {
 			wd.statistics[rec.GetClientIP().String()] = &IPProcData{
 				firstAccess: rec.GetTime(),
 			}
@@ -119,18 +95,27 @@ func (wd *Watchdog) Register(rec conversion.InputRecord) {
 }
 
 func (wd *Watchdog) GetSuspiciousRecords() []IPStats {
+	wd.mutex.Lock()
+	defer wd.mutex.Unlock()
 	ans := make([]IPStats, 0, len(wd.suspicions))
-	for ip, recs := range wd.suspicions {
-		for _, rec := range recs {
-			ans = append(ans, rec.ToIPStats(ip))
-		}
+	for ip, rec := range wd.suspicions {
+		ans = append(ans, rec.ToIPStats(ip))
 	}
 	return ans
 }
 
-func NewWatchdog() *Watchdog {
-	return &Watchdog{
-		statistics: make(map[string]*IPProcData),
-		suspicions: make(map[string][]IPProcData),
+func NewWatchdog(conf BotDetectionConf) *Watchdog {
+	analysis := make(chan conversion.InputRecord)
+	wd := &Watchdog{
+		statistics:     make(map[string]*IPProcData),
+		suspicions:     make(map[string]IPProcData),
+		conf:           conf,
+		onlineAnalysis: analysis,
 	}
+	go func() {
+		for item := range analysis {
+			wd.analyze(item)
+		}
+	}()
+	return wd
 }
