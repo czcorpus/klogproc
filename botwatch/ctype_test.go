@@ -14,12 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ctype
+package botwatch
 
 import (
 	"testing"
 
-	"github.com/czcorpus/klogproc/conversion/kontext015"
+	"klogproc/conversion/kontext015"
+
 	"github.com/stretchr/testify/assert"
 )
 

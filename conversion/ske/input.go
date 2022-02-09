@@ -20,7 +20,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 // Request is a simple representation of

@@ -17,12 +17,14 @@ package sredis
 // Deprecation note: please note that this package is deprecated and no longer in use in production
 
 import (
+	"context"
 	"fmt"
 	"log"
 
-	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/conversion/kontext013"
-	"github.com/go-redis/redis"
+	"klogproc/conversion"
+	"klogproc/conversion/kontext013"
+
+	"github.com/go-redis/redis/v8"
 )
 
 // RedisConf is a structure containing information
@@ -41,6 +43,7 @@ type RedisConf struct {
 // KonText log records.
 type RedisQueue struct {
 	db             *redis.Client
+	ctx            context.Context
 	queueKey       string
 	failedItemsKey string
 	tzShift        int
@@ -49,7 +52,7 @@ type RedisQueue struct {
 // OpenRedisQueue creates a client for Redis
 func OpenRedisQueue(address string, database int, queueKey string, tzShift int) (*RedisQueue, error) {
 	if queueKey == "" {
-		return nil, fmt.Errorf("No queue key provided")
+		return nil, fmt.Errorf("no queue key provided")
 	}
 	client := &RedisQueue{
 		db: redis.NewClient(&redis.Options{
@@ -57,6 +60,7 @@ func OpenRedisQueue(address string, database int, queueKey string, tzShift int) 
 			Password: "",
 			DB:       database,
 		}),
+		ctx:            context.Background(),
 		queueKey:       queueKey,
 		failedItemsKey: queueKey + "_failed",
 		tzShift:        tzShift,
@@ -72,12 +76,12 @@ func OpenRedisQueue(address string, database int, queueKey string, tzShift int) 
 // original item source).
 func (rc *RedisQueue) GetItems() []conversion.InputRecord {
 
-	size := int(rc.db.LLen(rc.queueKey).Val())
+	size := int(rc.db.LLen(rc.ctx, rc.queueKey).Val())
 	log.Printf("INFO: Found %d records in log queue", size)
 	ans := make([]conversion.InputRecord, 0, size)
 
 	for i := 0; i < size; i++ {
-		rawItem, err := rc.db.LPop(rc.queueKey).Bytes()
+		rawItem, err := rc.db.LPop(rc.ctx, rc.queueKey).Bytes()
 		if err != nil {
 			log.Printf("WARNING: %s, orig item: %s", err, rawItem)
 		}
@@ -96,7 +100,7 @@ func (rc *RedisQueue) GetItems() []conversion.InputRecord {
 // This is mostly for handling ElasticSearch import errors.
 func (rc *RedisQueue) RescueFailedChunks(data [][]byte) error {
 	for _, item := range data {
-		rc.db.RPush(rc.failedItemsKey, item)
+		rc.db.RPush(rc.ctx, rc.failedItemsKey, item)
 	}
 	if len(data) > 0 {
 		log.Printf("INFO: Stored raw data to be reinserted next time (num bulk insert rows: %d)", len(data))
@@ -120,6 +124,7 @@ func (rc *RedisQueue) GetRescuedChunksIterator() *RedisRescuedChunkIterator {
 // individual bulk insert chunks ([meta line, data line]+  "new line")
 type RedisRescuedChunkIterator struct {
 	db      *redis.Client
+	ctx     context.Context
 	currPos int64
 	dbKey   string
 }
@@ -127,11 +132,11 @@ type RedisRescuedChunkIterator struct {
 // GetNextChunk provide next chunk of bulk insert data.
 // If nothing is found then a slice of size 0 is returned.
 func (rrci *RedisRescuedChunkIterator) GetNextChunk() [][]byte {
-	queueSize := rrci.db.LLen(rrci.dbKey).Val()
+	queueSize := rrci.db.LLen(rrci.ctx, rrci.dbKey).Val()
 	tmp := make([][]byte, 0, queueSize)
 	var curr string
 	for ; rrci.currPos < queueSize && curr != "\n"; rrci.currPos++ {
-		currSrch := rrci.db.LRange(rrci.dbKey, rrci.currPos, rrci.currPos).Val()
+		currSrch := rrci.db.LRange(rrci.ctx, rrci.dbKey, rrci.currPos, rrci.currPos).Val()
 		if len(currSrch) == 1 {
 			curr = currSrch[0]
 			tmp = append(tmp, []byte(curr))
@@ -142,7 +147,7 @@ func (rrci *RedisRescuedChunkIterator) GetNextChunk() [][]byte {
 
 // RemoveVisitedItems removes from Redis all the items we iterated through so far
 func (rrci *RedisRescuedChunkIterator) RemoveVisitedItems() (int, error) {
-	status := rrci.db.LTrim(rrci.dbKey, rrci.currPos, int64(-1))
+	status := rrci.db.LTrim(rrci.ctx, rrci.dbKey, rrci.currPos, int64(-1))
 	if status.Err() != nil {
 		return 0, status.Err()
 	}

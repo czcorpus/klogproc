@@ -17,8 +17,8 @@
 package main
 
 import (
-	"github.com/czcorpus/klogproc/config"
-	"github.com/czcorpus/klogproc/load/celery"
+	"klogproc/config"
+	"klogproc/load/celery"
 )
 
 func processCeleryStatus(conf *config.Main) {

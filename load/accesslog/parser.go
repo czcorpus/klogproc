@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 func testOpenQuot(c byte) byte {

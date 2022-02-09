@@ -17,21 +17,21 @@ package main
 import (
 	"fmt"
 
-	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/conversion/kontext013"
-	"github.com/czcorpus/klogproc/conversion/kontext015"
-	"github.com/czcorpus/klogproc/conversion/korpusdb"
-	"github.com/czcorpus/klogproc/conversion/kwords"
-	"github.com/czcorpus/klogproc/conversion/mapka"
-	"github.com/czcorpus/klogproc/conversion/morfio"
-	"github.com/czcorpus/klogproc/conversion/shiny"
-	"github.com/czcorpus/klogproc/conversion/ske"
-	"github.com/czcorpus/klogproc/conversion/syd"
-	"github.com/czcorpus/klogproc/conversion/treq"
-	"github.com/czcorpus/klogproc/conversion/wag06"
-	"github.com/czcorpus/klogproc/conversion/wag07"
-	"github.com/czcorpus/klogproc/conversion/wsserver"
-	"github.com/czcorpus/klogproc/users"
+	"klogproc/conversion"
+	"klogproc/conversion/kontext013"
+	"klogproc/conversion/kontext015"
+	"klogproc/conversion/korpusdb"
+	"klogproc/conversion/kwords"
+	"klogproc/conversion/mapka"
+	"klogproc/conversion/morfio"
+	"klogproc/conversion/shiny"
+	"klogproc/conversion/ske"
+	"klogproc/conversion/syd"
+	"klogproc/conversion/treq"
+	"klogproc/conversion/wag06"
+	"klogproc/conversion/wag07"
+	"klogproc/conversion/wsserver"
+	"klogproc/users"
 )
 
 // ------------------------------------
@@ -48,7 +48,7 @@ func (k *konText013Transformer) Transform(logRec conversion.InputRecord, recType
 	if ok {
 		return k.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("Invalid type for conversion by KonText transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for conversion by KonText transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -65,7 +65,7 @@ func (k *konText015Transformer) Transform(logRec conversion.InputRecord, recType
 	if ok {
 		return k.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("Invalid type for conversion by KonText transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for conversion by KonText transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -81,7 +81,7 @@ func (s *kwordsTransformer) Transform(logRec conversion.InputRecord, recType str
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("Invalid type for conversion by KWords transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for conversion by KWords transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -97,7 +97,7 @@ func (s *korpusDBTransformer) Transform(logRec conversion.InputRecord, recType s
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("Invalid type for conversion by KonText transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for conversion by KonText transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -113,7 +113,7 @@ func (s *mapkaTransformer) Transform(logRec conversion.InputRecord, recType stri
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("Invalid type for conversion by Mapka transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for conversion by Mapka transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -129,7 +129,7 @@ func (s *morfioTransformer) Transform(logRec conversion.InputRecord, recType str
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("Invalid type for conversion by Morfio transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for conversion by Morfio transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -145,7 +145,7 @@ func (s *skeTransformer) Transform(logRec conversion.InputRecord, recType string
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("Invalid type for conversion by SkE transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for conversion by SkE transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -161,7 +161,7 @@ func (s *shinyTransformer) Transform(logRec conversion.InputRecord, recType stri
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("Invalid type for conversion by Shiny transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for conversion by Shiny transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -177,7 +177,7 @@ func (s *sydTransformer) Transform(logRec conversion.InputRecord, recType string
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("Invalid type for conversion by SyD transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for conversion by SyD transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -193,7 +193,7 @@ func (s *treqTransformer) Transform(logRec conversion.InputRecord, recType strin
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("Invalid type for conversion by Treq transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for conversion by Treq transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -209,7 +209,7 @@ func (s *wag06Transformer) Transform(logRec conversion.InputRecord, recType stri
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("Invalid type for conversion by WaG 0.6 transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for conversion by WaG 0.6 transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -225,7 +225,7 @@ func (s *wag07Transformer) Transform(logRec conversion.InputRecord, recType stri
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("Invalid type for conversion by WaG 0.7 transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for conversion by WaG 0.7 transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -241,7 +241,7 @@ func (s *wsserverTransformer) Transform(logRec conversion.InputRecord, recType s
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("Invalid type for conversion by WSServer transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for conversion by WSServer transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -259,7 +259,7 @@ func GetLogTransformer(appType string, version string, userMap *users.UserMap) (
 		case "0.15":
 			return &konText015Transformer{t: &kontext015.Transformer{}}, nil
 		default:
-			return nil, fmt.Errorf("Cannot create transformer, unsupported KonText version: %s", version)
+			return nil, fmt.Errorf("cannot create transformer, unsupported KonText version: %s", version)
 		}
 	case conversion.AppTypeKwords:
 		return &kwordsTransformer{t: &kwords.Transformer{}}, nil
@@ -282,11 +282,11 @@ func GetLogTransformer(appType string, version string, userMap *users.UserMap) (
 		case "0.7":
 			return &wag07Transformer{t: &wag07.Transformer{}}, nil
 		default:
-			return nil, fmt.Errorf("Cannot create transformer, unsupported WaG version: %s", version)
+			return nil, fmt.Errorf("cannot create transformer, unsupported WaG version: %s", version)
 		}
 	case conversion.AppTypeWsserver:
 		return &wsserverTransformer{t: &wsserver.Transformer{}}, nil
 	default:
-		return nil, fmt.Errorf("Cannot find log transformer for app type %s", appType)
+		return nil, fmt.Errorf("cannot find log transformer for app type %s", appType)
 	}
 }

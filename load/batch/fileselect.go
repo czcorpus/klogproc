@@ -31,9 +31,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/fsop"
-	"github.com/czcorpus/klogproc/load/alarm"
+	"klogproc/conversion"
+	"klogproc/fsop"
+	"klogproc/load/alarm"
 )
 
 var (

@@ -25,7 +25,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/czcorpus/klogproc/conversion/celery"
+	"klogproc/conversion/celery"
 )
 
 type nullWriter struct {

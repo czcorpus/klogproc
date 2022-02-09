@@ -21,7 +21,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 var (

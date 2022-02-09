@@ -20,15 +20,12 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 // RunWriteConsumer runs a dummy (null) write consumer
-func RunWriteConsumer(incomingData <-chan *conversion.BoundOutputRecord) <-chan ConfirmMsg {
+func RunWriteConsumer(incomingData <-chan *conversion.BoundOutputRecord, printOut bool) <-chan ConfirmMsg {
 	confirmChan := make(chan ConfirmMsg)
-	defer func() {
-		close(confirmChan)
-	}()
 	go func() {
 		for item := range incomingData {
 			out, err := item.ToJSON()
@@ -36,9 +33,14 @@ func RunWriteConsumer(incomingData <-chan *conversion.BoundOutputRecord) <-chan 
 				log.Print("ERROR: ", err)
 
 			} else {
-				fmt.Println(string(out))
+				if printOut {
+					fmt.Println(string(out))
+				}
 			}
 		}
+		defer func() {
+			close(confirmChan)
+		}()
 	}()
 	return confirmChan
 }

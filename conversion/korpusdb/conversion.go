@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 func getQueryType(rec *InputRecord) string {

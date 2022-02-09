@@ -19,7 +19,7 @@ package kontext013
 import (
 	"testing"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 // cnkr.Action + cnkr.Corpus + cnkr.Datetime + cnkr.IPAddress + cnkr.Type + cnkr.UserAgent + cnkr.UserID

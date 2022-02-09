@@ -24,8 +24,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/fsop"
+	"klogproc/conversion"
+	"klogproc/fsop"
 )
 
 type updateRequest struct {

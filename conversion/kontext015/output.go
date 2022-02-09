@@ -23,7 +23,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 // importQueryType translates KonText/Bonito query type argument

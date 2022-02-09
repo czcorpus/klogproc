@@ -17,20 +17,16 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"path/filepath"
 
-	"github.com/czcorpus/klogproc/config"
-	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/ctype"
-	"github.com/czcorpus/klogproc/fsop"
-	"github.com/czcorpus/klogproc/load/batch"
-	"github.com/czcorpus/klogproc/load/sredis"
-	"github.com/czcorpus/klogproc/save"
-	"github.com/czcorpus/klogproc/save/elastic"
-	"github.com/czcorpus/klogproc/save/influx"
-	"github.com/czcorpus/klogproc/users"
+	"klogproc/botwatch"
+	"klogproc/config"
+	"klogproc/conversion"
+	"klogproc/fsop"
+	"klogproc/load/batch"
+	"klogproc/users"
+
 	"github.com/oschwald/geoip2-golang"
 )
 
@@ -54,11 +50,17 @@ type ClientAnalyzer interface {
 	AgentIsMonitor(rec conversion.InputRecord) bool
 	AgentIsBot(rec conversion.InputRecord) bool
 	HasBlacklistedIP(rec conversion.InputRecord) bool
+	Add(rec conversion.InputRecord)
+	GetBotCandidates() []botwatch.IPStats
+	StoreBotCandidates()
+	ResetBotCandidates()
+	Close()
 }
 
 type ProcessOptions struct {
 	worklogReset  bool
 	dryRun        bool
+	analysisOnly  bool
 	datetimeRange batch.DatetimeRange
 }
 
@@ -70,7 +72,6 @@ type CNKLogProcessor struct {
 	anonymousUsers []int
 	geoIPDb        *geoip2.Reader
 	chunkSize      int
-	currIdx        int
 	numNonLoggable int
 	logTransformer conversion.LogItemTransformer
 	clientAnalyzer ClientAnalyzer
@@ -89,6 +90,7 @@ func (clp *CNKLogProcessor) recordIsLoggable(logRec conversion.InputRecord) bool
 // ProcItem transforms input log record into an output format.
 // In case an unsupported record is encountered, nil is returned.
 func (clp *CNKLogProcessor) ProcItem(logRec conversion.InputRecord, tzShiftMin int) conversion.OutputRecord {
+	clp.clientAnalyzer.Add(logRec)
 	if clp.recordIsLoggable(logRec) {
 		rec, err := clp.logTransformer.Transform(logRec, clp.appType, tzShiftMin, clp.anonymousUsers)
 		if err != nil {
@@ -112,33 +114,6 @@ func (clp *CNKLogProcessor) GetAppType() string {
 func (clp *CNKLogProcessor) GetAppVersion() string {
 	return clp.appVersion
 }
-
-// ---------
-
-// retryRescuedItems inserts (sychronously) rescued raw bulk
-// insert items to ElasticSearch. There is no additial rescue here.
-// If something goes wrong we stop (while keeping data in
-// rescue queue) and refuse to continue.
-func retryRescuedItems(appType string, queue *sredis.RedisQueue, conf *elastic.ConnectionConf) error {
-	iterator := queue.GetRescuedChunksIterator()
-	chunk := iterator.GetNextChunk()
-	log.Printf("INFO: Found %d rescued items. I am going to re-insert them.", len(chunk))
-	for len(chunk) > 0 {
-		err := elastic.BulkWriteRequest(chunk, appType, conf)
-		if err != nil {
-			return fmt.Errorf("failed to reuse rescued data chunk: %s", err)
-		}
-		fixed, err := iterator.RemoveVisitedItems()
-		if err != nil {
-			return fmt.Errorf("failed to remove rescued & applied data chunk: %s", err)
-		}
-		log.Printf("INFO: Rescued %d bulk insert rows from the previous failed run(s)", fixed)
-		chunk = iterator.GetNextChunk()
-	}
-	return nil
-}
-
-// ----
 
 // ProcessLogs runs through all the logs found in configuration and matching
 // some basic properties (it is a query, preferably from a human user etc.).
@@ -165,93 +140,16 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 	}
 	defer geoDb.Close()
 
-	var clientTypeDetector ClientAnalyzer
-	if conf.BotDefsPath != "" {
-		clientTypeDetector, err = ctype.LoadFromResource(conf.BotDefsPath)
-		if err != nil {
-			log.Fatal("FATAL: ", err)
-		}
-		log.Printf("INFO: using bot definitions from resource %s", conf.BotDefsPath)
-
-	} else {
-		clientTypeDetector = &ctype.LegacyClientTypeAnalyzer{}
-		log.Print("WARNING: no bots configuration provided (botDefsPath), using legacy analyzer")
+	clientTypeDetector, err := botwatch.NewClientTypeAnalyzer(conf.BotDetection)
+	if err != nil {
+		log.Fatal("FATAL: ", err)
 	}
 
 	finishEvent := make(chan bool)
 	go func() {
 		switch action {
 		case actionBatch:
-			lt, err := GetLogTransformer(conf.LogFiles.AppType, conf.LogFiles.Version, userMap)
-			if err != nil {
-				log.Fatal(err)
-			}
-			processor := &CNKLogProcessor{
-				geoIPDb:        geoDb,
-				chunkSize:      conf.ElasticSearch.PushChunkSize,
-				appType:        conf.LogFiles.AppType,
-				appVersion:     conf.LogFiles.Version,
-				logTransformer: lt,
-				anonymousUsers: conf.AnonymousUsers,
-				clientAnalyzer: clientTypeDetector,
-			}
-			channelWriteES := make(chan *conversion.BoundOutputRecord, conf.ElasticSearch.PushChunkSize*2)
-			channelWriteInflux := make(chan *conversion.BoundOutputRecord, conf.InfluxDB.PushChunkSize)
-			worklog := batch.NewWorklog(conf.LogFiles.WorklogPath)
-			log.Printf("INFO: using worklog %s", conf.LogFiles.WorklogPath)
-			if options.worklogReset {
-				log.Printf("truncated worklog %v", worklog)
-				err := worklog.Reset()
-				if err != nil {
-					log.Fatalf("FATAL: unable to initialize worklog: %s", err)
-				}
-			}
-			defer worklog.Save()
-
-			syncChan := make(chan interface{})
-			if options.dryRun {
-				ch1 := save.RunWriteConsumer(channelWriteES)
-				go func() {
-					for m := range ch1 {
-						syncChan <- m
-					}
-				}()
-				ch2 := save.RunWriteConsumer(channelWriteInflux)
-				go func() {
-					for m := range ch2 {
-						syncChan <- m
-					}
-				}()
-				log.Print("WARNING: using dry-run mode, output goes to stdout")
-
-			} else {
-				ch1 := elastic.RunWriteConsumer(conf.LogFiles.AppType, &conf.ElasticSearch, channelWriteES)
-				ch2 := influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux)
-				go func() {
-					for confirm := range ch1 {
-						if confirm.Error != nil {
-							log.Print("ERROR: failed to save data to ElasticSearch db: ", confirm.Error)
-							// TODO
-						}
-					}
-				}()
-				go func() {
-					for confirm := range ch2 {
-						if confirm.Error != nil {
-							log.Print("ERROR: failed to save data to InfluxDB db: ", confirm.Error)
-							// TODO
-						}
-					}
-				}()
-			}
-			proc := batch.CreateLogFileProcFunc(processor, options.datetimeRange, channelWriteES, channelWriteInflux)
-			proc(&conf.LogFiles, worklog.GetLastRecord())
-			close(channelWriteES)
-			close(channelWriteInflux)
-			for range syncChan {
-			}
-			finishEvent <- true
-			log.Printf("INFO: Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)
+			runBatchAction(conf, options, geoDb, userMap, clientTypeDetector, finishEvent)
 
 		case actionTail:
 			runTailAction(conf, geoDb, userMap, clientTypeDetector, finishEvent)

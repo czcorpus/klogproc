@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 func exportArgs(data map[string]interface{}) map[string]interface{} {

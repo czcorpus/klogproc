@@ -19,7 +19,7 @@ package mapka
 import (
 	"strings"
 
-	"github.com/czcorpus/klogproc/load/accesslog"
+	"klogproc/load/accesslog"
 )
 
 func getAction(path string) (string, *RequestParams) {

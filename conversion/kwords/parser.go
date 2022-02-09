@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 /*

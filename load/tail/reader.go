@@ -22,8 +22,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/czcorpus/klogproc/conversion"
-	"github.com/czcorpus/klogproc/fsop"
+	"klogproc/conversion"
+	"klogproc/fsop"
 )
 
 // FileTailReader reads newly added lines to a file.

@@ -19,7 +19,8 @@ package kontext015
 import (
 	"testing"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
+
 	"github.com/stretchr/testify/assert"
 )
 

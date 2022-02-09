@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/czcorpus/klogproc/conversion"
+	"klogproc/conversion"
 )
 
 // createID creates an idempotent ID of rec based on its properties.

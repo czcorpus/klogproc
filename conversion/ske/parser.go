@@ -19,7 +19,7 @@ package ske
 import (
 	"strings"
 
-	"github.com/czcorpus/klogproc/load/accesslog"
+	"klogproc/load/accesslog"
 )
 
 const (
