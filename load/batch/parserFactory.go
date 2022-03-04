@@ -25,6 +25,7 @@ import (
 	"klogproc/conversion/korpusdb"
 	"klogproc/conversion/kwords"
 	"klogproc/conversion/mapka"
+	"klogproc/conversion/mapka2"
 	"klogproc/conversion/morfio"
 	"klogproc/conversion/shiny"
 	"klogproc/conversion/ske"
@@ -89,6 +90,16 @@ type mapkaLineParser struct {
 }
 
 func (parser *mapkaLineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
+}
+
+// ------------------------------------
+
+type mapka2LineParser struct {
+	lp *mapka2.LineParser
+}
+
+func (parser *mapka2LineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -188,14 +199,21 @@ func NewLineParser(appType string, version string, appErrRegister conversion.App
 		case "0.15":
 			return &kontext015LineParser{lp: kontext015.NewLineParser(appErrRegister)}, nil
 		default:
-			return nil, fmt.Errorf("Cannot find parser - unsupported version of KonText specified: %s", version)
+			return nil, fmt.Errorf("cannot find parser - unsupported version of KonText specified: %s", version)
 		}
 	case conversion.AppTypeKwords:
 		return &kwordsLineParser{lp: &kwords.LineParser{}}, nil
 	case conversion.AppTypeKorpusDB:
 		return &korpusDBLineParser{lp: &korpusdb.LineParser{}}, nil
 	case conversion.AppTypeMapka:
-		return &mapkaLineParser{lp: &mapka.LineParser{}}, nil
+		switch version {
+		case "1":
+			return &mapkaLineParser{lp: &mapka.LineParser{}}, nil
+		case "2":
+			return &mapka2LineParser{lp: &mapka2.LineParser{}}, nil
+		default:
+			return nil, fmt.Errorf("cannot find parser - unsupported version of Mapka specified: %s", version)
+		}
 	case conversion.AppTypeMorfio:
 		return &morfioLineParser{lp: &morfio.LineParser{}}, nil
 	case conversion.AppTypeSke:
@@ -211,7 +229,7 @@ func NewLineParser(appType string, version string, appErrRegister conversion.App
 		case "0.7":
 			return &wag07LineParser{lp: &wag07.LineParser{}}, nil
 		default:
-			return nil, fmt.Errorf("Cannot find parser - unsupported version of WaG specified: %s", version)
+			return nil, fmt.Errorf("cannot find parser - unsupported version of WaG specified: %s", version)
 		}
 	case conversion.AppTypeWsserver:
 		return &wsserverLineParser{lp: &wsserver.LineParser{}}, nil
