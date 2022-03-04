@@ -153,6 +153,9 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, tzShift
 		i := 0
 		for _, item := range tmp {
 			logPath := path.Join(dirPath, item.Name())
+			if !fsop.IsFile(logPath) {
+				continue
+			}
 			matches, merr := LogFileMatches(logPath, minTimestamp, strictMatch, tzShiftMin)
 			if merr != nil {
 				log.Println("ERROR: Failed to check log file ", logPath)

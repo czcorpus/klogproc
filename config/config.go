@@ -97,5 +97,9 @@ func Load(path string) *Main {
 	}
 	var conf Main
 	json.Unmarshal(rawData, &conf)
+	if conf.BotDetection.NumRequestsThreshold == 0 {
+		log.Print("WARNING: botDetection.nmRequestsThreshold not set - using default 100")
+		conf.BotDetection.NumRequestsThreshold = 100
+	}
 	return &conf
 }

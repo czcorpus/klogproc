@@ -23,6 +23,7 @@ import (
 	"klogproc/conversion/korpusdb"
 	"klogproc/conversion/kwords"
 	"klogproc/conversion/mapka"
+	"klogproc/conversion/mapka2"
 	"klogproc/conversion/morfio"
 	"klogproc/conversion/shiny"
 	"klogproc/conversion/ske"
@@ -114,6 +115,22 @@ func (s *mapkaTransformer) Transform(logRec conversion.InputRecord, recType stri
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
 	return nil, fmt.Errorf("invalid type for conversion by Mapka transformer %T", logRec)
+}
+
+// ------------------------------------
+
+type mapka2Transformer struct {
+	t *mapka2.Transformer
+}
+
+// Transform transforms Mapka (v2) app log record types as general InputRecord
+// In case of type mismatch, error is returned.
+func (s *mapka2Transformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+	tRec, ok := logRec.(*mapka2.InputRecord)
+	if ok {
+		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
+	}
+	return nil, fmt.Errorf("invalid type for conversion by Mapka2 transformer %T", logRec)
 }
 
 // ------------------------------------
@@ -266,7 +283,14 @@ func GetLogTransformer(appType string, version string, userMap *users.UserMap) (
 	case conversion.AppTypeKorpusDB:
 		return &korpusDBTransformer{t: &korpusdb.Transformer{}}, nil
 	case conversion.AppTypeMapka:
-		return &mapkaTransformer{t: mapka.NewTransformer()}, nil
+		switch version {
+		case "1":
+			return &mapkaTransformer{t: mapka.NewTransformer()}, nil
+		case "2":
+			return &mapka2Transformer{t: mapka2.NewTransformer()}, nil
+		default:
+			return nil, fmt.Errorf("cannot create transformer, unsupported Mapka version: %s", version)
+		}
 	case conversion.AppTypeMorfio:
 		return &morfioTransformer{t: &morfio.Transformer{}}, nil
 	case conversion.AppTypeSke:
