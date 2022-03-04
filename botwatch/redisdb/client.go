@@ -48,6 +48,9 @@ type RedisWriter struct {
 }
 
 func (rw *RedisWriter) WriteReport(ip string, report *ActivityReport) error {
+	if rw.client == nil {
+		return nil
+	}
 	cmd := rw.client.HGet(rw.ctx, rw.blockListKey, ip)
 	if cmd.Err() == redis.Nil {
 		report.TotalReports = 1
@@ -76,11 +79,14 @@ func (rw *RedisWriter) WriteReport(ip string, report *ActivityReport) error {
 }
 
 func NewRedisWriter(conf ConnectionConf) *RedisWriter {
-	client := redis.NewClient(&redis.Options{
-		Addr:     conf.Address,
-		Password: "",
-		DB:       conf.DB,
-	})
+	var client *redis.Client
+	if conf.Address != "" {
+		client = redis.NewClient(&redis.Options{
+			Addr:     conf.Address,
+			Password: "",
+			DB:       conf.DB,
+		})
+	}
 	return &RedisWriter{
 		client:       client,
 		ctx:          context.Background(),
