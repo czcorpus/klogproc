@@ -52,12 +52,18 @@ func (r *InputRecord) GetTime() time.Time {
 
 // GetClientIP returns a normalized IP address info
 func (r *InputRecord) GetClientIP() net.IP {
-	return net.ParseIP(r.Request.RemoteAddr)
+	if r.Request != nil {
+		return net.ParseIP(r.Request.RemoteAddr)
+	}
+	return net.IPv4zero
 }
 
 // GetUserAgent returns a raw HTTP user agent info as provided by the client
 func (r *InputRecord) GetUserAgent() string {
-	return r.Request.HTTPUserAgent
+	if r.Request != nil {
+		return r.Request.HTTPUserAgent
+	}
+	return ""
 }
 
 // IsProcessable returns true if there was no error in reading the record
