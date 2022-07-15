@@ -22,10 +22,11 @@ package alarm
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type errorRecord struct {
@@ -96,10 +97,10 @@ func (tpa *TailProcAlarm) Evaluate() {
 
 		subj := fmt.Sprintf("Klogproc ERROR alarm for file %s (type %s)", tpa.fileInfo.GetPath(),
 			tpa.fileInfo.GetAppType())
-		log.Printf("INFO: sending alarm notification for %s", tpa.fileInfo.GetPath())
+		log.Info().Msgf("sending alarm notification for %s", tpa.fileInfo.GetPath())
 		err := tpa.notifier.SendNotification(subj, msg.String())
 		if err != nil {
-			log.Print("ERROR: ", err)
+			log.Error().Msgf("%s", err)
 		}
 		tpa.Reset()
 	}

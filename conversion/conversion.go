@@ -18,11 +18,12 @@ package conversion
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -293,7 +294,7 @@ func ConvertDatetimeString(datetime string) time.Time {
 	if err == nil {
 		return t
 	}
-	log.Print("WARNING: ", err)
+	log.Warn().Msgf("%s", err)
 	return time.Time{}
 }
 
@@ -302,7 +303,7 @@ func ConvertDatetimeStringNoTZ(datetime string) time.Time {
 	if err == nil {
 		return t
 	}
-	log.Print("WARNING: ", err)
+	log.Warn().Msgf("%s", err)
 	return time.Time{}
 }
 
@@ -311,7 +312,7 @@ func ConvertDatetimeStringWithMillisNoTZ(datetime string) time.Time {
 	if err == nil {
 		return t
 	}
-	log.Print("WARNING: ", err)
+	log.Warn().Msgf("%s", err)
 	return time.Time{}
 }
 
@@ -320,6 +321,6 @@ func ConvertAccessLogDatetimeString(datetime string) time.Time {
 	if err == nil {
 		return t
 	}
-	log.Print("WARNING: ", err)
+	log.Warn().Msgf("%s", err)
 	return time.Time{}
 }

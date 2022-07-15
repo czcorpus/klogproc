@@ -19,13 +19,14 @@ package botwatch
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"strings"
 
 	"klogproc/botwatch/redisdb"
 	"klogproc/common"
 	"klogproc/conversion"
+
+	"github.com/rs/zerolog/log"
 )
 
 type BotInfo struct {
@@ -130,7 +131,7 @@ func NewClientTypeAnalyzer(cfg BotDetectionConf) (*ClientTypeAnalyzer, error) {
 	var listIP []net.IP
 
 	if cfg.BotDefsPath != "" {
-		log.Printf("INFO: using bot definitions from resource %s", cfg.BotDefsPath)
+		log.Info().Msgf("using bot definitions from resource %s", cfg.BotDefsPath)
 		rawData, err := common.LoadSupportedResource(cfg.BotDefsPath)
 		if err != nil {
 			return nil, err
@@ -155,9 +156,9 @@ func NewClientTypeAnalyzer(cfg BotDetectionConf) (*ClientTypeAnalyzer, error) {
 		}
 
 	} else {
-		log.Print("WARNING: no bots configuration provided (botDefsPath)")
+		log.Warn().Msg("no bots configuration provided (botDefsPath)")
 	}
-	log.Printf("INFO: bot defs: %d, monitors defs: %d, blacklisted IPs: %d", len(conf.Bots), len(conf.Monitors), len(listIP))
+	log.Info().Msgf("bot defs: %d, monitors defs: %d, blacklisted IPs: %d", len(conf.Bots), len(conf.Monitors), len(listIP))
 
 	outDB := redisdb.NewRedisWriter(cfg.Redis)
 

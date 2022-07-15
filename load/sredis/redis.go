@@ -19,12 +19,12 @@ package sredis
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"klogproc/conversion"
 	"klogproc/conversion/kontext013"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/rs/zerolog/log"
 )
 
 // RedisConf is a structure containing information
@@ -77,17 +77,17 @@ func OpenRedisQueue(address string, database int, queueKey string, tzShift int) 
 func (rc *RedisQueue) GetItems() []conversion.InputRecord {
 
 	size := int(rc.db.LLen(rc.ctx, rc.queueKey).Val())
-	log.Printf("INFO: Found %d records in log queue", size)
+	log.Info().Msgf("Found %d records in log queue", size)
 	ans := make([]conversion.InputRecord, 0, size)
 
 	for i := 0; i < size; i++ {
 		rawItem, err := rc.db.LPop(rc.ctx, rc.queueKey).Bytes()
 		if err != nil {
-			log.Printf("WARNING: %s, orig item: %s", err, rawItem)
+			log.Warn().Msgf("%s, orig item: %s", err, rawItem)
 		}
 		item, err := kontext013.ImportJSONLog(rawItem)
 		if err != nil {
-			log.Printf("WARNING: %s, orig item: %s", err, rawItem)
+			log.Warn().Msgf("%s, orig item: %s", err, rawItem)
 
 		} else {
 			ans = append(ans, item)
@@ -103,7 +103,7 @@ func (rc *RedisQueue) RescueFailedChunks(data [][]byte) error {
 		rc.db.RPush(rc.ctx, rc.failedItemsKey, item)
 	}
 	if len(data) > 0 {
-		log.Printf("INFO: Stored raw data to be reinserted next time (num bulk insert rows: %d)", len(data))
+		log.Info().Msgf("Stored raw data to be reinserted next time (num bulk insert rows: %d)", len(data))
 	}
 	return nil
 }

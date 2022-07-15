@@ -24,12 +24,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
 	"net/mail"
 	"net/smtp"
 	"strings"
 
 	"klogproc/config"
+
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -94,7 +95,7 @@ func NewEmailNotifier(conf *config.Email) (*DefaultEmailNotifier, error) {
 		return nil, errors.New("cannot create e-mail sender, missing configuration")
 	}
 	if conf.Sender == "" {
-		log.Printf("WARNING: e-mail sender not set - using default %s", defaultSender)
+		log.Warn().Msgf("e-mail sender not set - using default %s", defaultSender)
 		conf.Sender = defaultSender
 	}
 	recipients := make([]*mail.Address, len(conf.NotificationEmails))
@@ -105,6 +106,6 @@ func NewEmailNotifier(conf *config.Email) (*DefaultEmailNotifier, error) {
 			return nil, fmt.Errorf("address <%s> not parsed: %s", addr, err)
 		}
 	}
-	log.Printf("INFO: creating e-mail sender with recipient(s) %s", strings.Join(conf.NotificationEmails, ", "))
+	log.Info().Msgf("creating e-mail sender with recipient(s) %s", strings.Join(conf.NotificationEmails, ", "))
 	return &DefaultEmailNotifier{conf: conf, recipients: recipients}, nil
 }

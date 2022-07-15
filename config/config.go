@@ -17,7 +17,6 @@ package config
 import (
 	"encoding/json"
 	"flag"
-	"log"
 
 	"klogproc/botwatch"
 	"klogproc/common"
@@ -28,6 +27,8 @@ import (
 	"klogproc/load/tail"
 	"klogproc/save/elastic"
 	"klogproc/save/influx"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Email configures e-mail client for sending misc. notifications and alarms
@@ -75,17 +76,17 @@ func Validate(conf *Main) {
 	if conf.ElasticSearch.IsConfigured() {
 		err = conf.ElasticSearch.Validate()
 		if err != nil {
-			log.Fatal("FATAL: ", err)
+			log.Fatal().Msgf("%s", err)
 		}
 	}
 	if conf.InfluxDB.IsConfigured() {
 		err = conf.InfluxDB.Validate()
 		if err != nil {
-			log.Fatal("FATAL: ", err)
+			log.Fatal().Msgf("%s", err)
 		}
 	}
 	if !fsop.IsFile(conf.GeoIPDbPath) {
-		log.Fatal("FATAL: Invalid GeoIPDbPath: '", conf.GeoIPDbPath, "'")
+		log.Fatal().Msgf("Invalid GeoIPDbPath: '%s'", conf.GeoIPDbPath)
 	}
 }
 
@@ -93,12 +94,12 @@ func Validate(conf *Main) {
 func Load(path string) *Main {
 	rawData, err := common.LoadSupportedResource(flag.Arg(1))
 	if err != nil {
-		log.Fatal("FATAL: ", err)
+		log.Fatal().Msgf("%s", err)
 	}
 	var conf Main
 	json.Unmarshal(rawData, &conf)
 	if conf.BotDetection.NumRequestsThreshold == 0 {
-		log.Print("WARNING: botDetection.nmRequestsThreshold not set - using default 100")
+		log.Warn().Msg("botDetection.nmRequestsThreshold not set - using default 100")
 		conf.BotDetection.NumRequestsThreshold = 100
 	}
 	return &conf

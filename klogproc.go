@@ -17,11 +17,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"os"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"klogproc/config"
 	"klogproc/load/batch"
@@ -53,10 +56,10 @@ func updateRecords(conf *config.Main, options *ProcessOptions) {
 		totalUpdated, err := client.ManualBulkRecordUpdate(conf.ElasticSearch.Index, updConf,
 			conf.RecUpdate.Update, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize)
 		if err == nil {
-			log.Printf("INFO: Updated %d items\n", totalUpdated)
+			log.Info().Msgf("Updated %d items\n", totalUpdated)
 
 		} else {
-			log.Fatal("FATAL: Update error: ", err)
+			log.Fatal().Msgf("Update error: ", err)
 		}
 	}
 }
@@ -67,10 +70,10 @@ func removeKeyFromRecords(conf *config.Main, options *ProcessOptions) {
 		totalUpdated, err := client.ManualBulkRecordKeyRemove(conf.ElasticSearch.Index, updConf,
 			conf.RecUpdate.RemoveKey, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize)
 		if err == nil {
-			log.Printf("INFO: Removed key %s from %d items\n", conf.RecUpdate.RemoveKey, totalUpdated)
+			log.Info().Msgf("Removed key %s from %d items\n", conf.RecUpdate.RemoveKey, totalUpdated)
 
 		} else {
-			log.Fatal("FATAL: Update error: ", err)
+			log.Fatal().Msgf("Update error: ", err)
 		}
 	}
 }
@@ -95,19 +98,29 @@ func help(topic string) {
 	fmt.Println()
 }
 
-func setup(confPath string) (*config.Main, *os.File) {
+func setupLog(path string) {
+	if path != "" {
+		logf, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal().Msgf("Failed to initialize log. File: %s", path)
+		}
+		log.Logger = log.Output(logf)
+
+	} else {
+		log.Logger = log.Output(
+			zerolog.ConsoleWriter{
+				Out:        os.Stderr,
+				TimeFormat: time.RFC3339,
+			},
+		)
+	}
+}
+
+func setup(confPath string) *config.Main {
 	conf := config.Load(confPath)
 	config.Validate(conf)
-
-	if conf.LogPath != "" {
-		logf, err := os.OpenFile(conf.LogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			log.Fatalf("Failed to initialize log. File: %s", conf.LogPath)
-		}
-		log.SetOutput(logf)
-		return conf, logf
-	}
-	return conf, nil
+	setupLog(conf.LogPath)
+	return conf
 }
 
 func main() {
@@ -128,28 +141,27 @@ func main() {
 	var err error
 	procOpts.datetimeRange, err = batch.NewDateTimeRange(fromTimestamp, toTimestamp)
 	if err != nil {
-		log.Fatal("FATAL: ", err)
+		log.Fatal().Msgf("%s", err)
 	}
 
 	var conf *config.Main
-	var logf *os.File
 	action := flag.Arg(0)
 
 	switch action {
 	case actionHelp:
 		help(flag.Arg(1))
 	case actionDocupdate:
-		conf, logf = setup(flag.Arg(1))
+		conf = setup(flag.Arg(1))
 		updateRecords(conf, procOpts)
 	case actionKeyremove:
-		conf, logf = setup(flag.Arg(1))
+		conf = setup(flag.Arg(1))
 		removeKeyFromRecords(conf, procOpts)
 	case actionBatch, actionTail, actionRedis:
-		conf, logf = setup(flag.Arg(1))
+		conf = setup(flag.Arg(1))
 		log.Print(startingServiceMsg)
 		processLogs(conf, action, procOpts)
 	case actionCelery:
-		conf, logf = setup(flag.Arg(1))
+		conf = setup(flag.Arg(1))
 		log.Print(startingServiceMsg)
 		processCeleryStatus(conf)
 	case actionVersion:
@@ -157,9 +169,5 @@ func main() {
 	default:
 		fmt.Printf("Unknown action [%s]. Try -h for help\n", flag.Arg(0))
 		os.Exit(1)
-	}
-
-	if logf != nil {
-		logf.Close()
 	}
 }

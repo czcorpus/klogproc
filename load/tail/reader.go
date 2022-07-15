@@ -19,11 +19,12 @@ package tail
 import (
 	"bufio"
 	"io"
-	"log"
 	"os"
 
 	"klogproc/conversion"
 	"klogproc/fsop"
+
+	"github.com/rs/zerolog/log"
 )
 
 // FileTailReader reads newly added lines to a file.
@@ -69,7 +70,7 @@ func (ftw *FileTailReader) ApplyNewContent(processor FileTailProcessor, prevPosi
 
 	} else if !prevPosition.Written {
 		ftw.internalSeek = prevPosition.SeekStart
-		log.Printf("WARNING: FileTailReader(%s) updated internalSeek position to %d due to unsaved last record", ftw.filePath, prevPosition.SeekStart)
+		log.Warn().Msgf("FileTailReader(%s) updated internalSeek position to %d due to unsaved last record", ftw.filePath, prevPosition.SeekStart)
 		ftw.file.Seek(ftw.internalSeek, io.SeekStart)
 
 	} else if ftw.internalSeek != prevPosition.SeekEnd {
@@ -83,7 +84,7 @@ func (ftw *FileTailReader) ApplyNewContent(processor FileTailProcessor, prevPosi
 		}
 		ftw.internalSeek = prevPosition.SeekEnd
 		ftw.file.Seek(ftw.internalSeek, io.SeekStart)
-		log.Printf("WARNING: FileTailReader[%s] updated internalSeek position to %d due to updated position status", ftw.filePath, ftw.internalSeek)
+		log.Warn().Msgf("FileTailReader[%s] updated internalSeek position to %d due to updated position status", ftw.filePath, ftw.internalSeek)
 	}
 
 	sc := bufio.NewReader(ftw.file)

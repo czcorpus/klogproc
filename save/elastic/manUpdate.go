@@ -19,7 +19,8 @@ package elastic
 import (
 	"bytes"
 	"encoding/json"
-	"log"
+
+	"github.com/rs/zerolog/log"
 )
 
 // DocUpdateFilter specifies parameters of docupdate operation
@@ -106,12 +107,12 @@ func (c *ESClient) bulkUpdateUpdRecordScroll(index string, hits Hits, rawOp []by
 	for _, item := range hits.Hits {
 		jsonMeta, err := createDocBulkMetaRecord(index, item.Type, item.ID)
 		if err != nil {
-			log.Panicf("Failed to generate bulk update JSON (meta): %v", err)
+			log.Panic().Msgf("Failed to generate bulk update JSON (meta): %v", err)
 		}
 		jsonLines[stopIdx] = jsonMeta
-		//log.Print("json meta: ", string(jsonMeta))
+		//log.Debug().Msgf("json meta: %s", string(jsonMeta))
 		jsonLines[stopIdx+1] = rawOp
-		//log.Print("json data: ", string(jsonData))
+		//log.Debug().Msgf("json data: %s", string(jsonData))
 		stopIdx += 2
 	}
 	jsonLines[stopIdx] = make([]byte, 0)
@@ -170,7 +171,7 @@ func (c *ESClient) ManualBulkRecordUpdate(index string, filters DocUpdateFilter,
 
 	jsonData, err := createLogRecUpdQuery(upd)
 	if err != nil {
-		log.Fatalf("Failed to generate bulk update JSON (values): %s", err)
+		log.Fatal().Msgf("Failed to generate bulk update JSON (values): %s", err)
 	}
 	return c.manualBulkRecordOp(index, filters, jsonData, scrollTTL, srchChunkSize)
 }
@@ -180,7 +181,7 @@ func (c *ESClient) ManualBulkRecordKeyRemove(index string, filters DocUpdateFilt
 
 	jsonData, err := createLogRecKeyRemoveQuery(key)
 	if err != nil {
-		log.Fatalf("Failed to generate bulk update JSON (values): %s", err)
+		log.Fatal().Msgf("Failed to generate bulk update JSON (values): %s", err)
 	}
 	return c.manualBulkRecordOp(index, filters, jsonData, scrollTTL, srchChunkSize)
 }

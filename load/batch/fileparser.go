@@ -23,11 +23,12 @@ package batch
 
 import (
 	"bufio"
-	"log"
 	"os"
 	"path/filepath"
 
 	"klogproc/conversion"
+
+	"github.com/rs/zerolog/log"
 )
 
 // newParser creates a new instance of the Parser.
@@ -80,11 +81,11 @@ func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, datetimeRange
 		if err == nil {
 			recTime := rec.GetTime()
 			if datetimeRange.From != nil && recTime.Before(*datetimeRange.From) {
-				log.Printf("Skipping line %d (timestamp: %v) due to required time range", i, recTime)
+				log.Info().Msgf("Skipping line %d (timestamp: %v) due to required time range", i, recTime)
 				continue
 			}
 			if datetimeRange.To != nil && recTime.After(*datetimeRange.To) {
-				log.Printf("Stopping file processing - record at line %d (timestamp: %v) is newer than the required limit %v",
+				log.Info().Msgf("Stopping file processing - record at line %d (timestamp: %v) is newer than the required limit %v",
 					i, recTime, datetimeRange.To)
 				break
 			}
@@ -100,9 +101,9 @@ func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, datetimeRange
 		} else {
 			switch tErr := err.(type) {
 			case conversion.LineParsingError:
-				log.Printf("INFO: file %s, %s", p.fileName, tErr)
+				log.Info().Msgf("file %s, %s", p.fileName, tErr)
 			default:
-				log.Print("ERROR: ", tErr)
+				log.Error().Msgf("%s", tErr)
 			}
 
 		}

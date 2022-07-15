@@ -17,8 +17,9 @@
 package main
 
 import (
-	"log"
 	"path/filepath"
+
+	"github.com/rs/zerolog/log"
 
 	"klogproc/botwatch"
 	"klogproc/config"
@@ -35,7 +36,7 @@ func applyLocation(rec conversion.InputRecord, db *geoip2.Reader, outRec convers
 	if ip != nil {
 		city, err := db.City(ip)
 		if err != nil {
-			log.Printf("Failed to fetch GeoIP data for IP %s: %s", ip.String(), err)
+			log.Error().Msgf("Failed to fetch GeoIP data for IP %s: %s", ip.String(), err)
 
 		} else {
 			outRec.SetLocation(city.Country.Names["en"], float32(city.Location.Latitude),
@@ -81,7 +82,7 @@ func (clp *CNKLogProcessor) recordIsLoggable(logRec conversion.InputRecord) bool
 	isBlacklisted := false
 	if clp.clientAnalyzer.HasBlacklistedIP(logRec) {
 		isBlacklisted = true
-		log.Printf("INFO: Found blacklisted IP %s", logRec.GetClientIP().String())
+		log.Info().Msgf("Found blacklisted IP %s", logRec.GetClientIP().String())
 	}
 	return !clp.clientAnalyzer.AgentIsBot(logRec) && !clp.clientAnalyzer.AgentIsMonitor(logRec) &&
 		!isBlacklisted && logRec.IsProcessable()
@@ -94,7 +95,7 @@ func (clp *CNKLogProcessor) ProcItem(logRec conversion.InputRecord, tzShiftMin i
 	if clp.recordIsLoggable(logRec) {
 		rec, err := clp.logTransformer.Transform(logRec, clp.appType, tzShiftMin, clp.anonymousUsers)
 		if err != nil {
-			log.Printf("ERROR: failed to transform item %s: %s", logRec, err)
+			log.Error().Msgf("failed to transform item %s: %s", logRec, err)
 			return nil
 		}
 		applyLocation(logRec, clp.geoIPDb, rec)
@@ -128,21 +129,21 @@ func (clp *CNKLogProcessor) GetAppVersion() string {
 func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 	geoDb, err := geoip2.Open(conf.GeoIPDbPath)
 	if err != nil {
-		log.Fatal("FATAL: ", err)
+		log.Fatal().Msgf("%s", err)
 	}
 	userMap := users.EmptyUserMap()
 	confPath := filepath.Join(conf.CustomConfDir, "usermap.json")
 	if fsop.IsFile(confPath) {
 		userMap, err = users.LoadUserMap(confPath)
 		if err != nil {
-			log.Fatal("FATAL: ", err)
+			log.Fatal().Msgf("%s", err)
 		}
 	}
 	defer geoDb.Close()
 
 	clientTypeDetector, err := botwatch.NewClientTypeAnalyzer(conf.BotDetection)
 	if err != nil {
-		log.Fatal("FATAL: ", err)
+		log.Fatal().Msgf("%s", err)
 	}
 
 	finishEvent := make(chan bool)

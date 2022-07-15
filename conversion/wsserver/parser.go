@@ -18,8 +18,9 @@ package wsserver
 
 import (
 	"encoding/json"
-	"log"
 	"regexp"
+
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -35,7 +36,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 	if len(srch) > 0 {
 		err := json.Unmarshal([]byte(srch[1]), ans)
 		if err != nil {
-			log.Print("ERROR: ", err)
+			log.Error().Msgf("%s", err)
 
 		} else {
 			ans.isProcessable = true

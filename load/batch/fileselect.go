@@ -24,7 +24,6 @@ import (
 	"bufio"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"regexp"
@@ -34,6 +33,8 @@ import (
 	"klogproc/conversion"
 	"klogproc/fsop"
 	"klogproc/load/alarm"
+
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -158,7 +159,7 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, tzShift
 			}
 			matches, merr := LogFileMatches(logPath, minTimestamp, strictMatch, tzShiftMin)
 			if merr != nil {
-				log.Println("ERROR: Failed to check log file ", logPath)
+				log.Error().Msgf("Failed to check log file %s", logPath)
 
 			} else if matches {
 				ans[i] = logPath
@@ -191,7 +192,7 @@ func CreateLogFileProcFunc(processor LogItemProcessor, datetimeRange DatetimeRan
 		} else {
 			files = []string{conf.SrcPath}
 		}
-		log.Printf("Found %d file(s) to process in %s", len(files), conf.SrcPath)
+		log.Info().Msgf("Found %d file(s) to process in %s", len(files), conf.SrcPath)
 		var procAlarm conversion.AppErrorRegister
 		if conf.NumErrorsAlarm > 0 {
 			procAlarm = &alarm.BatchProcAlarm{}
@@ -200,7 +201,7 @@ func CreateLogFileProcFunc(processor LogItemProcessor, datetimeRange DatetimeRan
 			procAlarm = &alarm.NullAlarm{}
 		}
 		if conf.TZShift != 0 {
-			log.Printf("Found time-zone correction %d minutes", conf.TZShift)
+			log.Info().Msgf("Found time-zone correction %d minutes", conf.TZShift)
 		}
 		for _, file := range files {
 			p := newParser(file, conf.TZShift, processor.GetAppType(), processor.GetAppVersion(), procAlarm)
