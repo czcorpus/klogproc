@@ -74,6 +74,9 @@ const (
 
 	// AppTypeWsserver defines a universal storage identifier for Word-Sim-Server
 	AppTypeWsserver = "wsserver"
+
+	// AppTypeMasm defines a universal storage identifier for Masm
+	AppTypeMasm = "masm"
 )
 
 // LineParsingError informs that we failed to parse a line as
