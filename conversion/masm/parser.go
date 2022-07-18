@@ -1,5 +1,5 @@
-// Copyright 2020 Tomas Machalek <tomas.machalek@gmail.com>
-// Copyright 2020 Institute of the Czech National Corpus,
+// Copyright 2022 Martin Zimandl <martin.zimandl@gmail.com>
+// Copyright 2022 Institute of the Czech National Corpus,
 //                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,37 +14,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package wsserver
+package masm
 
 import (
 	"encoding/json"
-	"regexp"
 
-	"github.com/rs/zerolog/log"
+	"klogproc/conversion"
 )
 
-var (
-	recMatch = regexp.MustCompile("^.+ QUERY: (\\{.+)+")
-)
-
+// LineParser is a parser for reading KonText application logs
 type LineParser struct {
+	appErrorRegister conversion.AppErrorRegister
 }
 
+// ParseLine parses a query log line - i.e. it expects
+// that the line contains user interaction log
 func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
-	srch := recMatch.FindStringSubmatch(s)
-	ans := &InputRecord{isProcessable: false}
-	if len(srch) > 0 {
-		err := json.Unmarshal([]byte(srch[1]), ans)
-		if err != nil {
-			log.Error().Msgf("%s", err)
-
-		} else {
-			ans.isProcessable = true
-			if ans.Datetime[len(ans.Datetime)-1] == 'Z' { // UTC time
-				ans.Datetime = ans.Datetime[:len(ans.Datetime)-1]
-			}
-		}
-
+	var record InputRecord
+	err := json.Unmarshal([]byte(s), &record)
+	if err != nil {
+		return nil, err
 	}
-	return ans, nil
+	return &record, nil
+}
+
+// NewLineParser is a factory for LineParser
+func NewLineParser(appErrRegister conversion.AppErrorRegister) *LineParser {
+	return &LineParser{appErrorRegister: appErrRegister}
 }

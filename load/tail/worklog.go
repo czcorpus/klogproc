@@ -20,12 +20,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"sync"
 
 	"klogproc/conversion"
 	"klogproc/fsop"
+
+	"github.com/rs/zerolog/log"
 )
 
 type updateRequest struct {
@@ -57,7 +58,7 @@ func (w *Worklog) Init() error {
 	if w.filePath == "" {
 		return fmt.Errorf("Failed to initialize tail worklog - no path specified")
 	}
-	log.Printf("INFO: Initializing worklog %s", w.filePath)
+	log.Info().Msgf("Initializing worklog %s", w.filePath)
 	w.fr, err = os.OpenFile(w.filePath, os.O_CREATE|os.O_RDWR, 0644)
 	byteValue, err := ioutil.ReadAll(w.fr)
 	if err != nil {
@@ -74,7 +75,7 @@ func (w *Worklog) Init() error {
 		for req := range w.updRequests {
 			curr := w.rec[req.FilePath]
 			if curr.Inode != req.Value.Inode {
-				log.Printf("WARNING: inode for %s has changed from %d to %d", req.FilePath, curr.Inode, req.Value.Inode)
+				log.Warn().Msgf("inode for %s has changed from %d to %d", req.FilePath, curr.Inode, req.Value.Inode)
 			}
 			// rules for worklog update:
 			// 1) if inodes differ then write the new record
@@ -92,7 +93,7 @@ func (w *Worklog) Init() error {
 				w.save()
 
 			} else {
-				log.Printf("DEBUG: worklog[%s] item %v won't be saved due to the current %v", req.FilePath, req.Value, curr)
+				log.Debug().Msgf("worklog[%s] item %v won't be saved due to the current %v", req.FilePath, req.Value, curr)
 			}
 		}
 	}()

@@ -17,7 +17,6 @@
 package celery
 
 import (
-	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -28,6 +27,8 @@ import (
 	"klogproc/conversion/celery"
 	"klogproc/save/elastic"
 	"klogproc/save/influx"
+
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -96,11 +97,11 @@ func Run(conf *Conf, finishEvent chan<- bool, influxConf *influx.ConnectionConf,
 	confirmChan chan interface{}) {
 	tickerInterval := time.Duration(conf.IntervalSecs)
 	if tickerInterval == 0 {
-		log.Printf("WARNING: intervalSecs for Celery status mode not set, using default %ds", defaultTickerIntervalSecs)
+		log.Warn().Msgf("intervalSecs for Celery status mode not set, using default %ds", defaultTickerIntervalSecs)
 		tickerInterval = time.Duration(defaultTickerIntervalSecs)
 
 	} else {
-		log.Printf("INFO: configured to check Celery status every %d second(s)", tickerInterval)
+		log.Info().Msgf("configured to check Celery status every %d second(s)", tickerInterval)
 	}
 	ticker := time.NewTicker(tickerInterval * time.Second)
 	quitChan := make(chan bool)
@@ -130,7 +131,7 @@ func Run(conf *Conf, finishEvent chan<- bool, influxConf *influx.ConnectionConf,
 				go func(proc *Processor) {
 					out, err := proc.Process()
 					if err != nil {
-						log.Print("ERROR: failed to process Celery status item - ", err)
+						log.Error().Msgf("failed to process Celery status item - %s", err)
 					}
 					saveChannelInflux <- &conversion.BoundOutputRecord{Rec: out}
 					saveChannelES <- &conversion.BoundOutputRecord{Rec: out}
@@ -148,7 +149,7 @@ func Run(conf *Conf, finishEvent chan<- bool, influxConf *influx.ConnectionConf,
 				return
 			}
 		case <-syscallChan:
-			log.Print("INFO: Caught signal, exiting...")
+			log.Info().Msg("Caught signal, exiting...")
 			ticker.Stop()
 			finishEvent <- true
 			return

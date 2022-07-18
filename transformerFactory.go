@@ -24,6 +24,7 @@ import (
 	"klogproc/conversion/kwords"
 	"klogproc/conversion/mapka"
 	"klogproc/conversion/mapka2"
+	"klogproc/conversion/masm"
 	"klogproc/conversion/morfio"
 	"klogproc/conversion/shiny"
 	"klogproc/conversion/ske"
@@ -263,6 +264,22 @@ func (s *wsserverTransformer) Transform(logRec conversion.InputRecord, recType s
 
 // ------------------------------------
 
+type masmTransformer struct {
+	t *masm.Transformer
+}
+
+// Transform transforms masm app log record types as general InputRecord
+// In case of type mismatch, error is returned.
+func (s *masmTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+	tRec, ok := logRec.(*masm.InputRecord)
+	if ok {
+		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
+	}
+	return nil, fmt.Errorf("invalid type for conversion by masm transformer %T", logRec)
+}
+
+// ------------------------------------
+
 // GetLogTransformer returns a type-safe transformer for a concrete app type
 func GetLogTransformer(appType string, version string, userMap *users.UserMap) (conversion.LogItemTransformer, error) {
 	switch appType {
@@ -310,6 +327,8 @@ func GetLogTransformer(appType string, version string, userMap *users.UserMap) (
 		}
 	case conversion.AppTypeWsserver:
 		return &wsserverTransformer{t: &wsserver.Transformer{}}, nil
+	case conversion.AppTypeMasm:
+		return &masmTransformer{t: &masm.Transformer{}}, nil
 	default:
 		return nil, fmt.Errorf("cannot find log transformer for app type %s", appType)
 	}

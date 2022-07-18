@@ -18,9 +18,10 @@ package save
 
 import (
 	"fmt"
-	"log"
 
 	"klogproc/conversion"
+
+	"github.com/rs/zerolog/log"
 )
 
 // RunWriteConsumer runs a dummy (null) write consumer
@@ -30,7 +31,7 @@ func RunWriteConsumer(incomingData <-chan *conversion.BoundOutputRecord, printOu
 		for item := range incomingData {
 			out, err := item.ToJSON()
 			if err != nil {
-				log.Print("ERROR: ", err)
+				log.Error().Msgf("%s", err)
 
 			} else {
 				if printOut {

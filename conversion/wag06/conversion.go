@@ -17,9 +17,10 @@
 package wag06
 
 import (
-	"log"
 	"net/url"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 func isQuery(action string) bool {
@@ -29,7 +30,7 @@ func isQuery(action string) bool {
 func domainFromURL(urlAddr string) string {
 	u, err := url.Parse(urlAddr)
 	if err != nil {
-		log.Print("Failed to parse url: ", err)
+		log.Warn().Msgf("Failed to parse url: %s", err)
 		return ""
 	}
 	return u.Hostname()

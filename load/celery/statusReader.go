@@ -21,11 +21,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os/exec"
 	"strings"
 
 	"klogproc/conversion/celery"
+
+	"github.com/rs/zerolog/log"
 )
 
 type nullWriter struct {
@@ -56,7 +57,7 @@ func (s *StatusReader) ReadStatus() (*celery.InputRecord, error) {
 	cmd.Stderr = errWriter
 	err := cmd.Run()
 	if err != nil {
-		log.Print("WARNING: Celery inspect error output: ", string(errOutput.Bytes()))
+		log.Warn().Msgf("Celery inspect error output: %s", string(errOutput.Bytes()))
 		return nil, err
 	}
 	outWriter.Flush()

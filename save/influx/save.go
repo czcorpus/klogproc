@@ -17,10 +17,10 @@
 package influx
 
 import (
-	"log"
-
 	"klogproc/conversion"
 	"klogproc/save"
+
+	"github.com/rs/zerolog/log"
 )
 
 // RunWriteConsumer reads from incomingData channel and stores the data
@@ -37,7 +37,7 @@ func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan *conversion.Boun
 			var err error
 			client, err := NewRecordWriter(conf)
 			if err != nil {
-				log.Printf("ERROR: %s", err)
+				log.Error().Msgf("%s", err)
 			}
 			for rec := range incomingData {
 				write, err := client.AddRecord(rec.Rec)
@@ -57,7 +57,7 @@ func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan *conversion.Boun
 			}
 			err = client.Finish()
 			if err != nil {
-				log.Printf("ERROR: %s", err)
+				log.Error().Msgf("%s", err)
 			}
 
 		} else {

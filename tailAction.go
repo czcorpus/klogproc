@@ -17,7 +17,6 @@
 package main
 
 import (
-	"log"
 	"path/filepath"
 	"sync"
 
@@ -33,6 +32,7 @@ import (
 	"klogproc/users"
 
 	"github.com/oschwald/geoip2-golang"
+	"github.com/rs/zerolog/log"
 )
 
 // -----
@@ -98,9 +98,9 @@ func (tp *tailProcessor) OnEntry(item string, logPosition conversion.LogRange) {
 	if err != nil {
 		switch tErr := err.(type) {
 		case conversion.LineParsingError:
-			log.Printf("INFO: file %s, %s", tp.filePath, tErr)
+			log.Info().Msgf("file %s, %s", tp.filePath, tErr)
 		default:
-			log.Print("ERROR: ", tErr)
+			log.Error().Msgf("%s", tErr)
 		}
 		tp.dataIgnored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 		return
@@ -109,7 +109,7 @@ func (tp *tailProcessor) OnEntry(item string, logPosition conversion.LogRange) {
 	if parsed.IsProcessable() {
 		outRec, err := tp.logTransformer.Transform(parsed, tp.appType, tp.tzShift, tp.anonymousUsers)
 		if err != nil {
-			log.Printf("ERROR: %s", err)
+			log.Error().Msgf("%s", err)
 			tp.dataIgnored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 			return
 		}
@@ -169,7 +169,7 @@ func newProcAlarm(tailConf *tail.FileConf, conf *tail.Conf, mailConf *config.Ema
 			notifier,
 		), nil
 	}
-	log.Print("WARNING: logged errors counting alarm not set")
+	log.Warn().Msg("logged errors counting alarm not set")
 	return &alarm.NullAlarm{}, nil
 }
 
@@ -182,17 +182,17 @@ func newTailProcessor(
 ) *tailProcessor {
 	procAlarm, err := newProcAlarm(&tailConf, &conf.LogTail, &conf.EmailNotification)
 	if err != nil {
-		log.Fatal("FATAL: Failed to initialize alarm: ", err)
+		log.Fatal().Msgf("Failed to initialize alarm: %s", err)
 	}
 	lineParser, err := batch.NewLineParser(tailConf.AppType, tailConf.Version, procAlarm)
 	if err != nil {
-		log.Fatal("FATAL: Failed to initialize parser: ", err)
+		log.Fatal().Msgf("Failed to initialize parser: %s", err)
 	}
 	logTransformer, err := GetLogTransformer(tailConf.AppType, tailConf.Version, userMap)
 	if err != nil {
-		log.Fatal("FATAL: Failed to initialize transformer: ", err)
+		log.Fatal().Msgf("Failed to initialize transformer: %s", err)
 	}
-	log.Printf(
+	log.Info().Msgf(
 		"Creating tail processor for %s, app type: %s, app version: %s, tzShift: %d",
 		filepath.Clean(tailConf.Path), tailConf.AppType, tailConf.Version, tailConf.TZShift)
 

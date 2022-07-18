@@ -20,7 +20,7 @@
 
 package alarm
 
-import "log"
+import "github.com/rs/zerolog/log"
 
 // BatchProcAlarm is a pseudo-alarm for batch processing which just
 // logs information about total number of logged errors during processing.
@@ -33,7 +33,7 @@ func (bpa *BatchProcAlarm) OnError(message string) {
 }
 
 func (bpa *BatchProcAlarm) Evaluate() {
-	log.Printf("INFO: number of logged errors: %d", bpa.numErr)
+	log.Info().Msgf("number of logged errors: %d", bpa.numErr)
 }
 
 func (bpa *BatchProcAlarm) Reset() {

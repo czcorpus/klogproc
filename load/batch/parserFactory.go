@@ -26,6 +26,7 @@ import (
 	"klogproc/conversion/kwords"
 	"klogproc/conversion/mapka"
 	"klogproc/conversion/mapka2"
+	"klogproc/conversion/masm"
 	"klogproc/conversion/morfio"
 	"klogproc/conversion/shiny"
 	"klogproc/conversion/ske"
@@ -186,6 +187,16 @@ func (parser *wsserverLineParser) ParseLine(s string, lineNum int64) (conversion
 
 // ------------------------------------
 
+type masmLineParser struct {
+	lp *masm.LineParser
+}
+
+func (parser *masmLineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
+}
+
+// ------------------------------------
+
 // NewLineParser creates a parser for individual lines of a respective appType
 func NewLineParser(appType string, version string, appErrRegister conversion.AppErrorRegister) (LineParser, error) {
 	switch appType {
@@ -233,6 +244,8 @@ func NewLineParser(appType string, version string, appErrRegister conversion.App
 		}
 	case conversion.AppTypeWsserver:
 		return &wsserverLineParser{lp: &wsserver.LineParser{}}, nil
+	case conversion.AppTypeMasm:
+		return &masmLineParser{lp: &masm.LineParser{}}, nil
 	default:
 		return nil, fmt.Errorf("Parser not found for application type %s", appType)
 	}

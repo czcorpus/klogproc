@@ -23,11 +23,12 @@ package batch
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 func worklogExists(filePath string) bool {
@@ -77,7 +78,7 @@ func (w *Worklog) GetLastRecord() int64 {
 		}
 
 	} else {
-		log.Println("No worklog file present - all the found log files will be processed")
+		log.Info().Msg("No worklog file present - all the found log files will be processed")
 	}
 	return -1
 }
@@ -113,7 +114,7 @@ func NewWorklog(path string) *Worklog {
 	if os.IsNotExist(err) {
 		f, err := os.Create(path)
 		if err != nil {
-			log.Fatal("FATAL: cannot create worklog -", err)
+			log.Fatal().Msgf("cannot create worklog - %s", err)
 		}
 		f.Close()
 	}

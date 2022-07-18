@@ -20,8 +20,9 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"strconv"
+
+	"github.com/rs/zerolog/log"
 )
 
 func createID(rec *OutputRecord) string {
@@ -37,7 +38,7 @@ type Transformer struct{}
 func (t *Transformer) Transform(logRecord *InputRecord) (*OutputRecord, error) {
 	clk, err := strconv.Atoi(logRecord.Clock)
 	if err != nil {
-		log.Print("WARNING: unable to get Clock value - ", err)
+		log.Warn().Msgf("unable to get Clock value - %s", err)
 	}
 
 	out := &OutputRecord{

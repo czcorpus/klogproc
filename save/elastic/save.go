@@ -19,10 +19,11 @@ package elastic
 import (
 	"bytes"
 	"fmt"
-	"log"
 
 	"klogproc/conversion"
 	"klogproc/save"
+
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -52,7 +53,7 @@ func BulkWriteRequest(data [][]byte, appType string, esconf *ConnectionConf) err
 	if err != nil {
 		return fmt.Errorf("Failed to push log chunk: %s", err)
 	}
-	log.Printf("INFO: Inserted chunk of %d items to ElasticSearch\n", (len(data)-1)/2)
+	log.Info().Msgf("Inserted chunk of %d items to ElasticSearch\n", (len(data)-1)/2)
 	return nil
 }
 
@@ -96,7 +97,7 @@ func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan 
 					i += 2
 
 				} else {
-					log.Print("ERROR: Failed to encode item ", rec.GetTime())
+					log.Error().Msgf("Failed to encode item %s", rec.GetTime())
 				}
 				if i == conf.PushChunkSize*2 {
 					data[i] = []byte("\n")

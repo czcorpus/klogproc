@@ -17,7 +17,6 @@
 package tail
 
 import (
-	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -27,6 +26,8 @@ import (
 	"klogproc/botwatch"
 	"klogproc/conversion"
 	"klogproc/save"
+
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -91,17 +92,17 @@ func initReaders(processors []FileTailProcessor, worklog *Worklog) ([]*FileTailR
 	readers := make([]*FileTailReader, len(processors))
 	for i, processor := range processors {
 		wlItem := worklog.GetData(processor.FilePath())
-		log.Printf("INFO: Found log file %s", processor.FilePath())
+		log.Info().Msgf("Found log file %s", processor.FilePath())
 		if wlItem.Inode > -1 {
-			log.Printf("INFO: Found worklog for %s: %v", processor.FilePath(), wlItem)
+			log.Info().Msgf("Found worklog for %s: %v", processor.FilePath(), wlItem)
 
 		} else {
-			log.Printf("WARNING: no worklog for %s - creating a new one...", processor.FilePath())
+			log.Warn().Msgf("no worklog for %s - creating a new one...", processor.FilePath())
 			inode, err := worklog.ResetFile(processor.FilePath())
 			if err != nil {
 				return readers, err
 			}
-			log.Printf("INFO: ... added a worklog record for %s, inode: %d", processor.FilePath(), inode)
+			log.Info().Msgf("... added a worklog record for %s, inode: %d", processor.FilePath(), inode)
 		}
 		rdr, err := NewReader(
 			processor,
@@ -119,11 +120,11 @@ func initReaders(processors []FileTailProcessor, worklog *Worklog) ([]*FileTailR
 func Run(conf *Conf, processors []FileTailProcessor, analyzer ClientAnalyzer, finishEvent chan<- bool) {
 	tickerInterval := time.Duration(conf.IntervalSecs)
 	if tickerInterval == 0 {
-		log.Printf("WARNING: intervalSecs for tail mode not set, using default %ds", defaultTickerIntervalSecs)
+		log.Warn().Msgf("intervalSecs for tail mode not set, using default %ds", defaultTickerIntervalSecs)
 		tickerInterval = time.Duration(defaultTickerIntervalSecs)
 
 	} else {
-		log.Printf("INFO: configured to check for file changes every %d second(s)", tickerInterval)
+		log.Info().Msgf("configured to check for file changes every %d second(s)", tickerInterval)
 	}
 	ticker := time.NewTicker(tickerInterval * time.Second)
 	quitChan := make(chan bool, 10)
@@ -134,13 +135,13 @@ func Run(conf *Conf, processors []FileTailProcessor, analyzer ClientAnalyzer, fi
 	var readers []*FileTailReader
 	err := worklog.Init()
 	if err != nil {
-		log.Print("ERROR: ", err)
+		log.Error().Msgf("%s", err)
 		quitChan <- true
 
 	} else {
 		readers, err = initReaders(processors, worklog)
 		if err != nil {
-			log.Print("ERROR: ", err)
+			log.Error().Msgf("%s", err)
 			quitChan <- true
 		}
 	}
@@ -158,7 +159,7 @@ func Run(conf *Conf, processors []FileTailProcessor, analyzer ClientAnalyzer, fi
 							switch action := action.(type) {
 							case save.ConfirmMsg:
 								if action.Error != nil {
-									log.Printf("ERROR: failed to write data to one of target databases: %s ...", action.Error)
+									log.Error().Msgf("failed to write data to one of target databases: %s ...", action.Error)
 								}
 								worklog.UpdateFileInfo(action.FilePath, action.Position)
 							case save.IgnoredItemMsg:
@@ -188,7 +189,7 @@ func Run(conf *Conf, processors []FileTailProcessor, analyzer ClientAnalyzer, fi
 				finishEvent <- true
 			}
 		case <-syscallChan:
-			log.Print("WARNING: Caught signal, exiting...")
+			log.Warn().Msg("Caught signal, exiting...")
 			ticker.Stop()
 			for _, reader := range readers {
 				reader.Processor().OnQuit()

@@ -17,10 +17,11 @@
 package wag06
 
 import (
-	"log"
 	"strings"
 
 	"klogproc/load/accesslog"
+
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -75,7 +76,7 @@ func getAction(path string) actionArgs {
 			ans.queries = []string{items[1]}
 
 		} else {
-			log.Print("WARNING: ignoring legacy search action: ", path)
+			log.Warn().Msgf("ignoring legacy search action: %s", path)
 		}
 	case actionTranslate:
 		langItems := strings.Split(items[0], "--")
@@ -84,13 +85,13 @@ func getAction(path string) actionArgs {
 			ans.lang2 = langItems[1]
 
 		} else {
-			log.Print("WARNING: missing second lang info: ", path)
+			log.Warn().Msgf("missing second lang info: %s", path)
 		}
 		if len(items) > 1 {
 			ans.queries = []string{items[1]}
 
 		} else {
-			log.Print("WARNING: missing query: ", path)
+			log.Warn().Msgf("missing query: %s", path)
 		}
 	case actionCompare:
 		if len(items) > 1 {
@@ -99,7 +100,7 @@ func getAction(path string) actionArgs {
 				ans.queries = strings.Split(items[1], "--")
 
 			} else {
-				log.Print("WARNING: missing query: ", path)
+				log.Warn().Msgf("missing query: %s", path)
 			}
 		}
 	}

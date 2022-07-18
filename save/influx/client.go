@@ -18,9 +18,10 @@ package influx
 
 import (
 	"fmt"
-	"log"
 
 	"klogproc/conversion"
+
+	"github.com/rs/zerolog/log"
 
 	client "github.com/influxdata/influxdb1-client/v2"
 )
@@ -99,7 +100,7 @@ func (c *RecordWriter) AddRecord(rec conversion.OutputRecord) (bool, error) {
 	tags, values := rec.ToInfluxDB()
 	point, err := client.NewPoint(c.measurement, tags, values, rec.GetTime())
 	if err != nil {
-		log.Printf("ERROR: Failed to add record to influxdb: %s", err)
+		log.Error().Msgf("Failed to add record to influxdb: %s", err)
 	}
 	c.bp.AddPoint(point)
 	if len(c.bp.Points()) == c.pushChunkSize {
