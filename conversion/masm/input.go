@@ -1,4 +1,5 @@
 // Copyright 2022 Martin Zimandl <martin.zimandl@gmail.com>
+// Copyright 2022 Tomas Machalek <tomas.machalek@gmail.com>
 // Copyright 2022 Institute of the Czech National Corpus,
 //                Faculty of Arts, Charles University
 //
@@ -25,9 +26,16 @@ import (
 
 // InputRecord represents a raw-parsed version of masm query log
 type InputRecord struct {
-	Level   string `json:"level"`
-	Time    string `json:"time"`
-	Message string `json:"message"`
+	Level          string   `json:"level"`
+	Time           string   `json:"time"`
+	Message        string   `json:"message"`
+	IsQuery        bool     `json:"isQuery,omitempty"`
+	Corpus         string   `json:"corpus,omitempty"`
+	AlignedCorpora []string `json:"alignedCorpora,omitempty"`
+	IsAutocomplete bool     `json:"isAutocomplete,omitempty"`
+	IsCached       bool     `json:"isCached,omitempty"`
+	ProcTimeSecs   float64  `json:"procTimeSecs,omitempty"`
+	Error          string   `json:"error,omitempty"`
 }
 
 // GetTime returns a normalized log date and time information

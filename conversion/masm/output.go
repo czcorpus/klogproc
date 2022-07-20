@@ -1,4 +1,5 @@
 // Copyright 2022 Martin Zimandl <martin.zimandl@gmail.com>
+// Copyright 2022 Tomas Machalek <tomas.machalek@gmail.com>
 // Copyright 2022 Institute of the Czech National Corpus,
 //                Faculty of Arts, Charles University
 //
@@ -20,17 +21,26 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"strconv"
+	"strings"
 	"time"
 )
 
 // OutputRecord represents a polished version of WaG's access log.
 type OutputRecord struct {
-	ID      string `json:"-"`
-	Type    string `json:"type"`
-	Level   string `json:"level"`
-	Time    string `json:"time"`
-	time    time.Time
-	Message string `json:"message"`
+	ID             string `json:"-"`
+	Type           string `json:"type"`
+	Level          string `json:"level"`
+	Time           string `json:"time"`
+	time           time.Time
+	Message        string   `json:"message"`
+	IsQuery        bool     `json:"isQuery,omitempty"`
+	Corpus         string   `json:"corpus,omitempty"`
+	AlignedCorpora []string `json:"alignedCorpora,omitempty"`
+	IsAutocomplete bool     `json:"isAutocomplete,omitempty"`
+	IsCached       bool     `json:"isCached,omitempty"`
+	ProcTimeSecs   float64  `json:"procTimeSecs,omitempty"`
+	Error          string   `json:"error,omitempty"`
 }
 
 // GetID returns an idempotent ID of the record.
@@ -65,7 +75,9 @@ func (r *OutputRecord) SetLocation(countryName string, latitude float32, longitu
 
 // CreateID creates an idempotent ID of rec based on its properties.
 func CreateID(rec *OutputRecord) string {
-	str := rec.Level + rec.Time + rec.Message
+	str := rec.Level + rec.Time + rec.Message + strconv.FormatBool(rec.IsQuery) + rec.Corpus +
+		strings.Join(rec.AlignedCorpora, ", ") + strconv.FormatBool(rec.IsAutocomplete) + strconv.FormatBool(rec.IsCached) +
+		strconv.FormatFloat(rec.ProcTimeSecs, 'E', -1, 64) + rec.Error
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }
