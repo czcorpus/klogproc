@@ -31,7 +31,7 @@ type OutputRecord struct {
 	ID             string `json:"-"`
 	Type           string `json:"type"`
 	Level          string `json:"level"`
-	Time           string `json:"time"`
+	Datetime       string `json:"datetime"`
 	time           time.Time
 	Message        string   `json:"message"`
 	IsQuery        bool     `json:"isQuery,omitempty"`
@@ -75,7 +75,7 @@ func (r *OutputRecord) SetLocation(countryName string, latitude float32, longitu
 
 // CreateID creates an idempotent ID of rec based on its properties.
 func CreateID(rec *OutputRecord) string {
-	str := rec.Level + rec.Time + rec.Message + strconv.FormatBool(rec.IsQuery) + rec.Corpus +
+	str := rec.Level + rec.Datetime + rec.Message + strconv.FormatBool(rec.IsQuery) + rec.Corpus +
 		strings.Join(rec.AlignedCorpora, ", ") + strconv.FormatBool(rec.IsAutocomplete) + strconv.FormatBool(rec.IsCached) +
 		strconv.FormatFloat(rec.ProcTimeSecs, 'E', -1, 64) + rec.Error
 	sum := sha1.Sum([]byte(str))
