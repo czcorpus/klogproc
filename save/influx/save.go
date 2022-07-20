@@ -37,7 +37,7 @@ func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan *conversion.Boun
 			var err error
 			client, err := NewRecordWriter(conf)
 			if err != nil {
-				log.Error().Msgf("%s", err)
+				log.Error().Err(err).Msg("")
 			}
 			for rec := range incomingData {
 				write, err := client.AddRecord(rec.Rec)
@@ -57,7 +57,7 @@ func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan *conversion.Boun
 			}
 			err = client.Finish()
 			if err != nil {
-				log.Error().Msgf("%s", err)
+				log.Error().Err(err).Msgf("")
 			}
 
 		} else {

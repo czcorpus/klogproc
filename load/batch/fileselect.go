@@ -159,7 +159,7 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, tzShift
 			}
 			matches, merr := LogFileMatches(logPath, minTimestamp, strictMatch, tzShiftMin)
 			if merr != nil {
-				log.Error().Msgf("Failed to check log file %s", logPath)
+				log.Error().Err(merr).Msgf("Failed to check log file %s", logPath)
 
 			} else if matches {
 				ans[i] = logPath

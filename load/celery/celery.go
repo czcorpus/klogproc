@@ -131,7 +131,7 @@ func Run(conf *Conf, finishEvent chan<- bool, influxConf *influx.ConnectionConf,
 				go func(proc *Processor) {
 					out, err := proc.Process()
 					if err != nil {
-						log.Error().Msgf("failed to process Celery status item - %s", err)
+						log.Error().Err(err).Msgf("failed to process Celery status item")
 					}
 					saveChannelInflux <- &conversion.BoundOutputRecord{Rec: out}
 					saveChannelES <- &conversion.BoundOutputRecord{Rec: out}

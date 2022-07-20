@@ -91,13 +91,16 @@ func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan 
 				}
 				jsonMetaES, err2 := (&ESCNKRecordMeta{Index: jsonMeta}).ToJSON()
 
-				if err == nil && err2 == nil {
+				if err != nil {
+					log.Error().Err(err).Msgf("Failed to encode item %s", rec.GetID())
+
+				} else if err2 != nil {
+					log.Error().Err(err2).Msgf("Failed to encode a 'meta' record for item %s", rec.GetID())
+
+				} else {
 					data[i] = jsonMetaES
 					data[i+1] = jsonData
 					i += 2
-
-				} else {
-					log.Error().Msgf("Failed to encode item %s", rec.GetTime())
 				}
 				if i == conf.PushChunkSize*2 {
 					data[i] = []byte("\n")
