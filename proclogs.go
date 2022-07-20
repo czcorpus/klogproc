@@ -74,6 +74,7 @@ type CNKLogProcessor struct {
 	geoIPDb        *geoip2.Reader
 	chunkSize      int
 	numNonLoggable int
+	skipAnalysis   bool
 	logTransformer conversion.LogItemTransformer
 	clientAnalyzer ClientAnalyzer
 }
@@ -91,7 +92,9 @@ func (clp *CNKLogProcessor) recordIsLoggable(logRec conversion.InputRecord) bool
 // ProcItem transforms input log record into an output format.
 // In case an unsupported record is encountered, nil is returned.
 func (clp *CNKLogProcessor) ProcItem(logRec conversion.InputRecord, tzShiftMin int) conversion.OutputRecord {
-	clp.clientAnalyzer.Add(logRec)
+	if !clp.skipAnalysis {
+		clp.clientAnalyzer.Add(logRec)
+	}
 	if clp.recordIsLoggable(logRec) {
 		rec, err := clp.logTransformer.Transform(logRec, clp.appType, tzShiftMin, clp.anonymousUsers)
 		if err != nil {

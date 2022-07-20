@@ -52,6 +52,7 @@ func runBatchAction(
 		logTransformer: lt,
 		anonymousUsers: conf.AnonymousUsers,
 		clientAnalyzer: analyzer,
+		skipAnalysis:   conf.LogFiles.SkipAnalysis,
 	}
 	channelWriteES := make(chan *conversion.BoundOutputRecord, conf.ElasticSearch.PushChunkSize*2)
 	channelWriteInflux := make(chan *conversion.BoundOutputRecord, conf.InfluxDB.PushChunkSize)
@@ -111,7 +112,6 @@ func runBatchAction(
 	wg.Wait()
 	finishEvent <- true
 	log.Info().Msgf("Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)
-
 	if options.analysisOnly {
 		fmt.Println("Detected bot/script activities:")
 		for _, sr := range processor.clientAnalyzer.GetBotCandidates() {

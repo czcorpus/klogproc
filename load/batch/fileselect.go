@@ -55,6 +55,7 @@ type Conf struct {
 	Version        string `json:"version"`
 	NumErrorsAlarm int    `json:"numErrorsAlarm"`
 	TZShift        int    `json:"tzShift"`
+	SkipAnalysis   bool   `json:"skipAnalysis"`
 }
 
 type DatetimeRange struct {

@@ -26,7 +26,7 @@ type Transformer struct {
 func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
 	rec := &OutputRecord{
 		time:           logRecord.GetTime(),
-		Time:           logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		Datetime:       logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
 		Type:           recType,
 		Level:          logRecord.Level,
 		Message:        logRecord.Message,
