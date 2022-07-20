@@ -88,7 +88,7 @@ func runBatchAction(
 		go func() {
 			for confirm := range ch1 {
 				if confirm.Error != nil {
-					log.Error().Msgf("failed to save data to ElasticSearch db: %s", confirm.Error)
+					log.Error().Err(confirm.Error).Msg("failed to save data to ElasticSearch database")
 					// TODO
 				}
 			}
@@ -97,7 +97,7 @@ func runBatchAction(
 		go func() {
 			for confirm := range ch2 {
 				if confirm.Error != nil {
-					log.Error().Msgf("failed to save data to InfluxDB db: %s", confirm.Error)
+					log.Error().Err(confirm.Error).Msg("Failed to save data to InfluxDB database")
 					// TODO
 				}
 			}
@@ -117,7 +117,7 @@ func runBatchAction(
 		for _, sr := range processor.clientAnalyzer.GetBotCandidates() {
 			js, err := sr.ToJSON()
 			if err != nil {
-				log.Error().Msgf("%s", err)
+				log.Error().Err(err).Msg("")
 			}
 			fmt.Println(string(js))
 		}

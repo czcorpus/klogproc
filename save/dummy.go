@@ -31,7 +31,7 @@ func RunWriteConsumer(incomingData <-chan *conversion.BoundOutputRecord, printOu
 		for item := range incomingData {
 			out, err := item.ToJSON()
 			if err != nil {
-				log.Error().Msgf("%s", err)
+				log.Error().Err(err).Msg("")
 
 			} else {
 				if printOut {

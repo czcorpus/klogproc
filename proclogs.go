@@ -36,7 +36,7 @@ func applyLocation(rec conversion.InputRecord, db *geoip2.Reader, outRec convers
 	if ip != nil {
 		city, err := db.City(ip)
 		if err != nil {
-			log.Error().Msgf("Failed to fetch GeoIP data for IP %s: %s", ip.String(), err)
+			log.Error().Err(err).Msgf("Failed to fetch GeoIP data for IP %s.", ip.String())
 
 		} else {
 			outRec.SetLocation(city.Country.Names["en"], float32(city.Location.Latitude),
@@ -95,7 +95,7 @@ func (clp *CNKLogProcessor) ProcItem(logRec conversion.InputRecord, tzShiftMin i
 	if clp.recordIsLoggable(logRec) {
 		rec, err := clp.logTransformer.Transform(logRec, clp.appType, tzShiftMin, clp.anonymousUsers)
 		if err != nil {
-			log.Error().Msgf("failed to transform item %s: %s", logRec, err)
+			log.Error().Err(err).Msgf("Failed to transform item %s", logRec)
 			return nil
 		}
 		applyLocation(logRec, clp.geoIPDb, rec)

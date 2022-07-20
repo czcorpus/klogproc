@@ -100,7 +100,7 @@ func (tpa *TailProcAlarm) Evaluate() {
 		log.Info().Msgf("sending alarm notification for %s", tpa.fileInfo.GetPath())
 		err := tpa.notifier.SendNotification(subj, msg.String())
 		if err != nil {
-			log.Error().Msgf("%s", err)
+			log.Error().Err(err).Msg("")
 		}
 		tpa.Reset()
 	}

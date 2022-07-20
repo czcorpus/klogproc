@@ -36,7 +36,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 	if len(srch) > 0 {
 		err := json.Unmarshal([]byte(srch[1]), ans)
 		if err != nil {
-			log.Error().Msgf("%s", err)
+			log.Error().Err(err).Msg("")
 
 		} else {
 			ans.isProcessable = true

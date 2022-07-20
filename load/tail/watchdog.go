@@ -135,13 +135,13 @@ func Run(conf *Conf, processors []FileTailProcessor, analyzer ClientAnalyzer, fi
 	var readers []*FileTailReader
 	err := worklog.Init()
 	if err != nil {
-		log.Error().Msgf("%s", err)
+		log.Error().Err(err).Msg("")
 		quitChan <- true
 
 	} else {
 		readers, err = initReaders(processors, worklog)
 		if err != nil {
-			log.Error().Msgf("%s", err)
+			log.Error().Err(err).Msg("")
 			quitChan <- true
 		}
 	}
@@ -159,7 +159,7 @@ func Run(conf *Conf, processors []FileTailProcessor, analyzer ClientAnalyzer, fi
 							switch action := action.(type) {
 							case save.ConfirmMsg:
 								if action.Error != nil {
-									log.Error().Msgf("failed to write data to one of target databases: %s ...", action.Error)
+									log.Error().Err(action.Error).Msg("Failed to write data to one of target databases")
 								}
 								worklog.UpdateFileInfo(action.FilePath, action.Position)
 							case save.IgnoredItemMsg:

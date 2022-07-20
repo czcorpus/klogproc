@@ -59,7 +59,7 @@ func updateRecords(conf *config.Main, options *ProcessOptions) {
 			log.Info().Msgf("Updated %d items\n", totalUpdated)
 
 		} else {
-			log.Fatal().Msgf("Update error: ", err)
+			log.Fatal().Err(err).Msg("Failed to update records")
 		}
 	}
 }
@@ -73,7 +73,7 @@ func removeKeyFromRecords(conf *config.Main, options *ProcessOptions) {
 			log.Info().Msgf("Removed key %s from %d items\n", conf.RecUpdate.RemoveKey, totalUpdated)
 
 		} else {
-			log.Fatal().Msgf("Update error: ", err)
+			log.Fatal().Err(err).Msgf("Failed to update records")
 		}
 	}
 }

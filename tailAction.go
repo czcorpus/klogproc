@@ -100,7 +100,7 @@ func (tp *tailProcessor) OnEntry(item string, logPosition conversion.LogRange) {
 		case conversion.LineParsingError:
 			log.Info().Msgf("file %s, %s", tp.filePath, tErr)
 		default:
-			log.Error().Msgf("%s", tErr)
+			log.Error().Err(tErr).Msg("")
 		}
 		tp.dataIgnored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 		return
@@ -109,7 +109,7 @@ func (tp *tailProcessor) OnEntry(item string, logPosition conversion.LogRange) {
 	if parsed.IsProcessable() {
 		outRec, err := tp.logTransformer.Transform(parsed, tp.appType, tp.tzShift, tp.anonymousUsers)
 		if err != nil {
-			log.Error().Msgf("%s", err)
+			log.Error().Err(err).Msg("")
 			tp.dataIgnored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 			return
 		}
