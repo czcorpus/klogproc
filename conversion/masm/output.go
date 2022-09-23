@@ -34,11 +34,11 @@ type OutputRecord struct {
 	Datetime       string `json:"datetime"`
 	time           time.Time
 	Message        string   `json:"message"`
-	IsQuery        bool     `json:"isQuery,omitempty"`
+	IsQuery        bool     `json:"isQuery"`
 	Corpus         string   `json:"corpus,omitempty"`
 	AlignedCorpora []string `json:"alignedCorpora,omitempty"`
-	IsAutocomplete bool     `json:"isAutocomplete,omitempty"`
-	IsCached       bool     `json:"isCached,omitempty"`
+	IsAutocomplete bool     `json:"isAutocomplete"`
+	IsCached       bool     `json:"isCached"`
 	ProcTimeSecs   float64  `json:"procTimeSecs,omitempty"`
 	Error          string   `json:"error,omitempty"`
 }
