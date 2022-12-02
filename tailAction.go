@@ -98,9 +98,9 @@ func (tp *tailProcessor) OnEntry(item string, logPosition conversion.LogRange) {
 	if err != nil {
 		switch tErr := err.(type) {
 		case conversion.LineParsingError:
-			log.Info().Msgf("file %s, %s", tp.filePath, tErr)
+			log.Warn().Err(tErr).Msgf("parsing error in file %s", tp.filePath)
 		default:
-			log.Error().Err(tErr).Msg("")
+			log.Error().Err(tErr).Send()
 		}
 		tp.dataIgnored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 		return

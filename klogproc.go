@@ -45,9 +45,16 @@ const (
 )
 
 var (
-	version   string
-	build     string
-	gitCommit string
+	version         string
+	build           string
+	gitCommit       string
+	logLevelMapping = map[string]zerolog.Level{
+		"debug":   zerolog.DebugLevel,
+		"info":    zerolog.InfoLevel,
+		"warning": zerolog.WarnLevel,
+		"warn":    zerolog.WarnLevel,
+		"error":   zerolog.ErrorLevel,
+	}
 )
 
 func updateRecords(conf *config.Main, options *ProcessOptions) {
@@ -98,7 +105,12 @@ func help(topic string) {
 	fmt.Println()
 }
 
-func setupLog(path string) {
+func setupLog(path, level string) {
+	lev, ok := logLevelMapping[level]
+	if !ok {
+		log.Fatal().Msgf("invalid logging level: %s", level)
+	}
+	zerolog.SetGlobalLevel(lev)
 	if path != "" {
 		logf, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -119,7 +131,11 @@ func setupLog(path string) {
 func setup(confPath string) *config.Main {
 	conf := config.Load(confPath)
 	config.Validate(conf)
-	setupLog(conf.LogPath)
+	llevel := "info"
+	if conf.LogLevel != "" {
+		llevel = conf.LogLevel
+	}
+	setupLog(conf.LogPath, llevel)
 	return conf
 }
 

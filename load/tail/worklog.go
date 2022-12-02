@@ -93,7 +93,7 @@ func (w *Worklog) Init() error {
 				w.save()
 
 			} else {
-				log.Debug().Msgf("worklog[%s] item %v won't be saved due to the current %v", req.FilePath, req.Value, curr)
+				log.Warn().Msgf("worklog[%s] item %v won't be saved due to the current %v", req.FilePath, req.Value, curr)
 			}
 		}
 	}()
