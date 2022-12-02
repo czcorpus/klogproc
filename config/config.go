@@ -47,6 +47,7 @@ type Main struct {
 	GeoIPDbPath       string                    `json:"geoIpDbPath"`
 	AnonymousUsers    []int                     `json:"anonymousUsers"`
 	LogPath           string                    `json:"logPath"`
+	LogLevel          string                    `json:"logLevel"`
 	CustomConfDir     string                    `json:"customConfDir"`
 	RecUpdate         elastic.DocUpdConf        `json:"recordUpdate"`
 	ElasticSearch     elastic.ConnectionConf    `json:"elasticSearch"`
