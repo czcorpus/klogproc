@@ -29,7 +29,7 @@ var (
 
 func TestRandomEntry(t *testing.T) {
 	parser := LineParser{}
-	tokens := parser.tokenize(entry1)
+	tokens, _ := parser.tokenize(entry1)
 	assert.Equal(t, "10.0.3.50", tokens[0])
 	assert.Equal(t, "-", tokens[1])
 	assert.Equal(t, "janedoe", tokens[2])
@@ -45,7 +45,7 @@ func TestRandomEntry(t *testing.T) {
 // TestRandomEntryWithoutRt tests parsing of an entry without processing time information.
 func TestRandomEntryWithoutRt(t *testing.T) {
 	parser := LineParser{}
-	tokens := parser.tokenize(entry2)
+	tokens, _ := parser.tokenize(entry2)
 	assert.Equal(t, 10, len(tokens))
 	assert.Equal(t, "", tokens[len(tokens)-1])
 }
