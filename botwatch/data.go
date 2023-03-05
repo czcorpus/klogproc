@@ -18,7 +18,6 @@ package botwatch
 
 import (
 	"encoding/json"
-	"fmt"
 	"math"
 	"time"
 )
@@ -62,7 +61,6 @@ func (ips *IPProcData) ReqPerSecod() float64 {
 }
 
 func (ips *IPProcData) IsSuspicious(conf BotDetectionConf) bool {
-	fmt.Printf("Testing suspic on, mean: %.2f, stdev: %.2f, ratio: %.2f, num Records: %d\n", ips.mean, ips.Stdev(), ips.Stdev()/ips.mean, ips.count)
 	return ips.Stdev()/ips.mean <= conf.RSDThreshold && ips.count >= conf.NumRequestsThreshold
 }
 

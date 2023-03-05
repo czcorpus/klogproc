@@ -23,6 +23,8 @@ import (
 	"strings"
 
 	"klogproc/conversion"
+
+	"github.com/rs/zerolog/log"
 )
 
 func testOpenQuot(c byte) byte {
@@ -49,17 +51,29 @@ func getProcTime(procTimeExpr string) (float32, error) {
 		pts := strings.Trim(procTimeExpr[3:], "\"")
 		pt, err := strconv.ParseFloat(pts, 32)
 		if err != nil {
-			return -1, fmt.Errorf("Failed to parse proc. time %s: %s", procTimeExpr, err)
+			return -1, fmt.Errorf("failed to parse proc. time %s: %s", procTimeExpr, err)
 		}
 		return float32(pt), nil
 	}
-	return -1, fmt.Errorf("Failed to parse proc. time %s", procTimeExpr)
+	return -1, fmt.Errorf("failed to parse proc. time %s", procTimeExpr)
 }
 
 // LineParser is a parser for reading KonText application logs
 type LineParser struct{}
 
-func (lp *LineParser) tokenize(s string) []string {
+func (lp *LineParser) updateTokenAt(items []string, i int, value string) error {
+	if i < len(items) {
+		items[i] = value
+		return nil
+	}
+	log.Error().
+		Str("line", strings.Join(items, " ")).
+		Msgf("Apache log tokenizer failed to process line")
+
+	return fmt.Errorf("failed to get token [%d] (num. available: [%d])", i, len(items))
+}
+
+func (lp *LineParser) tokenize(s string) ([]string, error) {
 	items := make([]string, 10)
 	currQuoted := make([]string, 0, 30)
 	var currQuotChar byte
@@ -76,19 +90,25 @@ func (lp *LineParser) tokenize(s string) []string {
 
 			} else if closeChar != 0 && item[len(item)-1] == closeChar {
 				if len(item) > 1 {
-					items[parsedPos] = item[1 : len(item)-1]
+					err := lp.updateTokenAt(items, parsedPos, item[1:len(item)-1])
+					if err != nil {
+						return []string{}, err
+					}
 				}
 				parsedPos++
 
 			} else if closeChar == 0 && parsedPos < len(items) {
-				items[parsedPos] = item
+				items[parsedPos] = item // TODO use updateTokenAt() here too?
 				parsedPos++
 			}
 
 		} else {
 			if isCloseQuot(currQuotChar, item[len(item)-1]) {
 				currQuoted = append(currQuoted, item[:len(item)-1])
-				items[parsedPos] = strings.Join(currQuoted, " ")
+				err := lp.updateTokenAt(items, parsedPos, strings.Join(currQuoted, " "))
+				if err != nil {
+					return []string{}, err
+				}
 				currQuotChar = 0
 				parsedPos++
 				currQuoted = make([]string, 0, 30)
@@ -98,7 +118,7 @@ func (lp *LineParser) tokenize(s string) []string {
 			}
 		}
 	}
-	return items
+	return items, nil
 }
 
 // ParsedAccessLog represents a general processing of an access log line
@@ -130,14 +150,18 @@ type ParsedAccessLog struct {
 //   9) rt=0.012
 func (lp *LineParser) ParseLine(s string, lineNum int64) (*ParsedAccessLog, error) {
 	ans := &ParsedAccessLog{}
-	tokens := lp.tokenize(s)
+	var err error
+	var tokens []string
+	tokens, err = lp.tokenize(s)
+	if err != nil {
+		return nil, conversion.NewLineParsingError(lineNum, err.Error())
+	}
 
 	ans.IPAddress = tokens[0]
 	ans.Username = tokens[2]
 	ans.Datetime = tokens[3]
 	urlBlock := strings.Split(tokens[4], " ")
 
-	var err error
 	var parsedURL *url.URL
 	if len(urlBlock) == 3 {
 		ans.HTTPMethod = urlBlock[0]
