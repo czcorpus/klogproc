@@ -22,6 +22,7 @@ import (
 	"klogproc/conversion"
 	"klogproc/conversion/kontext013"
 	"klogproc/conversion/kontext015"
+	"klogproc/conversion/kontext018"
 	"klogproc/conversion/korpusdb"
 	"klogproc/conversion/kwords"
 	"klogproc/conversion/mapka"
@@ -61,6 +62,19 @@ type kontext015LineParser struct {
 
 // ParseLine parses a passed line of a respective log
 func (parser *kontext015LineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
+}
+
+// ------------------------------------
+
+// kontext018LineParser wraps kontext-specific parser into a general form as required
+// by core of the klogproc
+type kontext018LineParser struct {
+	lp *kontext018.LineParser
+}
+
+// ParseLine parses a passed line of a respective log
+func (parser *kontext018LineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -209,6 +223,8 @@ func NewLineParser(appType string, version string, appErrRegister conversion.App
 			return &kontext013LineParser{lp: kontext013.NewLineParser(appErrRegister)}, nil
 		case "0.15":
 			return &kontext015LineParser{lp: kontext015.NewLineParser(appErrRegister)}, nil
+		case "0.18":
+			return &kontext018LineParser{lp: kontext018.NewLineParser()}, nil
 		default:
 			return nil, fmt.Errorf("cannot find parser - unsupported version of KonText specified: %s", version)
 		}

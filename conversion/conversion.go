@@ -298,6 +298,15 @@ func ConvertDatetimeString(datetime string) time.Time {
 	return time.Time{}
 }
 
+func ConvertDatetimeStringWithMillis(datetime string) time.Time {
+	t, err := time.Parse("2006-01-02T15:04:05.000000-07:00", datetime)
+	if err == nil {
+		return t
+	}
+	log.Warn().Msgf("%s", err)
+	return time.Time{}
+}
+
 func ConvertDatetimeStringNoTZ(datetime string) time.Time {
 	t, err := time.Parse("2006-01-02T15:04:05", datetime)
 	if err == nil {
