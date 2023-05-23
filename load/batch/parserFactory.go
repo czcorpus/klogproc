@@ -219,9 +219,9 @@ func NewLineParser(appType string, version string, appErrRegister conversion.App
 		return &shinyLineParser{lp: &shiny.LineParser{}}, nil
 	case conversion.AppTypeKontext, conversion.AppTypeKontextAPI:
 		switch version {
-		case "0.13":
+		case "0.13", "0.14":
 			return &kontext013LineParser{lp: kontext013.NewLineParser(appErrRegister)}, nil
-		case "0.15":
+		case "0.15", "0.16", "0.17":
 			return &kontext015LineParser{lp: kontext015.NewLineParser(appErrRegister)}, nil
 		case "0.18":
 			return &kontext018LineParser{lp: kontext018.NewLineParser()}, nil

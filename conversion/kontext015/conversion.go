@@ -48,7 +48,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 		datetime:       logRecord.GetTime(),
 		IPAddress:      logRecord.GetClientIP().String(),
 		IsAnonymous:    conversion.UserBelongsToList(logRecord.UserID, anonymousUsers),
-		IsQuery:        isEntryQuery(logRecord.Action),
+		IsQuery:        isEntryQuery(logRecord.Action) && !logRecord.IsIndirectCall,
 		ProcTime:       logRecord.ProcTime,
 		QueryType:      importQueryType(logRecord),
 		UserAgent:      logRecord.Request.HTTPUserAgent,

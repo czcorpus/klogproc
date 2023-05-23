@@ -37,11 +37,12 @@ func (h *onErrorHandler) Evaluate() {}
 func (h *onErrorHandler) Reset() {}
 
 func TestParseLine(t *testing.T) {
-	line := `2018-03-06 19:34:40,755 [QUERY] INFO: {"user_id": 4230, "proc_time": 0.5398, "pid": 46885, "request": {"HTTP_X_FORWARDED_FOR": "66.249.65.216", "HTTP_USER_AGENT": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"}, "action": "view", "params": {"ctxattrs": "word", "attr_vmode": "visible", "pagesize": "50", "q": "~U1OTWBoC", "viewmode": "kwic", "attrs": "word", "corpname": "omezeni/syn2015", "structs": "p", "attr_allpos": "kw"}, "date": "2018-03-06 19:34:40.755029"}`
+	line := `2018-03-06 19:34:40,755 [QUERY] INFO: {"user_id": 4230, "proc_time": 0.5398, "pid": 46885, "request": {"HTTP_X_FORWARDED_FOR": "66.249.65.216", "HTTP_USER_AGENT": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"}, "action": "/view", "params": {"ctxattrs": "word", "attr_vmode": "visible", "pagesize": "50", "q": "~U1OTWBoC", "viewmode": "kwic", "attrs": "word", "corpname": "omezeni/syn2015", "structs": "p", "attr_allpos": "kw"}, "date": "2018-03-06 19:34:40.755029"}`
 	p := LineParser{}
 	rec, err := p.ParseLine(line, 71)
 	assert.Nil(t, err)
 	assert.NotNil(t, rec)
+	assert.Equal(t, "/view", rec.Action)
 }
 
 func TestParseLineInvalidQuery(t *testing.T) {

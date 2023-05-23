@@ -78,13 +78,14 @@ type ErrorRecord struct {
 // QueryInputRecord represents Kontext query log
 type QueryInputRecord struct {
 	GeneralInputRecord
-	UserID        int                    `json:"user_id"`
-	ProcTime      float32                `json:"proc_time"`
-	Action        string                 `json:"action"`
-	Request       Request                `json:"request"`
-	Args          map[string]interface{} `json:"args"`
-	Error         ErrorRecord            `json:"error"`
-	isProcessable bool
+	UserID         int                    `json:"user_id"`
+	ProcTime       float32                `json:"proc_time"`
+	Action         string                 `json:"action"`
+	IsIndirectCall bool                   `json:"is_indirect_call"`
+	Request        Request                `json:"request"`
+	Args           map[string]interface{} `json:"args"`
+	Error          ErrorRecord            `json:"error"`
+	isProcessable  bool
 }
 
 // GetTime returns record's time as a Golang's Time
