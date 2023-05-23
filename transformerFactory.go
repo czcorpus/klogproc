@@ -20,6 +20,7 @@ import (
 	"klogproc/conversion"
 	"klogproc/conversion/kontext013"
 	"klogproc/conversion/kontext015"
+	"klogproc/conversion/kontext018"
 	"klogproc/conversion/korpusdb"
 	"klogproc/conversion/kwords"
 	"klogproc/conversion/mapka"
@@ -64,6 +65,23 @@ type konText015Transformer struct {
 // In case of type mismatch, error is returned.
 func (k *konText015Transformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
 	tRec, ok := logRec.(*kontext015.InputRecord)
+	if ok {
+		return k.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
+	}
+	return nil, fmt.Errorf("invalid type for conversion by KonText transformer %T", logRec)
+}
+
+// ------------------------------------
+
+// konText018Transformer is a simple type-safe wrapper for kontext 0.18.x app type log transformer
+type konText018Transformer struct {
+	t *kontext018.Transformer
+}
+
+// Transform transforms KonText app log record types as general InputRecord
+// In case of type mismatch, error is returned.
+func (k *konText018Transformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+	tRec, ok := logRec.(*kontext018.QueryInputRecord)
 	if ok {
 		return k.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
@@ -292,6 +310,8 @@ func GetLogTransformer(appType string, version string, userMap *users.UserMap) (
 			return &konText013Transformer{t: &kontext013.Transformer{}}, nil
 		case "0.15":
 			return &konText015Transformer{t: &kontext015.Transformer{}}, nil
+		case "0.18":
+			return &konText018Transformer{t: &kontext018.Transformer{}}, nil
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported KonText version: %s", version)
 		}
