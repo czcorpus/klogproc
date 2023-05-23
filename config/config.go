@@ -23,7 +23,6 @@ import (
 	"klogproc/fsop"
 	"klogproc/load/batch"
 	"klogproc/load/celery"
-	"klogproc/load/sredis"
 	"klogproc/load/tail"
 	"klogproc/save/elastic"
 	"klogproc/save/influx"
@@ -40,7 +39,6 @@ type Email struct {
 
 // Main describes klogproc's configuration
 type Main struct {
-	LogRedis          sredis.RedisConf          `json:"logRedis"`
 	LogFiles          batch.Conf                `json:"logFiles"`
 	LogTail           tail.Conf                 `json:"logTail"`
 	CeleryStatus      celery.Conf               `json:"celeryStatus"`
@@ -54,14 +52,6 @@ type Main struct {
 	InfluxDB          influx.ConnectionConf     `json:"influxDb"`
 	EmailNotification Email                     `json:"emailNotification"`
 	BotDetection      botwatch.BotDetectionConf `json:"botDetection"`
-}
-
-// UsesRedis tests whether the config contains Redis
-// configuration. The function is happy once it finds
-// a non empty address. Other values are not checked here
-// (it is up to the client module to validate that).
-func (c *Main) UsesRedis() bool {
-	return c.LogRedis.Address != ""
 }
 
 // HasInfluxOut tests whether an InfluxDB
