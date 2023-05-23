@@ -25,8 +25,8 @@ import (
 )
 
 var (
-	logLineRegexp  = regexp.MustCompile("^.+\\sINFO:\\s+(\\{.+)$")
-	lineTypeRegexp = regexp.MustCompile("^.+\\s([A-Z]+):\\s+.+$")
+	logLineRegexp  = regexp.MustCompile(`^.+\sINFO:\s+(\{.+)$`)
+	lineTypeRegexp = regexp.MustCompile(`^.+\s([A-Z]+):\s+.+$`)
 )
 
 func parseRawLine(s string) string {
@@ -51,8 +51,8 @@ type LineParser struct {
 }
 
 func (lp *LineParser) isIgnoredError(s string) bool {
-	return strings.Index(s, "] ERROR: syntax error") > -1 ||
-		strings.Index(s, "] ERROR: regexopt: at position") > -1
+	return strings.Contains(s, "] ERROR: syntax error") ||
+		strings.Contains(s, "] ERROR: regexopt: at position")
 }
 
 // ParseLine parses a query log line - i.e. it expects
@@ -63,7 +63,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 		return ImportJSONLog([]byte(jsonLine))
 
 	} else if tp := getLineType(s); tp == "QUERY" {
-		return nil, fmt.Errorf("Failed to process QUERY entry: %s", s)
+		return nil, fmt.Errorf("failed to process QUERY entry: %s", s)
 
 	} else {
 		if tp == "ERROR" && !lp.isIgnoredError(s) {

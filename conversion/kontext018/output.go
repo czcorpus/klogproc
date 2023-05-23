@@ -122,7 +122,7 @@ func createID(cnkr *OutputRecord) string {
 }
 
 func isEntryQuery(action string) bool {
-	ea := []string{"/query_submit", "/wordlist"}
+	ea := []string{"/query_submit", "/wordlist/submit", "/pquery/freq_intersection"}
 	for _, item := range ea {
 		if item == action {
 			return true

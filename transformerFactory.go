@@ -306,9 +306,9 @@ func GetLogTransformer(appType string, version string, userMap *users.UserMap) (
 		return &shinyTransformer{t: shiny.NewTransformer()}, nil
 	case conversion.AppTypeKontext, conversion.AppTypeKontextAPI:
 		switch version {
-		case "0.13":
+		case "0.13", "0.14":
 			return &konText013Transformer{t: &kontext013.Transformer{}}, nil
-		case "0.15":
+		case "0.15", "0.16", "0.17":
 			return &konText015Transformer{t: &kontext015.Transformer{}}, nil
 		case "0.18":
 			return &konText018Transformer{t: &kontext018.Transformer{}}, nil

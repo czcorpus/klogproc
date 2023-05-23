@@ -113,13 +113,14 @@ type ErrorRecord struct {
 
 // InputRecord represents a parsed KonText record
 type InputRecord struct {
-	UserID   int                    `json:"user_id"`
-	ProcTime float32                `json:"proc_time"`
-	Date     string                 `json:"date"`
-	Action   string                 `json:"action"`
-	Request  Request                `json:"request"`
-	Args     map[string]interface{} `json:"args"`
-	Error    ErrorRecord            `json:"error"`
+	UserID         int                    `json:"user_id"`
+	ProcTime       float32                `json:"proc_time"`
+	Date           string                 `json:"date"`
+	Action         string                 `json:"action"`
+	IsIndirectCall bool                   `json:"is_indirect_call"`
+	Request        Request                `json:"request"`
+	Args           map[string]interface{} `json:"args"`
+	Error          ErrorRecord            `json:"error"`
 }
 
 // GetTime returns record's time as a Golang's Time
