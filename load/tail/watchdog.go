@@ -75,6 +75,7 @@ type FileTailProcessor interface {
 	OnEntry(item string, logPosition conversion.LogRange)
 	OnCheckStop()
 	OnQuit()
+	IsRunning() bool
 }
 
 // ClientAnalyzer represents an object which is able to recognize
@@ -155,6 +156,14 @@ func Run(conf *Conf, processors []FileTailProcessor, analyzer ClientAnalyzer, fi
 			wg.Add(len(readers))
 			for _, reader := range readers {
 				go func(rdr *FileTailReader) {
+					if rdr.processor.IsRunning() {
+						log.Warn().
+							Str("logFile", rdr.filePath).
+							Str("appType", rdr.AppType()).
+							Msg("cannot perform check, processor still running")
+						wg.Done()
+						return
+					}
 					actionChan := rdr.Processor().OnCheckStart()
 
 					go func() {
