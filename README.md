@@ -17,21 +17,22 @@ concurrently which makes it quite fast.
 
 ### Supported applications
 
-| Name       | config code | note                                |
-|------------|-------------|-------------------------------------|
-| Akalex     | akalex      | a Shiny app with a custom log (*)   |
-| Calc       | calc        | a Shiny app with a custom log (*)   |
-| Gramatikat | gramatikat  | a Shiny app with a custom log (*)   |
-| KonText    | kontext     |                                     |
-| KorpusDB   | korpus-db   |                                     |
-| Kwords     | kwords      |                                     |
-| Lists      | lists       | a Shiny app with a custom log (*)   |
-| Mapka      | mapka       | using Nginx/Apache access log       |
-| Morfio     | morfio      |                                     |
-| QuitaUP    | quita-up    | a Shiny app with a custom log (*)   |
-| SkE        | ske         | using Nginx/Apache access log       |
-| SyD        | syd         | a custom app log                    |
-| Treq       | treq        | a custom app log                    |
+| Name       | config code | note                                  |
+|------------|-------------|---------------------------------------|
+| Akalex     | akalex      | a Shiny app with a custom log (*)     |
+| APIGuard   | apiguard    | CNC's internal API proxy and watchdog |
+| Calc       | calc        | a Shiny app with a custom log (*)     |
+| Gramatikat | gramatikat  | a Shiny app with a custom log (*)     |
+| KonText    | kontext     |                                       |
+| KorpusDB   | korpus-db   |                                       |
+| Kwords     | kwords      |                                       |
+| Lists      | lists       | a Shiny app with a custom log (*)     |
+| Mapka      | mapka       | using Nginx/Apache access log         |
+| Morfio     | morfio      |                                       |
+| QuitaUP    | quita-up    | a Shiny app with a custom log (*)     |
+| SkE        | ske         | using Nginx/Apache access log         |
+| SyD        | syd         | a custom app log                      |
+| Treq       | treq        | a custom app log                      |
 | WaG        | wag         | web access log, currently without user credentials  |
 
 (*) All the Shiny apps use the same log fromat.
