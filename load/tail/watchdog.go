@@ -56,6 +56,7 @@ func (fc *FileConf) GetAppType() string {
 // Conf wraps all the configuration for the 'tail' function
 type Conf struct {
 	IntervalSecs          int        `json:"intervalSecs"`
+	MaxLinesPerCheck      int        `json:"maxLinesPerCheck"`
 	WorklogPath           string     `json:"worklogPath"`
 	Files                 []FileConf `json:"files"`
 	NumErrorsAlarm        int        `json:"numErrorsAlarm"`
@@ -68,6 +69,7 @@ type Conf struct {
 type FileTailProcessor interface {
 	AppType() string
 	FilePath() string
+	MaxLinesPerCheck() int
 	CheckIntervalSecs() int
 	OnCheckStart() chan interface{}
 	OnEntry(item string, logPosition conversion.LogRange)
@@ -154,6 +156,7 @@ func Run(conf *Conf, processors []FileTailProcessor, analyzer ClientAnalyzer, fi
 			for _, reader := range readers {
 				go func(rdr *FileTailReader) {
 					actionChan := rdr.Processor().OnCheckStart()
+
 					go func() {
 						for action := range actionChan {
 							switch action := action.(type) {

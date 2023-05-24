@@ -43,6 +43,7 @@ type tailProcessor struct {
 	version           string
 	tzShift           int
 	checkIntervalSecs int
+	maxLinesPerCheck  int
 	conf              *config.Main
 	lineParser        batch.LineParser
 	logTransformer    conversion.LogItemTransformer
@@ -154,6 +155,10 @@ func (tp *tailProcessor) CheckIntervalSecs() int {
 	return tp.checkIntervalSecs
 }
 
+func (tp *tailProcessor) MaxLinesPerCheck() int {
+	return tp.maxLinesPerCheck
+}
+
 // -----
 
 func newProcAlarm(tailConf *tail.FileConf, conf *tail.Conf, mailConf *config.Email) (conversion.AppErrorRegister, error) {
@@ -201,7 +206,8 @@ func newTailProcessor(
 		filePath:          filepath.Clean(tailConf.Path), // note: this is not a full path normalization !
 		version:           tailConf.Version,
 		tzShift:           tailConf.TZShift,
-		checkIntervalSecs: conf.LogTail.IntervalSecs, // TODO maybe per-app type here ??
+		checkIntervalSecs: conf.LogTail.IntervalSecs,     // TODO maybe per-app type here ??
+		maxLinesPerCheck:  conf.LogTail.MaxLinesPerCheck, // TODO dtto
 		conf:              &conf,
 		lineParser:        lineParser,
 		logTransformer:    logTransformer,

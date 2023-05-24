@@ -79,6 +79,14 @@ func Validate(conf *Main) {
 	if !fsop.IsFile(conf.GeoIPDbPath) {
 		log.Fatal().Msgf("Invalid GeoIPDbPath: '%s'", conf.GeoIPDbPath)
 	}
+	if len(conf.LogTail.Files) > 0 {
+		if conf.LogTail.IntervalSecs < 10 {
+			log.Fatal().Msg("logTail.intervalSecs must be at least 10")
+		}
+		if conf.LogTail.MaxLinesPerCheck < conf.LogTail.IntervalSecs*100 {
+			log.Fatal().Msg("logTail.maxLinesPerCheck must be at least logTail.intervalSecs * 10")
+		}
+	}
 }
 
 // Load loads main configuration (either from a local fs or via http(s))

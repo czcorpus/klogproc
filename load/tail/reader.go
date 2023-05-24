@@ -88,7 +88,8 @@ func (ftw *FileTailReader) ApplyNewContent(processor FileTailProcessor, prevPosi
 	}
 
 	sc := bufio.NewReader(ftw.file)
-	for {
+	var i int
+	for i = 0; i < ftw.processor.MaxLinesPerCheck(); i++ {
 		newPosition.SeekStart = ftw.internalSeek
 		rawLine, err := sc.ReadBytes('\n')
 		if err == io.EOF {
@@ -99,6 +100,13 @@ func (ftw *FileTailReader) ApplyNewContent(processor FileTailProcessor, prevPosi
 		newPosition.SeekEnd = newPosition.SeekStart + int64(len(rawLine))
 		ftw.internalSeek = newPosition.SeekEnd
 		processor.OnEntry(string(rawLine[:len(rawLine)-1]), newPosition)
+	}
+	if i == ftw.processor.MaxLinesPerCheck() {
+		log.Warn().
+			Int("maxLinesPerCheck", ftw.processor.MaxLinesPerCheck()).
+			Str("logFile", ftw.filePath).
+			Str("name", ftw.AppType()).
+			Msg("tail processor hit the maxLinesPerCheck limit")
 	}
 	return nil
 }
