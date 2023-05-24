@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"klogproc/conversion"
+	"klogproc/conversion/apiguard"
 	"klogproc/conversion/kontext013"
 	"klogproc/conversion/kontext015"
 	"klogproc/conversion/kontext018"
@@ -38,6 +39,17 @@ import (
 	"klogproc/conversion/wag06"
 	"klogproc/conversion/wsserver"
 )
+
+// ------------------------------------
+
+type apiguardLineParser struct {
+	lp *apiguard.LineParser
+}
+
+// ParseLine parses a passed line of a respective log
+func (parser *apiguardLineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
+}
 
 // ------------------------------------
 
@@ -214,6 +226,8 @@ func (parser *masmLineParser) ParseLine(s string, lineNum int64) (conversion.Inp
 // NewLineParser creates a parser for individual lines of a respective appType
 func NewLineParser(appType string, version string, appErrRegister conversion.AppErrorRegister) (LineParser, error) {
 	switch appType {
+	case conversion.AppTypeAPIGuard:
+		return &apiguardLineParser{lp: &apiguard.LineParser{}}, nil
 	case conversion.AppTypeAkalex, conversion.AppTypeCalc, conversion.AppTypeLists,
 		conversion.AppTypeQuitaUp, conversion.AppTypeGramatikat:
 		return &shinyLineParser{lp: &shiny.LineParser{}}, nil

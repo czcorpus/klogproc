@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"klogproc/conversion"
+	"klogproc/conversion/apiguard"
 	"klogproc/conversion/kontext013"
 	"klogproc/conversion/kontext015"
 	"klogproc/conversion/kontext018"
@@ -36,6 +37,22 @@ import (
 	"klogproc/conversion/wsserver"
 	"klogproc/users"
 )
+
+// ------------------------------------
+
+type apiguardTransformer struct {
+	t *apiguard.Transformer
+}
+
+// Transform transforms APIGuard app log record types as general InputRecord
+// In case of type mismatch, error is returned.
+func (k *apiguardTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+	tRec, ok := logRec.(*apiguard.InputRecord)
+	if ok {
+		return k.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
+	}
+	return nil, fmt.Errorf("invalid type for conversion by APIGuard transformer %T", logRec)
+}
 
 // ------------------------------------
 
@@ -301,6 +318,8 @@ func (s *masmTransformer) Transform(logRec conversion.InputRecord, recType strin
 // GetLogTransformer returns a type-safe transformer for a concrete app type
 func GetLogTransformer(appType string, version string, userMap *users.UserMap) (conversion.LogItemTransformer, error) {
 	switch appType {
+	case conversion.AppTypeAPIGuard:
+		return &apiguardTransformer{t: &apiguard.Transformer{}}, nil
 	case conversion.AppTypeAkalex, conversion.AppTypeCalc, conversion.AppTypeLists,
 		conversion.AppTypeQuitaUp, conversion.AppTypeGramatikat:
 		return &shinyTransformer{t: shiny.NewTransformer()}, nil

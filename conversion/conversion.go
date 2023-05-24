@@ -31,6 +31,9 @@ const (
 	// AppTypeAkalex defines a universal storage identifier for Calc
 	AppTypeAkalex = "akalex"
 
+	// AppTypeAPIGuard represents a universal storage identifier for APIGuard
+	AppTypeAPIGuard = "apiguard"
+
 	// AppTypeCalc defines a universal storage identifier for Calc
 	AppTypeCalc = "calc"
 
