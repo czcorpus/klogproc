@@ -61,5 +61,6 @@ func (rec *InputRecord) GetUserAgent() string {
 
 // IsProcessable returns true if there was no error in reading the record
 func (rec *InputRecord) IsProcessable() bool {
-	return rec.AccessLog
+	chngLimit := time.Date(2023, 5, 24, 23, 59, 59, 0, time.UTC)
+	return rec.AccessLog || rec.GetTime().Before(chngLimit)
 }
