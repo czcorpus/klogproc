@@ -53,44 +53,44 @@ type tailProcessor struct {
 	anonymousUsers    []int
 	elasticChunkSize  int
 	influxChunkSize   int
-	itemConfirm       chan interface{}
 	alarm             conversion.AppErrorRegister
 	analysis          chan<- conversion.InputRecord
 }
 
 func (tp *tailProcessor) OnCheckStart() chan interface{} {
-	tp.dataForES = make(chan *conversion.BoundOutputRecord, tp.elasticChunkSize*2)
-	tp.dataForInflux = make(chan *conversion.BoundOutputRecord, tp.influxChunkSize)
-	tp.dataIgnored = make(chan save.IgnoredItemMsg)
+	itemConfirm := make(chan interface{}, 10)
+	go func() {
+		tp.dataForES = make(chan *conversion.BoundOutputRecord, tp.elasticChunkSize*2)
+		tp.dataForInflux = make(chan *conversion.BoundOutputRecord, tp.influxChunkSize)
+		tp.dataIgnored = make(chan save.IgnoredItemMsg)
 
-	var waitMergeEnd sync.WaitGroup
-	waitMergeEnd.Add(3)
-	tp.itemConfirm = make(chan interface{}, 10)
-	confirmChan1 := elastic.RunWriteConsumer(tp.appType, &tp.conf.ElasticSearch, tp.dataForES)
-	go func() {
-		for item := range confirmChan1 {
-			tp.itemConfirm <- item
-		}
-		waitMergeEnd.Done()
-	}()
-	confirmChan2 := influx.RunWriteConsumer(&tp.conf.InfluxDB, tp.dataForInflux)
-	go func() {
-		for item := range confirmChan2 {
-			tp.itemConfirm <- item
-		}
-		waitMergeEnd.Done()
-	}()
-	go func() {
-		for msg := range tp.dataIgnored {
-			tp.itemConfirm <- msg
-		}
-		waitMergeEnd.Done()
-	}()
-	go func() {
+		var waitMergeEnd sync.WaitGroup
+		waitMergeEnd.Add(3)
+		confirmChan1 := elastic.RunWriteConsumer(tp.appType, &tp.conf.ElasticSearch, tp.dataForES)
+		go func() {
+			for item := range confirmChan1 {
+				itemConfirm <- item
+			}
+			waitMergeEnd.Done()
+		}()
+		confirmChan2 := influx.RunWriteConsumer(&tp.conf.InfluxDB, tp.dataForInflux)
+		go func() {
+			for item := range confirmChan2 {
+				itemConfirm <- item
+			}
+			waitMergeEnd.Done()
+		}()
+		go func() {
+			for msg := range tp.dataIgnored {
+				itemConfirm <- msg
+			}
+			waitMergeEnd.Done()
+		}()
+
 		waitMergeEnd.Wait()
-		close(tp.itemConfirm)
+		close(itemConfirm)
 	}()
-	return tp.itemConfirm
+	return itemConfirm
 }
 
 func (tp *tailProcessor) OnEntry(item string, logPosition conversion.LogRange) {
@@ -109,7 +109,7 @@ func (tp *tailProcessor) OnEntry(item string, logPosition conversion.LogRange) {
 	if parsed.IsProcessable() {
 		outRec, err := tp.logTransformer.Transform(parsed, tp.appType, tp.tzShift, tp.anonymousUsers)
 		if err != nil {
-			log.Error().Err(err).Msg("")
+			log.Error().Err(err).Msg("Failed to transform processable record")
 			tp.dataIgnored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 			return
 		}

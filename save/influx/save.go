@@ -29,9 +29,6 @@ import (
 // conf.PushChunkSize and also once the incomingData channel is closed.
 func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan *conversion.BoundOutputRecord) <-chan save.ConfirmMsg {
 	confirmChan := make(chan save.ConfirmMsg)
-	defer func() {
-		close(confirmChan)
-	}()
 	go func() {
 		if conf.IsConfigured() {
 			var err error
@@ -55,6 +52,7 @@ func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan *conversion.Boun
 					confirmChan <- confirmMsg
 				}
 			}
+			close(confirmChan)
 			err = client.Finish()
 			if err != nil {
 				log.Error().Err(err).Msgf("")
