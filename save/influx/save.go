@@ -61,6 +61,7 @@ func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan *conversion.Boun
 		} else {
 			for range incomingData {
 			}
+			close(confirmChan)
 		}
 	}()
 	return confirmChan
