@@ -44,6 +44,7 @@ type tailProcessor struct {
 	tzShift           int
 	checkIntervalSecs int
 	maxLinesPerCheck  int
+	checkingMutex     sync.Mutex
 	conf              *config.Main
 	lineParser        batch.LineParser
 	logTransformer    conversion.LogItemTransformer
@@ -59,6 +60,8 @@ type tailProcessor struct {
 }
 
 func (tp *tailProcessor) OnCheckStart() chan interface{} {
+	tp.checkingMutex.Lock()
+	defer tp.checkingMutex.Unlock()
 	itemConfirm := make(chan interface{}, 10)
 	go func() {
 		tp.dataForES = make(chan *conversion.BoundOutputRecord, tp.elasticChunkSize*2)
@@ -132,6 +135,8 @@ func (tp *tailProcessor) OnEntry(item string, logPosition conversion.LogRange) {
 }
 
 func (tp *tailProcessor) OnCheckStop() {
+	tp.checkingMutex.Lock()
+	defer tp.checkingMutex.Unlock()
 	close(tp.dataForES)
 	close(tp.dataForInflux)
 	close(tp.dataIgnored)
