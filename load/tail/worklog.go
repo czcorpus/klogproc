@@ -21,10 +21,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"sync"
 
 	"klogproc/conversion"
 	"klogproc/fsop"
+
+	"github.com/czcorpus/cnc-gokit/collections"
 
 	"github.com/rs/zerolog/log"
 )
@@ -46,8 +47,7 @@ type WorklogRecord = map[string]conversion.LogRange
 type Worklog struct {
 	filePath    string
 	fr          *os.File
-	rec         map[string]conversion.LogRange
-	mutex       sync.Mutex
+	rec         *collections.ConcurrentMap[string, conversion.LogRange]
 	updRequests chan updateRequest
 }
 
@@ -73,7 +73,7 @@ func (w *Worklog) Init() error {
 	w.updRequests = make(chan updateRequest)
 	go func() {
 		for req := range w.updRequests {
-			curr := w.rec[req.FilePath]
+			curr := w.rec.Get(req.FilePath)
 			if curr.Inode != req.Value.Inode {
 				log.Warn().Msgf("inode for %s has changed from %d to %d", req.FilePath, curr.Inode, req.Value.Inode)
 			}
@@ -87,9 +87,7 @@ func (w *Worklog) Init() error {
 				!curr.Written && curr.SeekStart >= req.Value.SeekStart ||
 				curr.Written && req.Value.SeekEnd >= curr.SeekEnd ||
 				!req.Value.Written && (curr.Written || req.Value.SeekEnd < curr.SeekEnd) {
-				w.mutex.Lock()
-				w.rec[req.FilePath] = req.Value
-				w.mutex.Unlock()
+				w.rec.Set(req.FilePath, req.Value)
 				w.save()
 
 			} else {
@@ -167,9 +165,7 @@ func (w *Worklog) ResetFile(filePath string) (int64, error) {
 
 // GetData retrieves reading info for a provided app
 func (w *Worklog) GetData(filePath string) conversion.LogRange {
-	w.mutex.Lock()
-	v, ok := w.rec[filePath]
-	w.mutex.Unlock()
+	v, ok := w.rec.GetWithTest(filePath)
 	if ok {
 		return v
 	}
@@ -179,5 +175,8 @@ func (w *Worklog) GetData(filePath string) conversion.LogRange {
 // NewWorklog creates a new Worklog instance. Please note that
 // Init() must be called before you can begin using the worklog.
 func NewWorklog(path string) *Worklog {
-	return &Worklog{filePath: path, rec: make(map[string]conversion.LogRange)}
+	return &Worklog{
+		filePath: path,
+		rec:      collections.NewConcurrentMap[string, conversion.LogRange](),
+	}
 }
