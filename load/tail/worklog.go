@@ -56,16 +56,20 @@ type Worklog struct {
 func (w *Worklog) Init() error {
 	var err error
 	if w.filePath == "" {
-		return fmt.Errorf("Failed to initialize tail worklog - no path specified")
+		return fmt.Errorf("failed to initialize tail worklog - no path specified")
 	}
 	log.Info().Msgf("Initializing worklog %s", w.filePath)
 	w.fr, err = os.OpenFile(w.filePath, os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
 	byteValue, err := ioutil.ReadAll(w.fr)
 	if err != nil {
 		return err
 	}
 	if len(byteValue) > 0 {
-		err := json.Unmarshal(byteValue, &w.rec)
+		var err error
+		w.rec, err = collections.NewConcurrentMapFromJSON[string, conversion.LogRange](byteValue)
 		if err != nil {
 			return err
 		}
