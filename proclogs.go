@@ -33,7 +33,7 @@ import (
 
 func applyLocation(rec conversion.InputRecord, db *geoip2.Reader, outRec conversion.OutputRecord) {
 	ip := rec.GetClientIP()
-	if ip != nil {
+	if len(ip) > 0 {
 		city, err := db.City(ip)
 		if err != nil {
 			log.Error().Err(err).Msgf("Failed to fetch GeoIP data for IP %s.", ip.String())
