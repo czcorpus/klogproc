@@ -137,13 +137,13 @@ func Run(conf *Conf, processors []FileTailProcessor, analyzer ClientAnalyzer, fi
 	var readers []*FileTailReader
 	err := worklog.Init()
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		log.Error().Err(err).Msg("failed to initialize worklog")
 		quitChan <- true
 
 	} else {
 		readers, err = initReaders(processors, worklog)
 		if err != nil {
-			log.Error().Err(err).Msg("")
+			log.Error().Err(err).Msg("failed to initialize readers")
 			quitChan <- true
 		}
 	}
