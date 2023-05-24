@@ -26,6 +26,10 @@ import (
 	client "github.com/influxdata/influxdb1-client/v2"
 )
 
+const (
+	defaultReqTimeoutSecs = 10
+)
+
 // ConnectionConf specifies a configuration required to store data
 // to an InfluxDB database
 type ConnectionConf struct {
@@ -34,6 +38,7 @@ type ConnectionConf struct {
 	Database        string `json:"database"`
 	Measurement     string `json:"measurement"`
 	RetentionPolicy string `json:"retentionPolicy"`
+	ReqTimeoutSecs  int    `json:"reqTimeoutSecs"`
 }
 
 // IsConfigured tests whether the configuration is considered
@@ -48,16 +53,20 @@ func (conf *ConnectionConf) IsConfigured() bool {
 func (conf *ConnectionConf) Validate() error {
 	var err error
 	if conf.Server == "" {
-		err = fmt.Errorf("Missing 'server' information for InfluxDB")
+		err = fmt.Errorf("missing 'server' information for InfluxDB")
 	}
 	if conf.Database == "" {
-		err = fmt.Errorf("Missing 'database' information for InfluxDB")
+		err = fmt.Errorf("missing 'database' information for InfluxDB")
 	}
 	if conf.Measurement == "" {
-		err = fmt.Errorf("Missing 'measurement' information for InfluxDB")
+		err = fmt.Errorf("missing 'measurement' information for InfluxDB")
 	}
 	if conf.RetentionPolicy == "" {
-		err = fmt.Errorf("Missing 'retentionPolicy' information for InfluxDB")
+		err = fmt.Errorf("missing 'retentionPolicy' information for InfluxDB")
+	}
+	if conf.ReqTimeoutSecs == 0 {
+		conf.ReqTimeoutSecs = defaultReqTimeoutSecs
+		log.Warn().Msgf("value influxDb.reqTimeoutSecs not specified, using default %d", defaultReqTimeoutSecs)
 	}
 	return err
 }

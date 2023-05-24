@@ -19,7 +19,7 @@ package tail
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"klogproc/conversion"
@@ -63,7 +63,7 @@ func (w *Worklog) Init() error {
 	if err != nil {
 		return err
 	}
-	byteValue, err := ioutil.ReadAll(w.fr)
+	byteValue, err := io.ReadAll(w.fr)
 	if err != nil {
 		return err
 	}

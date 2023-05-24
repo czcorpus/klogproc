@@ -23,6 +23,12 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/rs/zerolog/log"
+)
+
+const (
+	defaultReqTimeoutSecs = 10
 )
 
 // ConnectionConf defines a configuration
@@ -54,6 +60,10 @@ func (conf *ConnectionConf) Validate() error {
 	}
 	if conf.PushChunkSize == 0 {
 		return fmt.Errorf("ERROR: elasticPushChunkSize is missing")
+	}
+	if conf.ReqTimeoutSecs == 0 {
+		conf.ReqTimeoutSecs = defaultReqTimeoutSecs
+		log.Warn().Msgf("missing elasticSearch.reqTimeoutSecs, using default %d", defaultReqTimeoutSecs)
 	}
 	return nil
 }
