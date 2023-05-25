@@ -54,7 +54,11 @@ func (ftw *FileTailReader) Processor() FileTailProcessor {
 }
 
 // ApplyNewContent calls a provided function to newly added lines
-func (ftw *FileTailReader) ApplyNewContent(processor FileTailProcessor, prevPosition conversion.LogRange) error {
+func (ftw *FileTailReader) ApplyNewContent(
+	processor FileTailProcessor,
+	dataWriter *LogDataWriter,
+	prevPosition conversion.LogRange,
+) error {
 	currInode, _, err := fsop.GetFileProps(processor.FilePath())
 	if err != nil {
 		return err
@@ -99,7 +103,7 @@ func (ftw *FileTailReader) ApplyNewContent(processor FileTailProcessor, prevPosi
 		}
 		newPosition.SeekEnd = newPosition.SeekStart + int64(len(rawLine))
 		ftw.internalSeek = newPosition.SeekEnd
-		processor.OnEntry(string(rawLine[:len(rawLine)-1]), newPosition)
+		processor.OnEntry(dataWriter, string(rawLine[:len(rawLine)-1]), newPosition)
 	}
 	if i == ftw.processor.MaxLinesPerCheck() {
 		log.Warn().

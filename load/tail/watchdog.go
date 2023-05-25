@@ -63,6 +63,19 @@ type Conf struct {
 	ErrCountTimeRangeSecs int        `json:"errCountTimeRangeSecs"`
 }
 
+type LineProcConfirmChan chan interface{}
+
+// LogDataWriter represents a per-check scoped instance
+// for writing converted logs to respective databases.
+// I.e. in case checks overlap due to a too long processing
+// in the previous check, both runs can independently write
+// their data.
+type LogDataWriter struct {
+	Elastic chan *conversion.BoundOutputRecord
+	Influx  chan *conversion.BoundOutputRecord
+	Ignored chan save.IgnoredItemMsg
+}
+
 // FileTailProcessor specifies an object which is able to utilize all
 // the "events" watchdog provides when processing a file tail for
 // a concrete appType
@@ -71,11 +84,19 @@ type FileTailProcessor interface {
 	FilePath() string
 	MaxLinesPerCheck() int
 	CheckIntervalSecs() int
-	OnCheckStart() chan interface{}
-	OnEntry(item string, logPosition conversion.LogRange)
-	OnCheckStop()
+
+	// OnCheckStart marks start of logged file check
+	// it returns a writer for storing converted adata
+	// and also a channel where confirmations of writes
+	// are sent.
+	OnCheckStart() (LineProcConfirmChan, *LogDataWriter)
+
+	// OnEntry is called on each processed line
+	OnEntry(writer *LogDataWriter, item string, logPosition conversion.LogRange)
+
+	// OnCheckStop marks the end of the single file check
+	OnCheckStop(writer *LogDataWriter)
 	OnQuit()
-	IsRunning() bool
 }
 
 // ClientAnalyzer represents an object which is able to recognize
@@ -138,13 +159,13 @@ func Run(conf *Conf, processors []FileTailProcessor, analyzer ClientAnalyzer, fi
 	var readers []*FileTailReader
 	err := worklog.Init()
 	if err != nil {
-		log.Error().Err(err).Msg("failed to initialize worklog")
+		log.Error().Err(err).Msg("")
 		quitChan <- true
 
 	} else {
 		readers, err = initReaders(processors, worklog)
 		if err != nil {
-			log.Error().Err(err).Msg("failed to initialize readers")
+			log.Error().Err(err).Msg("")
 			quitChan <- true
 		}
 	}
@@ -156,16 +177,7 @@ func Run(conf *Conf, processors []FileTailProcessor, analyzer ClientAnalyzer, fi
 			wg.Add(len(readers))
 			for _, reader := range readers {
 				go func(rdr *FileTailReader) {
-					if rdr.processor.IsRunning() {
-						log.Warn().
-							Str("logFile", rdr.filePath).
-							Str("appType", rdr.AppType()).
-							Msg("cannot perform check, processor still running")
-						wg.Done()
-						return
-					}
-					actionChan := rdr.Processor().OnCheckStart()
-
+					actionChan, writer := rdr.Processor().OnCheckStart()
 					go func() {
 						for action := range actionChan {
 							switch action := action.(type) {
@@ -181,8 +193,8 @@ func Run(conf *Conf, processors []FileTailProcessor, analyzer ClientAnalyzer, fi
 						wg.Done()
 					}()
 					prevPos := worklog.GetData(rdr.processor.FilePath())
-					rdr.ApplyNewContent(rdr.Processor(), prevPos)
-					rdr.Processor().OnCheckStop()
+					rdr.ApplyNewContent(rdr.Processor(), writer, prevPos)
+					rdr.Processor().OnCheckStop(writer)
 				}(reader)
 			}
 			wg.Wait()

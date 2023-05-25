@@ -19,6 +19,7 @@ package elastic
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -70,6 +71,36 @@ func (conf *ConnectionConf) Validate() error {
 
 // -------
 
+type BulkWriteRespItem struct {
+	Index struct {
+		Error struct {
+			Type   string `json:"type"`
+			Reason string `json:"reason"`
+		}
+		Status int `json:"status"`
+	} `json:"index"`
+}
+
+// BulkWriteResp represents a response from an ElasticSearch
+// server to a bulk insert action. Please note that even
+// there is an error (or more errors), the return code is
+// still 200 and actual individual errors are stored in
+// 'Items'.
+// TODO - test whether this works also for ES >= 6
+type BulkWriteResp struct {
+	Took   int                 `json:"took"`
+	Errors bool                `json:"errors"`
+	Items  []BulkWriteRespItem `json:"items"`
+}
+
+func (bwresp BulkWriteResp) FirstError() string {
+	if len(bwresp.Items) > 0 && bwresp.Items[0].Index.Error.Type != "" {
+		return fmt.Sprintf(
+			"%s (%s)", bwresp.Items[0].Index.Error.Type, bwresp.Items[0].Index.Error.Reason)
+	}
+	return ""
+}
+
 // ErrorResultObj describes an error response from ElasticSearch
 type ErrorResultObj struct {
 	Error  map[string]interface{} `json:"error"`
@@ -86,19 +117,19 @@ func (ero ErrorResultObj) String() string {
 
 // ESClientError is a general response error
 type ESClientError struct {
-	Message string
+	error
 	Query   []byte
 	ESError ErrorResultObj
 }
 
 func (esc *ESClientError) Error() string {
-	return fmt.Sprintf("%s: %s", esc.Message, esc.ESError)
+	return fmt.Sprintf("%s: %s", esc.error.Error(), esc.ESError)
 }
 
 func newESClientError(message string, response []byte, query []byte) *ESClientError {
 	var errResult ErrorResultObj
 	json.Unmarshal(response, &errResult)
-	return &ESClientError{message, query, errResult}
+	return &ESClientError{errors.New(message), query, errResult}
 }
 
 // ESClient is a simple ElasticSearch client
@@ -137,22 +168,32 @@ func (c *ESClient) Do(method string, path string, query []byte) ([]byte, error) 
 	client := http.Client{Timeout: time.Second * time.Duration(c.reqTimeoutSecs)}
 	req, err := http.NewRequest(method, c.server+path, body)
 	if err != nil {
-		return make([]byte, 0), err
+		return []byte{}, err
 	}
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	if err != nil {
-		return make([]byte, 0), err
+		return []byte{}, err
 	}
+	respBody, _ := ioutil.ReadAll(resp.Body)
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-		errBody, _ := ioutil.ReadAll(resp.Body)
-		return errBody, newESClientError(fmt.Sprintf("Request %s failed with code %d", path, resp.StatusCode), errBody, query)
+		return respBody, newESClientError(
+			fmt.Sprintf("Request %s failed with code %d", path, resp.StatusCode), respBody, query)
 	}
-	ans, err := ioutil.ReadAll(resp.Body)
+
+	var resObj BulkWriteResp
+	err = json.Unmarshal(respBody, &resObj)
 	if err != nil {
-		return make([]byte, 0), err
+		return []byte{}, fmt.Errorf("failed to decode ES bulk write response: %w", err)
 	}
-	return ans, nil
+	firstErr := resObj.FirstError()
+	if firstErr != "" {
+		return []byte{}, fmt.Errorf("failed to write data to ES: %w", errors.New(firstErr))
+	}
+	if err != nil {
+		return []byte{}, err
+	}
+	return respBody, nil
 }
 
 // search is a low level search function
