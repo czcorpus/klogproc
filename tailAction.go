@@ -44,14 +44,10 @@ type tailProcessor struct {
 	tzShift           int
 	checkIntervalSecs int
 	maxLinesPerCheck  int
-	isRunning         bool
 	conf              *config.Main
 	lineParser        batch.LineParser
 	logTransformer    conversion.LogItemTransformer
 	geoDB             *geoip2.Reader
-	dataForES         chan *conversion.BoundOutputRecord
-	dataForInflux     chan *conversion.BoundOutputRecord
-	dataIgnored       chan save.IgnoredItemMsg
 	anonymousUsers    []int
 	elasticChunkSize  int
 	influxChunkSize   int
@@ -59,24 +55,27 @@ type tailProcessor struct {
 	analysis          chan<- conversion.InputRecord
 }
 
-func (tp *tailProcessor) OnCheckStart() chan interface{} {
-	tp.isRunning = true
-	itemConfirm := make(chan interface{}, 10)
-	go func() {
-		tp.dataForES = make(chan *conversion.BoundOutputRecord, tp.elasticChunkSize*2)
-		tp.dataForInflux = make(chan *conversion.BoundOutputRecord, tp.influxChunkSize)
-		tp.dataIgnored = make(chan save.IgnoredItemMsg)
+func (tp *tailProcessor) OnCheckStart() (tail.LineProcConfirmChan, *tail.LogDataWriter) {
+	itemConfirm := make(tail.LineProcConfirmChan, 10)
+	dataWriter := tail.LogDataWriter{
+		Elastic: make(chan *conversion.BoundOutputRecord, tp.elasticChunkSize*2),
+		Influx:  make(chan *conversion.BoundOutputRecord, tp.influxChunkSize),
+		Ignored: make(chan save.IgnoredItemMsg),
+	}
 
+	go func() {
 		var waitMergeEnd sync.WaitGroup
 		waitMergeEnd.Add(3)
-		confirmChan1 := elastic.RunWriteConsumer(tp.appType, &tp.conf.ElasticSearch, tp.dataForES)
+		confirmChan1 := elastic.RunWriteConsumer(
+			tp.appType, &tp.conf.ElasticSearch, dataWriter.Elastic)
 		go func() {
 			for item := range confirmChan1 {
 				itemConfirm <- item
 			}
 			waitMergeEnd.Done()
 		}()
-		confirmChan2 := influx.RunWriteConsumer(&tp.conf.InfluxDB, tp.dataForInflux)
+		confirmChan2 := influx.RunWriteConsumer(
+			&tp.conf.InfluxDB, dataWriter.Influx)
 		go func() {
 			for item := range confirmChan2 {
 				itemConfirm <- item
@@ -84,19 +83,23 @@ func (tp *tailProcessor) OnCheckStart() chan interface{} {
 			waitMergeEnd.Done()
 		}()
 		go func() {
-			for msg := range tp.dataIgnored {
+			for msg := range dataWriter.Ignored {
 				itemConfirm <- msg
 			}
 			waitMergeEnd.Done()
 		}()
-
 		waitMergeEnd.Wait()
 		close(itemConfirm)
 	}()
-	return itemConfirm
+
+	return itemConfirm, &dataWriter
 }
 
-func (tp *tailProcessor) OnEntry(item string, logPosition conversion.LogRange) {
+func (tp *tailProcessor) OnEntry(
+	dataWriter *tail.LogDataWriter,
+	item string,
+	logPosition conversion.LogRange,
+) {
 	parsed, err := tp.lineParser.ParseLine(item, -1) // TODO (line num - hard to keep track)
 	if err != nil {
 		switch tErr := err.(type) {
@@ -105,7 +108,7 @@ func (tp *tailProcessor) OnEntry(item string, logPosition conversion.LogRange) {
 		default:
 			log.Error().Err(tErr).Send()
 		}
-		tp.dataIgnored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
+		dataWriter.Ignored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 		return
 	}
 	tp.analysis <- parsed
@@ -113,32 +116,31 @@ func (tp *tailProcessor) OnEntry(item string, logPosition conversion.LogRange) {
 		outRec, err := tp.logTransformer.Transform(parsed, tp.appType, tp.tzShift, tp.anonymousUsers)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to transform processable record")
-			tp.dataIgnored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
+			dataWriter.Ignored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 			return
 		}
 		applyLocation(parsed, tp.geoDB, outRec)
-		tp.dataForES <- &conversion.BoundOutputRecord{
+		dataWriter.Elastic <- &conversion.BoundOutputRecord{
 			FilePath: tp.filePath,
 			Rec:      outRec,
 			FilePos:  logPosition,
 		}
-		tp.dataForInflux <- &conversion.BoundOutputRecord{
+		dataWriter.Influx <- &conversion.BoundOutputRecord{
 			FilePath: tp.filePath,
 			Rec:      outRec,
 			FilePos:  logPosition,
 		}
 
 	} else {
-		tp.dataIgnored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
+		dataWriter.Ignored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 	}
 }
 
-func (tp *tailProcessor) OnCheckStop() {
-	close(tp.dataForES)
-	close(tp.dataForInflux)
-	close(tp.dataIgnored)
+func (tp *tailProcessor) OnCheckStop(dataWriter *tail.LogDataWriter) {
+	close(dataWriter.Elastic)
+	close(dataWriter.Influx)
+	close(dataWriter.Ignored)
 	tp.alarm.Evaluate()
-	tp.isRunning = false
 }
 
 func (tp *tailProcessor) OnQuit() {
@@ -160,10 +162,6 @@ func (tp *tailProcessor) CheckIntervalSecs() int {
 
 func (tp *tailProcessor) MaxLinesPerCheck() int {
 	return tp.maxLinesPerCheck
-}
-
-func (tp *tailProcessor) IsRunning() bool {
-	return tp.isRunning
 }
 
 // -----
