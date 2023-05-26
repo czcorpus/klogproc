@@ -25,9 +25,9 @@ import (
 )
 
 func createID(apgr *OutputRecord) string {
-	str := apgr.Datetime + apgr.Level + apgr.Service + apgr.Type + apgr.IPAddress + apgr.UserAgent +
-		fmt.Sprintf("%01.3f", apgr.ProcTime) + strconv.FormatBool(apgr.IsCached) +
-		strconv.FormatBool(apgr.IsIndirect)
+	str := apgr.Datetime + strconv.FormatBool(apgr.IsQuery) + apgr.Service + apgr.Type +
+		apgr.IPAddress + apgr.UserAgent + fmt.Sprintf("%01.3f", apgr.ProcTime) +
+		strconv.FormatBool(apgr.IsCached) + strconv.FormatBool(apgr.IsIndirect)
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }
@@ -49,8 +49,7 @@ func (t *Transformer) Transform(
 	corrDT := logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin))
 	r := &OutputRecord{
 		Type:       logRecord.Type,
-		Level:      logRecord.Level,
-		AccessLog:  true, // for older records, this is false - so normalizing to prevent confusion
+		IsQuery:    true,
 		Service:    logRecord.Service,
 		ProcTime:   logRecord.ProcTime,
 		IsCached:   logRecord.IsCached,
