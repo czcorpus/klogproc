@@ -31,11 +31,11 @@ type OutputRecord struct {
 	IsCached   bool                     `json:"isCached"`
 	IsIndirect bool                     `json:"isIndirect"`
 	UserID     string                   `json:"userId"`
-	Time       string                   `json:"time"`
 	IPAddress  string                   `json:"ipAddress,omitempty"`
 	UserAgent  string                   `json:"userAgent,omitempty"`
 	ID         string                   `json:"-"`
 	GeoIP      conversion.GeoDataRecord `json:"geoip,omitempty"`
+	Datetime   string                   `json:"datetime"`
 	datetime   time.Time
 }
 

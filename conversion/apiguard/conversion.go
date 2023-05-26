@@ -25,7 +25,7 @@ import (
 )
 
 func createID(apgr *OutputRecord) string {
-	str := apgr.Time + apgr.Level + apgr.Service + apgr.Type + apgr.IPAddress + apgr.UserAgent +
+	str := apgr.Datetime + apgr.Level + apgr.Service + apgr.Type + apgr.IPAddress + apgr.UserAgent +
 		fmt.Sprintf("%01.3f", apgr.ProcTime) + strconv.FormatBool(apgr.IsCached) +
 		strconv.FormatBool(apgr.IsIndirect)
 	sum := sha1.Sum([]byte(str))
@@ -46,6 +46,7 @@ func (t *Transformer) Transform(
 	if logRecord.UserID != nil {
 		sUserID = strconv.Itoa(*logRecord.UserID)
 	}
+	corrDT := logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin))
 	r := &OutputRecord{
 		Type:       logRecord.Type,
 		Level:      logRecord.Level,
@@ -57,8 +58,8 @@ func (t *Transformer) Transform(
 		UserID:     sUserID,
 		IPAddress:  logRecord.IPAddress,
 		UserAgent:  logRecord.UserAgent,
-		datetime:   logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)),
-		Time:       logRecord.GetTime().Format(time.RFC3339),
+		datetime:   corrDT,
+		Datetime:   corrDT.Format(time.RFC3339),
 	}
 	r.ID = createID(r)
 	return r, nil
