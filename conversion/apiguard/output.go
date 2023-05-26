@@ -24,8 +24,7 @@ import (
 
 type OutputRecord struct {
 	Type       string                   `json:"type"`
-	Level      string                   `json:"level"`
-	AccessLog  bool                     `json:"accessLog"`
+	IsQuery    bool                     `json:"isQuery"`
 	Service    string                   `json:"service"`
 	ProcTime   float64                  `json:"procTime"`
 	IsCached   bool                     `json:"isCached"`
