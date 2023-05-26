@@ -57,7 +57,7 @@ type OutputRecord struct {
 	RunScript   string `json:"runScript"`
 	IsQuery     bool   `json:"isQuery"`
 
-	GeoIP conversion.GeoDataRecord `json:"geoip"`
+	GeoIP conversion.GeoDataRecord `json:"geoip,omitempty"`
 }
 
 // SetLocation sets all the location related properties

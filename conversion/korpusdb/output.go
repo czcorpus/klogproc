@@ -47,7 +47,7 @@ type OutputRecord struct {
 	IsQuery     bool                     `json:"isQuery"`
 	IsAPI       bool                     `json:"isApi"`
 	ClientFlag  string                   `json:"clientFlag"`
-	GeoIP       conversion.GeoDataRecord `json:"geoip"`
+	GeoIP       conversion.GeoDataRecord `json:"geoip,omitempty"`
 	QueryType   string                   `json:"queryType"` // token/ngram
 }
 

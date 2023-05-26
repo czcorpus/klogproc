@@ -59,7 +59,7 @@ type OutputRecord struct {
 	Con             bool                     `json:"con"`
 	Num             bool                     `json:"num"`
 	CaseInsensitive bool                     `json:"caseInsensitive"`
-	GeoIP           conversion.GeoDataRecord `json:"geoip"`
+	GeoIP           conversion.GeoDataRecord `json:"geoip,omitempty"`
 }
 
 // SetLocation sets all the location related properties

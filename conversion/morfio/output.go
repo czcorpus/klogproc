@@ -53,7 +53,7 @@ type OutputRecord struct {
 	InputAttr       string                   `json:"inputAttr"`
 	OutputAttr      string                   `json:"outputAttr"`
 	CaseInsensitive bool                     `json:"caseInsensitive"`
-	GeoIP           conversion.GeoDataRecord `json:"geoip"`
+	GeoIP           conversion.GeoDataRecord `json:"geoip,omitempty"`
 }
 
 // SetLocation sets all the location related properties

@@ -68,7 +68,7 @@ type OutputRecord struct {
 	QueryType      string                   `json:"queryType"`
 	UserAgent      string                   `json:"userAgent"`
 	UserID         string                   `json:"userId"`
-	GeoIP          conversion.GeoDataRecord `json:"geoip"`
+	GeoIP          conversion.GeoDataRecord `json:"geoip,omitempty"`
 	Error          ErrorRecord              `json:"error"`
 	Args           map[string]interface{}   `json:"args"`
 }

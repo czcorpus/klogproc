@@ -46,7 +46,7 @@ type OutputRecord struct {
 	Lang1               string                   `json:"lang1"`
 	Lang2               string                   `json:"lang2"`
 	Queries             []string                 `json:"queries"`
-	GeoIP               conversion.GeoDataRecord `json:"geoip"`
+	GeoIP               conversion.GeoDataRecord `json:"geoip,omitempty"`
 	ProcTime            float32                  `json:"procTime"`
 }
 

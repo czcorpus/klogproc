@@ -56,7 +56,7 @@ type OutputRecord struct {
 	QType       string                   `json:"qType"`
 	Query       string                   `json:"query"`
 	Query2      string                   `json:"query2"`
-	GeoIP       conversion.GeoDataRecord `json:"geoip"`
+	GeoIP       conversion.GeoDataRecord `json:"geoip,omitempty"`
 }
 
 // SetLocation sets all the location related properties

@@ -25,7 +25,7 @@ import (
 type OutputRecord struct {
 	InputRecord
 	ID       string                   `json:"-"`
-	GeoIP    conversion.GeoDataRecord `json:"geoip"`
+	GeoIP    conversion.GeoDataRecord `json:"geoip,omitempty"`
 	datetime time.Time
 }
 
