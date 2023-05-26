@@ -23,10 +23,20 @@ import (
 )
 
 type OutputRecord struct {
-	InputRecord
-	ID       string                   `json:"-"`
-	GeoIP    conversion.GeoDataRecord `json:"geoip,omitempty"`
-	datetime time.Time
+	Type       string                   `json:"type"`
+	Level      string                   `json:"level"`
+	AccessLog  bool                     `json:"accessLog"`
+	Service    string                   `json:"service"`
+	ProcTime   float64                  `json:"procTime"`
+	IsCached   bool                     `json:"isCached"`
+	IsIndirect bool                     `json:"isIndirect"`
+	UserID     string                   `json:"userId"`
+	Time       string                   `json:"time"`
+	IPAddress  string                   `json:"ipAddress,omitempty"`
+	UserAgent  string                   `json:"userAgent,omitempty"`
+	ID         string                   `json:"-"`
+	GeoIP      conversion.GeoDataRecord `json:"geoip,omitempty"`
+	datetime   time.Time
 }
 
 // ToJSON converts self to JSON string
