@@ -44,7 +44,7 @@ type OutputRecord struct {
 	IsAnonymous bool                     `json:"isAnonymous"`
 	Lang        string                   `json:"lang"`
 	UserAgent   string                   `json:"userAgent"`
-	GeoIP       conversion.GeoDataRecord `json:"geoip"`
+	GeoIP       conversion.GeoDataRecord `json:"geoip,omitempty"`
 	IsQuery     bool                     `json:"isQuery"`
 }
 

@@ -34,8 +34,8 @@ type InputRecord struct {
 	IsIndirect bool    `json:"isIndirect"`
 	UserID     *int    `json:"userId"`
 	Time       string  `json:"time"`
-	IPAddress  string  `json:"ipAddress"`
-	UserAgent  string  `json:"userAgent"`
+	IPAddress  string  `json:"ipAddress,omitempty"`
+	UserAgent  string  `json:"userAgent,omitempty"`
 }
 
 // GetTime returns record's time as a Golang's Time
@@ -51,7 +51,7 @@ func (rec *InputRecord) GetClientIP() net.IP {
 	if rec.IPAddress != "" {
 		return net.ParseIP(rec.IPAddress)
 	}
-	return make([]byte, 0)
+	return []byte{}
 }
 
 // GetUserAgent returns a raw HTTP user agent info as provided by the client
@@ -59,7 +59,11 @@ func (rec *InputRecord) GetUserAgent() string {
 	return rec.UserAgent
 }
 
-// IsProcessable returns true if there was no error in reading the record
+// IsProcessable declares whether the log record matches
+// the type we are interested in (i.e. "access log").
+// For APIGuard we also accept older records without 'accessLog==true'
+// but with some indirect flags making almost 100% sure that
+// the records are of the "access log" type.
 func (rec *InputRecord) IsProcessable() bool {
 	chngLimit := time.Date(2023, 5, 24, 23, 59, 59, 0, time.UTC)
 	return rec.AccessLog ||

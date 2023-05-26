@@ -37,7 +37,7 @@ type OutputRecord struct {
 	UserID      string                   `json:"userId"`
 	IsAnonymous bool                     `json:"isAnonymous"`
 	IsQuery     bool                     `json:"isQuery"`
-	GeoIP       conversion.GeoDataRecord `json:"geoip"`
+	GeoIP       conversion.GeoDataRecord `json:"geoip,omitempty"`
 	ProcTime    float32                  `json:"procTime"`
 }
 
