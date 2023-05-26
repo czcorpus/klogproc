@@ -42,11 +42,24 @@ func (t *Transformer) Transform(
 	tzShiftMin int,
 	anonymousUsers []int,
 ) (*OutputRecord, error) {
-	r := &OutputRecord{
-		InputRecord: *logRecord,
-		datetime:    logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)),
+	var sUserID string
+	if logRecord.UserID != nil {
+		sUserID = strconv.Itoa(*logRecord.UserID)
 	}
-	r.Time = r.GetTime().Format(time.RFC3339)
+	r := &OutputRecord{
+		Type:       logRecord.Type,
+		Level:      logRecord.Level,
+		AccessLog:  logRecord.AccessLog,
+		Service:    logRecord.Service,
+		ProcTime:   logRecord.ProcTime,
+		IsCached:   logRecord.IsCached,
+		IsIndirect: logRecord.IsIndirect,
+		UserID:     sUserID,
+		IPAddress:  logRecord.IPAddress,
+		UserAgent:  logRecord.UserAgent,
+		datetime:   logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)),
+		Time:       logRecord.GetTime().Format(time.RFC3339),
+	}
 	r.ID = createID(r)
 	return r, nil
 }
