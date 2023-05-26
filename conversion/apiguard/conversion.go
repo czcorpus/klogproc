@@ -50,7 +50,7 @@ func (t *Transformer) Transform(
 	r := &OutputRecord{
 		Type:       logRecord.Type,
 		Level:      logRecord.Level,
-		AccessLog:  logRecord.AccessLog,
+		AccessLog:  true, // for older records, this is false - so normalizing to prevent confusion
 		Service:    logRecord.Service,
 		ProcTime:   logRecord.ProcTime,
 		IsCached:   logRecord.IsCached,
