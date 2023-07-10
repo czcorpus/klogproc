@@ -40,7 +40,7 @@ func (k *masmTransformer) HistoryLookupSecs() int {
 }
 
 func (k *masmTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

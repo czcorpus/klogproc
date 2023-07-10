@@ -17,10 +17,16 @@
 package mapka3
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
+	"fmt"
 	"net"
 	"time"
 
 	"klogproc/conversion"
+
+	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 )
 
 // InputRecord represents a raw-parsed version of MAPKA's access log
@@ -30,6 +36,7 @@ import (
 // "extra":{"session_selector":"aa7e3e2a322a","user_id":"4321","url":"/markers",
 // "ip":"::1","http_method":"POST","server":"localhost","referrer":"http://localhost:8083/"}}
 type InputRecord struct {
+	Type          string         `json:"type"`
 	Message       string         `json:"message"`
 	Context       map[string]any `json:"context"`
 	Level         int            `json:"level"`
@@ -62,6 +69,29 @@ func (r *InputRecord) GetClientIP() net.IP {
 		return v
 	}
 	return net.IPv4zero
+}
+
+func (rec *InputRecord) ClusteringClientID() string {
+	var inp string
+	if rec.Extra.UserID != "" {
+		inp = fmt.Sprint(rec.Extra.UserID)
+
+	} else if rec.Extra.IP != "" {
+		inp = rec.Extra.IP
+
+	} else {
+		log.Warn().Msgf(
+			"unable to get a proper clustering client ID for app %s (time: %s) - using uuid",
+			rec.Type, rec.Datetime)
+		id := uuid.New()
+		inp = id.String()
+	}
+	sum := sha1.New()
+	_, err := sum.Write([]byte(inp))
+	if err != nil {
+		log.Error().Err(err).Msg("problem generating hash")
+	}
+	return hex.EncodeToString(sum.Sum(nil))
 }
 
 // GetUserAgent returns a raw HTTP user agent info as provided by the client

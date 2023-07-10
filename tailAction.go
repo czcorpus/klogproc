@@ -55,7 +55,7 @@ type tailProcessor struct {
 	influxChunkSize   int
 	alarm             conversion.AppErrorRegister
 	analysis          chan<- conversion.InputRecord
-	logBuffer         *logbuffer.Storage
+	logBuffer         *logbuffer.Storage[conversion.InputRecord]
 }
 
 func (tp *tailProcessor) OnCheckStart() (tail.LineProcConfirmChan, *tail.LogDataWriter) {
@@ -227,7 +227,7 @@ func newTailProcessor(
 		influxChunkSize:   conf.InfluxDB.PushChunkSize,
 		alarm:             procAlarm,
 		analysis:          analysis,
-		logBuffer:         logbuffer.NewStorage(),
+		logBuffer:         logbuffer.NewStorage[conversion.InputRecord](),
 	}
 }
 

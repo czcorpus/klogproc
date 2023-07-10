@@ -51,7 +51,7 @@ func (t *Transformer) HistoryLookupSecs() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
 ) conversion.InputRecord {
 	return rec
 }

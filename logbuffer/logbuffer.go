@@ -16,9 +16,21 @@
 
 package logbuffer
 
-type Storage struct {
+import (
+	"time"
+)
+
+type Storable interface {
+	GetTime() time.Time
 }
 
-func NewStorage() *Storage {
-	return &Storage{}
+type Storage[T Storable] struct {
+}
+
+func (st *Storage[T]) AddRecord(appType string, rec Storable) {
+
+}
+
+func NewStorage[T Storable]() *Storage[T] {
+	return &Storage[T]{}
 }

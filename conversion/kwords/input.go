@@ -48,6 +48,10 @@ func (rec *InputRecord) GetClientIP() net.IP {
 	return net.ParseIP(rec.IPAddress)
 }
 
+func (rec *InputRecord) ClusteringClientID() string {
+	return conversion.GenerateRandomClusteringID()
+}
+
 // GetUserAgent returns a raw HTTP user agent info as provided by the client
 func (rec *InputRecord) GetUserAgent() string {
 	return ""

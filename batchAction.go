@@ -60,7 +60,7 @@ func runBatchAction(
 		anonymousUsers: conf.AnonymousUsers,
 		clientAnalyzer: analyzer,
 		skipAnalysis:   conf.LogFiles.SkipAnalysis,
-		logBuffer:      logbuffer.NewStorage(),
+		logBuffer:      logbuffer.NewStorage[conversion.InputRecord](),
 	}
 	channelWriteES := make(chan *conversion.BoundOutputRecord, conf.ElasticSearch.PushChunkSize*2)
 	channelWriteInflux := make(chan *conversion.BoundOutputRecord, conf.InfluxDB.PushChunkSize)

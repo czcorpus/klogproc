@@ -61,6 +61,10 @@ func (r *InputRecord) GetClientIP() net.IP {
 	return net.ParseIP(r.Request.RemoteAddr)
 }
 
+func (r *InputRecord) ClusteringClientID() string {
+	return conversion.GenerateRandomClusteringID()
+}
+
 // GetUserAgent returns a raw HTTP user agent info as provided by the client
 func (r *InputRecord) GetUserAgent() string {
 	return r.Request.HTTPUserAgent
