@@ -66,6 +66,16 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 	return r, nil
 }
 
+func (t *Transformer) HistoryLookupSecs() int {
+	return 0
+}
+
+func (t *Transformer) Preprocess(
+	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+) conversion.InputRecord {
+	return rec
+}
+
 // NewTransformer is a recommended factory for new Transformer instances
 // to reflect the version properly
 func NewTransformer(version string) *Transformer {

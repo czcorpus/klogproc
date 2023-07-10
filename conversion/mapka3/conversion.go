@@ -1,5 +1,5 @@
-// Copyright 2023 Tomas Machalek <tomas.machalek@gmail.com>
-// Copyright 2023 Institute of the Czech National Corpus,
+// Copyright 2020 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2020 Institute of the Czech National Corpus,
 //                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,27 +14,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package apiguard
+package mapka3
 
 import (
 	"crypto/sha1"
 	"encoding/hex"
-	"fmt"
-	"klogproc/conversion"
 	"strconv"
 	"time"
+
+	"klogproc/conversion"
 )
 
-func createID(apgr *OutputRecord) string {
-	str := apgr.Datetime + strconv.FormatBool(apgr.IsQuery) + apgr.Service + apgr.Type +
-		apgr.IPAddress + apgr.UserAgent + fmt.Sprintf("%01.3f", apgr.ProcTime) +
-		strconv.FormatBool(apgr.IsCached) + strconv.FormatBool(apgr.IsIndirect)
+// createID creates an idempotent ID of rec based on its properties.
+func createID(rec *OutputRecord) string {
+	str := rec.Type + rec.Path + rec.Datetime + rec.IPAddress + rec.UserID
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }
 
 // Transformer converts a source log object into a destination one
-type Transformer struct{}
+type Transformer struct {
+}
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
@@ -43,25 +43,23 @@ func (t *Transformer) Transform(
 	tzShiftMin int,
 	anonymousUsers []int,
 ) (*OutputRecord, error) {
-	var sUserID string
-	if logRecord.UserID != nil {
-		sUserID = strconv.Itoa(*logRecord.UserID)
-	}
-	corrDT := logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin))
+
+	userID := -1
+
 	r := &OutputRecord{
-		Type:       logRecord.Type,
-		IsQuery:    true,
-		Service:    logRecord.Service,
-		ProcTime:   logRecord.ProcTime,
-		IsCached:   logRecord.IsCached,
-		IsIndirect: logRecord.IsIndirect,
-		UserID:     sUserID,
-		IPAddress:  logRecord.IPAddress,
-		UserAgent:  logRecord.UserAgent,
-		datetime:   corrDT,
-		Datetime:   corrDT.Format(time.RFC3339),
+		Type:        recType,
+		time:        logRecord.GetTime(),
+		Datetime:    logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		IPAddress:   logRecord.Extra.IP,
+		UserAgent:   logRecord.GetUserAgent(),
+		IsAnonymous: userID == -1 || conversion.UserBelongsToList(userID, anonymousUsers),
+		IsQuery:     false,
+		UserID:      strconv.Itoa(userID),
 	}
 	r.ID = createID(r)
+	if r.Action == "index" || r.Action == "records_list" || r.Action == "city" {
+		r.IsQuery = true
+	}
 	return r, nil
 }
 
@@ -73,4 +71,10 @@ func (t *Transformer) Preprocess(
 	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
 ) conversion.InputRecord {
 	return rec
+}
+
+// NewTransformer is a default constructor for the Transformer.
+// It also loads user ID map from a configured file (if exists).
+func NewTransformer() *Transformer {
+	return &Transformer{}
 }

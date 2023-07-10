@@ -89,3 +89,13 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 	}
 	return out, nil
 }
+
+func (t *Transformer) HistoryLookupSecs() int {
+	return 0
+}
+
+func (t *Transformer) Preprocess(
+	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+) conversion.InputRecord {
+	return rec
+}

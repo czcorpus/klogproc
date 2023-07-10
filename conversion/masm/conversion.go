@@ -17,7 +17,10 @@
 
 package masm
 
-import "time"
+import (
+	"klogproc/conversion"
+	"time"
+)
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
@@ -40,4 +43,14 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 	}
 	rec.ID = CreateID(rec)
 	return rec, nil
+}
+
+func (t *Transformer) HistoryLookupSecs() int {
+	return 0
+}
+
+func (t *Transformer) Preprocess(
+	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+) conversion.InputRecord {
+	return rec
 }

@@ -47,3 +47,13 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 	rec.ID = wag06.CreateID(rec)
 	return rec, nil
 }
+
+func (t *Transformer) HistoryLookupSecs() int {
+	return 0
+}
+
+func (t *Transformer) Preprocess(
+	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+) conversion.InputRecord {
+	return rec
+}

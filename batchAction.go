@@ -24,6 +24,7 @@ import (
 	"klogproc/save"
 	"klogproc/save/elastic"
 	"klogproc/save/influx"
+	"klogproc/trfactory"
 	"klogproc/users"
 	"sync"
 
@@ -40,7 +41,12 @@ func runBatchAction(
 	finishEvent chan<- bool,
 ) {
 
-	lt, err := GetLogTransformer(conf.LogFiles.AppType, conf.LogFiles.Version, userMap)
+	lt, err := trfactory.GetLogTransformer(
+		conf.LogFiles.AppType,
+		conf.LogFiles.Version,
+		conf.LogFiles.HistoryLookupSecs,
+		userMap,
+	)
 	if err != nil {
 		log.Fatal().Msgf("%s", err)
 	}

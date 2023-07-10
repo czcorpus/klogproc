@@ -29,6 +29,7 @@ import (
 	"klogproc/save"
 	"klogproc/save/elastic"
 	"klogproc/save/influx"
+	"klogproc/trfactory"
 	"klogproc/users"
 
 	"github.com/oschwald/geoip2-golang"
@@ -198,7 +199,8 @@ func newTailProcessor(
 	if err != nil {
 		log.Fatal().Msgf("Failed to initialize parser: %s", err)
 	}
-	logTransformer, err := GetLogTransformer(tailConf.AppType, tailConf.Version, userMap)
+	logTransformer, err := trfactory.GetLogTransformer(
+		tailConf.AppType, tailConf.Version, tailConf.HistoryLookupSecs, userMap)
 	if err != nil {
 		log.Fatal().Msgf("Failed to initialize transformer: %s", err)
 	}

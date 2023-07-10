@@ -28,6 +28,7 @@ import (
 	"klogproc/conversion/kwords"
 	"klogproc/conversion/mapka"
 	"klogproc/conversion/mapka2"
+	"klogproc/conversion/mapka3"
 	"klogproc/conversion/masm"
 	"klogproc/conversion/morfio"
 	"klogproc/conversion/shiny"
@@ -127,6 +128,16 @@ type mapka2LineParser struct {
 }
 
 func (parser *mapka2LineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
+}
+
+// ------------------------------------
+
+type mapka3LineParser struct {
+	lp *mapka3.LineParser
+}
+
+func (parser *mapka3LineParser) ParseLine(s string, lineNum int64) (conversion.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -252,6 +263,8 @@ func NewLineParser(appType string, version string, appErrRegister conversion.App
 			return &mapkaLineParser{lp: &mapka.LineParser{}}, nil
 		case "2":
 			return &mapka2LineParser{lp: &mapka2.LineParser{}}, nil
+		case "3":
+			return &mapka3LineParser{lp: &mapka3.LineParser{}}, nil
 		default:
 			return nil, fmt.Errorf("cannot find parser - unsupported version of Mapka specified: %s", version)
 		}

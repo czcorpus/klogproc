@@ -60,6 +60,16 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 	return r, nil
 }
 
+func (t *Transformer) HistoryLookupSecs() int {
+	return 0
+}
+
+func (t *Transformer) Preprocess(
+	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+) conversion.InputRecord {
+	return rec
+}
+
 // NewTransformer is a default constructor for the Transformer.
 // It also loads user ID map from a configured file (if exists).
 func NewTransformer() *Transformer {

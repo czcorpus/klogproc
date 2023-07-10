@@ -49,6 +49,7 @@ type Conf struct {
 	PartiallyMatchingFiles bool   `json:"partiallyMatchingFiles"`
 	WorklogPath            string `json:"worklogPath"`
 	AppType                string `json:"appType"`
+	HistoryLookupSecs      int    `json:"historyLookupSecs"`
 
 	// Version represents a major and minor version signature as used in semantic versioning
 	// (e.g. 0.15, 1.2)
@@ -70,13 +71,13 @@ func importTimeRangeEntry(v string) (time.Time, error) {
 	if tzRangePattern.MatchString(v) {
 		vc, err := strconv.Atoi(v)
 		if err != nil {
-			return time.Time{}, fmt.Errorf("Failed to parse UNIX timestamp-like value: %v", err)
+			return time.Time{}, fmt.Errorf("failed to parse UNIX timestamp-like value: %v", err)
 		}
 		return time.Unix(int64(vc), 0), nil
 	}
 	t := conversion.ConvertDatetimeString(v)
 	if t.IsZero() {
-		return t, fmt.Errorf("Unrecognized time format. Must be either a numeric UNIX timestamp or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm")
+		return t, fmt.Errorf("unrecognized time format. Must be either a numeric UNIX timestamp or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm")
 	}
 	return t, nil
 }
