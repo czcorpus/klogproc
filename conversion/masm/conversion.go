@@ -19,6 +19,7 @@ package masm
 
 import (
 	"klogproc/conversion"
+	"klogproc/logbuffer"
 	"time"
 )
 
@@ -50,7 +51,7 @@ func (t *Transformer) HistoryLookupSecs() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return rec
 }

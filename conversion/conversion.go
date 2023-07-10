@@ -18,6 +18,7 @@ package conversion
 
 import (
 	"fmt"
+	"klogproc/logbuffer"
 	"net"
 	"strconv"
 	"strings"
@@ -227,7 +228,7 @@ type LogItemTransformer interface {
 	// x < 0: illegal value
 	HistoryLookupSecs() int
 
-	Preprocess(rec InputRecord, prevRecs []InputRecord) InputRecord
+	Preprocess(rec InputRecord, prevRecs *logbuffer.Storage) InputRecord
 
 	Transform(logRec InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (OutputRecord, error)
 }

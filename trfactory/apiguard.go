@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"klogproc/conversion"
 	"klogproc/conversion/apiguard"
+	"klogproc/logbuffer"
 )
 
 type apiguardTransformer struct {
@@ -39,7 +40,7 @@ func (k *apiguardTransformer) HistoryLookupSecs() int {
 }
 
 func (k *apiguardTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

@@ -77,7 +77,7 @@ func GetLogTransformer(
 		case "2":
 			return &mapka2Transformer{t: mapka2.NewTransformer()}, nil
 		case "3":
-			return &mapka3Transformer{t: mapka3.NewTransformer()}, nil
+			return &mapka3Transformer{t: mapka3.NewTransformer(historyLookupSecs)}, nil
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported Mapka version: %s", version)
 		}

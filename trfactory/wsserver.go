@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"klogproc/conversion"
 	"klogproc/conversion/wsserver"
+	"klogproc/logbuffer"
 )
 
 type wsserverTransformer struct {
@@ -39,7 +40,7 @@ func (k *wsserverTransformer) HistoryLookupSecs() int {
 }
 
 func (k *wsserverTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

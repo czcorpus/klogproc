@@ -21,6 +21,7 @@ import (
 	"klogproc/config"
 	"klogproc/conversion"
 	"klogproc/load/batch"
+	"klogproc/logbuffer"
 	"klogproc/save"
 	"klogproc/save/elastic"
 	"klogproc/save/influx"
@@ -59,6 +60,7 @@ func runBatchAction(
 		anonymousUsers: conf.AnonymousUsers,
 		clientAnalyzer: analyzer,
 		skipAnalysis:   conf.LogFiles.SkipAnalysis,
+		logBuffer:      logbuffer.NewStorage(),
 	}
 	channelWriteES := make(chan *conversion.BoundOutputRecord, conf.ElasticSearch.PushChunkSize*2)
 	channelWriteInflux := make(chan *conversion.BoundOutputRecord, conf.InfluxDB.PushChunkSize)

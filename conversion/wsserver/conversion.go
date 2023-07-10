@@ -20,6 +20,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"klogproc/conversion"
+	"klogproc/logbuffer"
 	"strings"
 	"time"
 )
@@ -63,7 +64,7 @@ func (t *Transformer) HistoryLookupSecs() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return rec
 }

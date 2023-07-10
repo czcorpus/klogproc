@@ -20,6 +20,7 @@ import (
 	"klogproc/conversion/kontext013"
 	"klogproc/conversion/kontext015"
 	"klogproc/conversion/kontext018"
+	"klogproc/logbuffer"
 )
 
 // konText013Transformer is a simple type-safe wrapper for kontext v 0.13.x app type log transformer
@@ -42,7 +43,7 @@ func (k *konText013Transformer) HistoryLookupSecs() int {
 }
 
 func (k *konText013Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -69,7 +70,7 @@ func (k *konText015Transformer) HistoryLookupSecs() int {
 }
 
 func (k *konText015Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -96,7 +97,7 @@ func (k *konText018Transformer) HistoryLookupSecs() int {
 }
 
 func (k *konText018Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

@@ -26,6 +26,7 @@ import (
 	"klogproc/conversion"
 	"klogproc/fsop"
 	"klogproc/load/batch"
+	"klogproc/logbuffer"
 	"klogproc/users"
 
 	"github.com/oschwald/geoip2-golang"
@@ -77,6 +78,7 @@ type CNKLogProcessor struct {
 	skipAnalysis   bool
 	logTransformer conversion.LogItemTransformer
 	clientAnalyzer ClientAnalyzer
+	logBuffer      *logbuffer.Storage
 }
 
 func (clp *CNKLogProcessor) recordIsLoggable(logRec conversion.InputRecord) bool {
@@ -96,6 +98,7 @@ func (clp *CNKLogProcessor) ProcItem(logRec conversion.InputRecord, tzShiftMin i
 		clp.clientAnalyzer.Add(logRec)
 	}
 	if clp.recordIsLoggable(logRec) {
+		logRec = clp.logTransformer.Preprocess(logRec, clp.logBuffer)
 		rec, err := clp.logTransformer.Transform(logRec, clp.appType, tzShiftMin, clp.anonymousUsers)
 		if err != nil {
 			log.Error().Err(err).Msgf("Failed to transform item %s", logRec)

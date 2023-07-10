@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"klogproc/conversion"
+	"klogproc/logbuffer"
 )
 
 const (
@@ -95,7 +96,7 @@ func (t *Transformer) HistoryLookupSecs() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return rec
 }

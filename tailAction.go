@@ -26,6 +26,7 @@ import (
 	"klogproc/load/alarm"
 	"klogproc/load/batch"
 	"klogproc/load/tail"
+	"klogproc/logbuffer"
 	"klogproc/save"
 	"klogproc/save/elastic"
 	"klogproc/save/influx"
@@ -54,6 +55,7 @@ type tailProcessor struct {
 	influxChunkSize   int
 	alarm             conversion.AppErrorRegister
 	analysis          chan<- conversion.InputRecord
+	logBuffer         *logbuffer.Storage
 }
 
 func (tp *tailProcessor) OnCheckStart() (tail.LineProcConfirmChan, *tail.LogDataWriter) {
@@ -114,6 +116,7 @@ func (tp *tailProcessor) OnEntry(
 	}
 	tp.analysis <- parsed
 	if parsed.IsProcessable() {
+		parsed = tp.logTransformer.Preprocess(parsed, tp.logBuffer)
 		outRec, err := tp.logTransformer.Transform(parsed, tp.appType, tp.tzShift, tp.anonymousUsers)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to transform processable record")
@@ -224,6 +227,7 @@ func newTailProcessor(
 		influxChunkSize:   conf.InfluxDB.PushChunkSize,
 		alarm:             procAlarm,
 		analysis:          analysis,
+		logBuffer:         logbuffer.NewStorage(),
 	}
 }
 

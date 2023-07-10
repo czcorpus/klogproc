@@ -24,6 +24,7 @@ import (
 	"klogproc/conversion/ske"
 	"klogproc/conversion/syd"
 	"klogproc/conversion/treq"
+	"klogproc/logbuffer"
 )
 
 // ------------------------------------
@@ -49,7 +50,7 @@ func (k *kwordsTransformer) HistoryLookupSecs() int {
 }
 
 func (k *kwordsTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -75,7 +76,7 @@ func (k *korpusDBTransformer) HistoryLookupSecs() int {
 }
 
 func (k *korpusDBTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -101,7 +102,7 @@ func (k *morfioTransformer) HistoryLookupSecs() int {
 }
 
 func (k *morfioTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -127,7 +128,7 @@ func (k *skeTransformer) HistoryLookupSecs() int {
 }
 
 func (k *skeTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -153,7 +154,7 @@ func (k *shinyTransformer) HistoryLookupSecs() int {
 }
 
 func (k *shinyTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -179,7 +180,7 @@ func (k *sydTransformer) HistoryLookupSecs() int {
 }
 
 func (k *sydTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -205,7 +206,7 @@ func (k *treqTransformer) HistoryLookupSecs() int {
 }
 
 func (k *treqTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

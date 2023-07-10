@@ -19,6 +19,7 @@ import (
 	"klogproc/conversion"
 	"klogproc/conversion/wag06"
 	"klogproc/conversion/wag07"
+	"klogproc/logbuffer"
 )
 
 type wag06Transformer struct {
@@ -40,7 +41,7 @@ func (k *wag06Transformer) HistoryLookupSecs() int {
 }
 
 func (k *wag06Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -66,7 +67,7 @@ func (k *wag07Transformer) HistoryLookupSecs() int {
 }
 
 func (k *wag07Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

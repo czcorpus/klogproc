@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"klogproc/conversion"
+	"klogproc/logbuffer"
 )
 
 // createID creates an idempotent ID of rec based on its properties.
@@ -34,6 +35,7 @@ func createID(rec *OutputRecord) string {
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
+	historyLookupSecs int
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
@@ -57,24 +59,23 @@ func (t *Transformer) Transform(
 		UserID:      strconv.Itoa(userID),
 	}
 	r.ID = createID(r)
-	if r.Action == "index" || r.Action == "records_list" || r.Action == "city" {
-		r.IsQuery = true
-	}
+	r.IsQuery = true
+	r.Action = "interaction"
 	return r, nil
 }
 
 func (t *Transformer) HistoryLookupSecs() int {
-	return 0
+	return t.historyLookupSecs
 }
 
 func (t *Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return rec
 }
 
 // NewTransformer is a default constructor for the Transformer.
 // It also loads user ID map from a configured file (if exists).
-func NewTransformer() *Transformer {
-	return &Transformer{}
+func NewTransformer(historyLookupSecs int) *Transformer {
+	return &Transformer{historyLookupSecs: historyLookupSecs}
 }

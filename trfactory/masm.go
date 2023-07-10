@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"klogproc/conversion"
 	"klogproc/conversion/masm"
+	"klogproc/logbuffer"
 )
 
 type masmTransformer struct {
@@ -39,7 +40,7 @@ func (k *masmTransformer) HistoryLookupSecs() int {
 }
 
 func (k *masmTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

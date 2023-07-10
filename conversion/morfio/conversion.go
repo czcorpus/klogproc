@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"klogproc/conversion"
+	"klogproc/logbuffer"
 )
 
 // Transformer converts a Morfio log record to a destination format
@@ -78,7 +79,7 @@ func (t *Transformer) HistoryLookupSecs() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return rec
 }

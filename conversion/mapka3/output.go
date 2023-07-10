@@ -26,8 +26,11 @@ import (
 // OutputRecord represents a polished version of Mapka's access log stripped
 // of unnecessary attributes
 type OutputRecord struct {
-	ID          string `json:"-"`
-	Type        string `json:"type"`
+	ID   string `json:"-"`
+	Type string `json:"type"`
+
+	// Action specifies an action name. In case of mapka3 where we aggregate requests into
+	// clusters representing user interactions we use a made up name "interaction".
 	Action      string `json:"action"`
 	Path        string `json:"path"`
 	Datetime    string `json:"datetime"`

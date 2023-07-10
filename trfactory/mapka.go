@@ -20,6 +20,7 @@ import (
 	"klogproc/conversion/mapka"
 	"klogproc/conversion/mapka2"
 	"klogproc/conversion/mapka3"
+	"klogproc/logbuffer"
 )
 
 // ------------------------------------
@@ -43,7 +44,7 @@ func (k *mapkaTransformer) HistoryLookupSecs() int {
 }
 
 func (k *mapkaTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -69,7 +70,7 @@ func (k *mapka2Transformer) HistoryLookupSecs() int {
 }
 
 func (k *mapka2Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -95,7 +96,7 @@ func (k *mapka3Transformer) HistoryLookupSecs() int {
 }
 
 func (k *mapka3Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs []conversion.InputRecord,
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage,
 ) conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
