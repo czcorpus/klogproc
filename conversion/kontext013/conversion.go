@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"klogproc/conversion"
+	"klogproc/logbuffer"
 )
 
 // Transformer converts a source log object into a destination one
@@ -48,4 +49,14 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 	}
 	r.ID = createID(r)
 	return r, nil
+}
+
+func (t *Transformer) HistoryLookupItems() int {
+	return 0
+}
+
+func (t *Transformer) Preprocess(
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+) []conversion.InputRecord {
+	return []conversion.InputRecord{rec}
 }

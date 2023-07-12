@@ -17,12 +17,16 @@
 package conversion
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
+	"klogproc/logbuffer"
 	"net"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
 
@@ -126,12 +130,34 @@ func NewStreamedLineParsingError(line string, message string) StreamedLineParsin
 	return StreamedLineParsingError{RecordPrefix: sample, Message: message}
 }
 
+func GenerateRandomClusteringID() string {
+	id := uuid.New()
+	sum := sha1.New()
+	_, err := sum.Write([]byte(id.String()))
+	if err != nil {
+		log.Error().Err(err).Msg("problem generating hash")
+	}
+	return hex.EncodeToString(sum.Sum(nil))
+}
+
 // InputRecord describes a common behavior for objects extracted
 // from an application log of any UCNK app.
 type InputRecord interface {
 	GetTime() time.Time
 	GetClientIP() net.IP
 	GetUserAgent() string
+
+	// ClusteringClientID should provide the best available identifier of a user
+	// usable for requests clustering.
+	// The priority is as follows:
+	// 1) user ID
+	// 2) session ID
+	// 3) IP address
+	// Please note that the values do not have to be directly the ones listed above.
+	// It is perfectly OK to hash the original values.
+	ClusteringClientID() string
+	ClusterSize() int
+	SetCluster(size int)
 	IsProcessable() bool
 }
 
@@ -215,6 +241,19 @@ func (r *BoundOutputRecord) GetType() string {
 // LogItemTransformer defines a general object able to transform
 // an input log record to an output one.
 type LogItemTransformer interface {
+
+	// HistoryLookupItems provides information about whether
+	// the transformer needs to look up to previously seen records.
+	// This can be used e.g. when clustering records.
+	//
+	// How the values are understood:
+	// x = 0: no buffer, i.e. the transformer will always gets only the current log line
+	// x > 0: up to `x` previous records will be available along with the current one
+	// x < 0: illegal value
+	HistoryLookupItems() int
+
+	Preprocess(rec InputRecord, prevRecs *logbuffer.Storage[InputRecord]) []InputRecord
+
 	Transform(logRec InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (OutputRecord, error)
 }
 

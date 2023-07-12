@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"klogproc/conversion"
+	"klogproc/logbuffer"
 )
 
 func getQueryType(rec *InputRecord) string {
@@ -54,7 +55,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 	if logRecord.UserID != "" { // null is converted into an empty string
 		uid, err := strconv.Atoi(logRecord.UserID)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to convert user ID [%s]", logRecord.UserID)
+			return nil, fmt.Errorf("failed to convert user ID [%s]", logRecord.UserID)
 		}
 		userID = uid
 	}
@@ -75,4 +76,14 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 	}
 	out.ID = createID(out)
 	return out, nil
+}
+
+func (t *Transformer) HistoryLookupItems() int {
+	return 0
+}
+
+func (t *Transformer) Preprocess(
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+) []conversion.InputRecord {
+	return []conversion.InputRecord{rec}
 }

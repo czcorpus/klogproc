@@ -20,6 +20,8 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"klogproc/conversion"
+	"klogproc/logbuffer"
 	"strconv"
 	"time"
 )
@@ -62,4 +64,14 @@ func (t *Transformer) Transform(
 	}
 	r.ID = createID(r)
 	return r, nil
+}
+
+func (t *Transformer) HistoryLookupItems() int {
+	return 0
+}
+
+func (t *Transformer) Preprocess(
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+) []conversion.InputRecord {
+	return []conversion.InputRecord{rec}
 }

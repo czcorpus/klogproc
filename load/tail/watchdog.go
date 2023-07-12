@@ -25,6 +25,7 @@ import (
 
 	"klogproc/botwatch"
 	"klogproc/conversion"
+	"klogproc/load"
 	"klogproc/save"
 
 	"github.com/rs/zerolog/log"
@@ -41,8 +42,9 @@ type FileConf struct {
 	AppType string `json:"appType"`
 	// Version represents a major and minor version signature as used in semantic versioning
 	// (e.g. 0.15, 1.2)
-	Version string `json:"version"`
-	TZShift int    `json:"tzShift"`
+	Version string          `json:"version"`
+	TZShift int             `json:"tzShift"`
+	Buffer  load.BufferConf `json:"buffer"`
 }
 
 func (fc *FileConf) GetPath() string {

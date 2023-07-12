@@ -47,11 +47,10 @@ func BulkWriteRequest(data [][]byte, appType string, esconf *ConnectionConf) err
 	} else {
 		esclient = NewClient6(esconf, appType)
 	}
-
 	q := bytes.Join(data, []byte("\n"))
 	_, err := esclient.Do("POST", "/_bulk", q)
 	if err != nil {
-		return fmt.Errorf("failed to push log chunk: %s", err)
+		return fmt.Errorf("failed to push log chunk: %w", err)
 	}
 	log.Debug().Msgf("Inserted chunk of %d items to ElasticSearch", (len(data)-1)/2)
 	return nil

@@ -41,12 +41,23 @@ type InputRecord struct {
 	Query2      string
 }
 
-func (r *InputRecord) GetTime() time.Time {
-	return conversion.ConvertDatetimeString(r.Datetime)
+func (rec *InputRecord) GetTime() time.Time {
+	return conversion.ConvertDatetimeString(rec.Datetime)
 }
 
-func (r *InputRecord) GetClientIP() net.IP {
-	return net.ParseIP(r.IPAddress)
+func (rec *InputRecord) GetClientIP() net.IP {
+	return net.ParseIP(rec.IPAddress)
+}
+
+func (rec *InputRecord) ClusteringClientID() string {
+	return conversion.GenerateRandomClusteringID()
+}
+
+func (rec *InputRecord) ClusterSize() int {
+	return 0
+}
+
+func (rec *InputRecord) SetCluster(size int) {
 }
 
 // GetUserAgent returns a raw HTTP user agent info as provided by the client

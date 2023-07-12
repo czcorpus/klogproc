@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"klogproc/conversion"
+	"klogproc/logbuffer"
 )
 
 func exportArgs(data map[string]interface{}) map[string]interface{} {
@@ -58,4 +59,14 @@ func (t *Transformer) Transform(logRecord *QueryInputRecord, recType string, tzS
 	}
 	r.ID = createID(r)
 	return r, nil
+}
+
+func (t *Transformer) HistoryLookupItems() int {
+	return 0
+}
+
+func (t *Transformer) Preprocess(
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+) []conversion.InputRecord {
+	return []conversion.InputRecord{rec}
 }

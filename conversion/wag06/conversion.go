@@ -17,6 +17,8 @@
 package wag06
 
 import (
+	"klogproc/conversion"
+	"klogproc/logbuffer"
 	"net/url"
 	"time"
 
@@ -62,4 +64,14 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 	}
 	r.ID = CreateID(r)
 	return r, nil
+}
+
+func (t *Transformer) HistoryLookupItems() int {
+	return 0
+}
+
+func (t *Transformer) Preprocess(
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+) []conversion.InputRecord {
+	return []conversion.InputRecord{rec}
 }

@@ -21,6 +21,7 @@ import (
 
 	"klogproc/conversion"
 	"klogproc/conversion/wag06"
+	"klogproc/logbuffer"
 )
 
 // Transformer converts a source log object into a destination one
@@ -46,4 +47,14 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 	rec.ProcTime = -1        // TODO not available; does it have a value
 	rec.ID = wag06.CreateID(rec)
 	return rec, nil
+}
+
+func (t *Transformer) HistoryLookupItems() int {
+	return 0
+}
+
+func (t *Transformer) Preprocess(
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+) []conversion.InputRecord {
+	return []conversion.InputRecord{rec}
 }

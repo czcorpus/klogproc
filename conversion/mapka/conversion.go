@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"klogproc/conversion"
+	"klogproc/logbuffer"
 )
 
 // createID creates an idempotent ID of rec based on its properties.
@@ -63,6 +64,16 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 	}
 	t.prevReqs.AddItem(r)
 	return r, nil
+}
+
+func (t *Transformer) HistoryLookupItems() int {
+	return 0
+}
+
+func (t *Transformer) Preprocess(
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+) []conversion.InputRecord {
+	return []conversion.InputRecord{rec}
 }
 
 // NewTransformer is a default constructor for the Transformer.

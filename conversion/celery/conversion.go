@@ -20,6 +20,8 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"klogproc/conversion"
+	"klogproc/logbuffer"
 	"strconv"
 
 	"github.com/rs/zerolog/log"
@@ -53,4 +55,14 @@ func (t *Transformer) Transform(logRecord *InputRecord) (*OutputRecord, error) {
 	}
 	out.ID = createID(out)
 	return out, nil
+}
+
+func (t *Transformer) HistoryLookupItems() int {
+	return 0
+}
+
+func (t *Transformer) Preprocess(
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+) []conversion.InputRecord {
+	return []conversion.InputRecord{rec}
 }

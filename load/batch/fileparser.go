@@ -90,8 +90,8 @@ func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, datetimeRange
 				break
 			}
 			if recTime.Unix() >= fromTimestamp {
-				outRec := proc.ProcItem(rec, p.tzShift)
-				if outRec != nil {
+				outRecs := proc.ProcItem(rec, p.tzShift)
+				for _, outRec := range outRecs {
 					for _, output := range outputs {
 						output <- &conversion.BoundOutputRecord{Rec: outRec, FilePath: p.fileName}
 					}

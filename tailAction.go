@@ -26,9 +26,11 @@ import (
 	"klogproc/load/alarm"
 	"klogproc/load/batch"
 	"klogproc/load/tail"
+	"klogproc/logbuffer"
 	"klogproc/save"
 	"klogproc/save/elastic"
 	"klogproc/save/influx"
+	"klogproc/trfactory"
 	"klogproc/users"
 
 	"github.com/oschwald/geoip2-golang"
@@ -53,6 +55,7 @@ type tailProcessor struct {
 	influxChunkSize   int
 	alarm             conversion.AppErrorRegister
 	analysis          chan<- conversion.InputRecord
+	logBuffer         *logbuffer.Storage[conversion.InputRecord]
 }
 
 func (tp *tailProcessor) OnCheckStart() (tail.LineProcConfirmChan, *tail.LogDataWriter) {
@@ -113,22 +116,25 @@ func (tp *tailProcessor) OnEntry(
 	}
 	tp.analysis <- parsed
 	if parsed.IsProcessable() {
-		outRec, err := tp.logTransformer.Transform(parsed, tp.appType, tp.tzShift, tp.anonymousUsers)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to transform processable record")
-			dataWriter.Ignored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
-			return
-		}
-		applyLocation(parsed, tp.geoDB, outRec)
-		dataWriter.Elastic <- &conversion.BoundOutputRecord{
-			FilePath: tp.filePath,
-			Rec:      outRec,
-			FilePos:  logPosition,
-		}
-		dataWriter.Influx <- &conversion.BoundOutputRecord{
-			FilePath: tp.filePath,
-			Rec:      outRec,
-			FilePos:  logPosition,
+		for _, precord := range tp.logTransformer.Preprocess(parsed, tp.logBuffer) {
+			tp.logBuffer.AddRecord(precord)
+			outRec, err := tp.logTransformer.Transform(precord, tp.appType, tp.tzShift, tp.anonymousUsers)
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to transform processable record")
+				dataWriter.Ignored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
+				return
+			}
+			applyLocation(precord, tp.geoDB, outRec)
+			dataWriter.Elastic <- &conversion.BoundOutputRecord{
+				FilePath: tp.filePath,
+				Rec:      outRec,
+				FilePos:  logPosition,
+			}
+			dataWriter.Influx <- &conversion.BoundOutputRecord{
+				FilePath: tp.filePath,
+				Rec:      outRec,
+				FilePos:  logPosition,
+			}
 		}
 
 	} else {
@@ -198,7 +204,8 @@ func newTailProcessor(
 	if err != nil {
 		log.Fatal().Msgf("Failed to initialize parser: %s", err)
 	}
-	logTransformer, err := GetLogTransformer(tailConf.AppType, tailConf.Version, userMap)
+	logTransformer, err := trfactory.GetLogTransformer(
+		tailConf.AppType, tailConf.Version, tailConf.Buffer, userMap)
 	if err != nil {
 		log.Fatal().Msgf("Failed to initialize transformer: %s", err)
 	}
@@ -222,6 +229,7 @@ func newTailProcessor(
 		influxChunkSize:   conf.InfluxDB.PushChunkSize,
 		alarm:             procAlarm,
 		analysis:          analysis,
+		logBuffer:         logbuffer.NewStorage[conversion.InputRecord](conf.LogFiles.Buffer),
 	}
 }
 

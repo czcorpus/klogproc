@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"klogproc/conversion"
+	"klogproc/logbuffer"
 )
 
 // Transformer converts a SyD log record to a destination format
@@ -64,6 +65,16 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 		r.Corpus = t.DiaCorpora
 	}
 	return r, nil
+}
+
+func (t *Transformer) HistoryLookupItems() int {
+	return 0
+}
+
+func (t *Transformer) Preprocess(
+	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+) []conversion.InputRecord {
+	return []conversion.InputRecord{rec}
 }
 
 // NewTransformer is a recommended factory for new Transformer instances
