@@ -45,13 +45,13 @@ func (s *kwordsTransformer) Transform(logRec conversion.InputRecord, recType str
 	return nil, fmt.Errorf("invalid type for conversion by KWords transformer %T", logRec)
 }
 
-func (k *kwordsTransformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *kwordsTransformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *kwordsTransformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
 
@@ -71,13 +71,13 @@ func (s *korpusDBTransformer) Transform(logRec conversion.InputRecord, recType s
 	return nil, fmt.Errorf("invalid type for conversion by KonText transformer %T", logRec)
 }
 
-func (k *korpusDBTransformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *korpusDBTransformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *korpusDBTransformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
 
@@ -97,13 +97,13 @@ func (s *morfioTransformer) Transform(logRec conversion.InputRecord, recType str
 	return nil, fmt.Errorf("invalid type for conversion by Morfio transformer %T", logRec)
 }
 
-func (k *morfioTransformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *morfioTransformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *morfioTransformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
 
@@ -123,13 +123,13 @@ func (s *skeTransformer) Transform(logRec conversion.InputRecord, recType string
 	return nil, fmt.Errorf("invalid type for conversion by SkE transformer %T", logRec)
 }
 
-func (k *skeTransformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *skeTransformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *skeTransformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
 
@@ -149,13 +149,13 @@ func (s *shinyTransformer) Transform(logRec conversion.InputRecord, recType stri
 	return nil, fmt.Errorf("invalid type for conversion by Shiny transformer %T", logRec)
 }
 
-func (k *shinyTransformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *shinyTransformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *shinyTransformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
 
@@ -175,13 +175,13 @@ func (s *sydTransformer) Transform(logRec conversion.InputRecord, recType string
 	return nil, fmt.Errorf("invalid type for conversion by SyD transformer %T", logRec)
 }
 
-func (k *sydTransformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *sydTransformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *sydTransformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
 
@@ -201,12 +201,12 @@ func (s *treqTransformer) Transform(logRec conversion.InputRecord, recType strin
 	return nil, fmt.Errorf("invalid type for conversion by Treq transformer %T", logRec)
 }
 
-func (k *treqTransformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *treqTransformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *treqTransformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

@@ -38,13 +38,13 @@ func (k *konText013Transformer) Transform(logRec conversion.InputRecord, recType
 	return nil, fmt.Errorf("invalid type for conversion by KonText transformer %T", logRec)
 }
 
-func (k *konText013Transformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *konText013Transformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *konText013Transformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
 
@@ -65,13 +65,13 @@ func (k *konText015Transformer) Transform(logRec conversion.InputRecord, recType
 	return nil, fmt.Errorf("invalid type for conversion by KonText transformer %T", logRec)
 }
 
-func (k *konText015Transformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *konText015Transformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *konText015Transformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
 
@@ -92,12 +92,12 @@ func (k *konText018Transformer) Transform(logRec conversion.InputRecord, recType
 	return nil, fmt.Errorf("invalid type for conversion by KonText transformer %T", logRec)
 }
 
-func (k *konText018Transformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *konText018Transformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *konText018Transformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

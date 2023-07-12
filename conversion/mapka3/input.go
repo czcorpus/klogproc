@@ -45,6 +45,7 @@ type InputRecord struct {
 	Datetime      string         `json:"datetime"`
 	Extra         Extra          `json:"extra"`
 	isProcessable bool
+	clusterSize   int
 }
 
 type Extra struct {
@@ -92,6 +93,14 @@ func (rec *InputRecord) ClusteringClientID() string {
 		log.Error().Err(err).Msg("problem generating hash")
 	}
 	return hex.EncodeToString(sum.Sum(nil))
+}
+
+func (rec *InputRecord) ClusterSize() int {
+	return rec.clusterSize
+}
+
+func (rec *InputRecord) SetCluster(size int) {
+	rec.clusterSize = size
 }
 
 // GetUserAgent returns a raw HTTP user agent info as provided by the client

@@ -36,13 +36,13 @@ func (s *wag06Transformer) Transform(logRec conversion.InputRecord, recType stri
 	return nil, fmt.Errorf("invalid type for conversion by WaG 0.6 transformer %T", logRec)
 }
 
-func (k *wag06Transformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *wag06Transformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *wag06Transformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
 
@@ -62,12 +62,12 @@ func (s *wag07Transformer) Transform(logRec conversion.InputRecord, recType stri
 	return nil, fmt.Errorf("invalid type for conversion by WaG 0.7 transformer %T", logRec)
 }
 
-func (k *wag07Transformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *wag07Transformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *wag07Transformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

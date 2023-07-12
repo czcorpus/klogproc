@@ -17,20 +17,76 @@
 package logbuffer
 
 import (
+	"klogproc/load"
 	"time"
+
+	"github.com/czcorpus/cnc-gokit/collections"
 )
 
 type Storable interface {
 	GetTime() time.Time
+	ClusteringClientID() string
 }
 
 type Storage[T Storable] struct {
+	initialCapacity int
+	data            map[string]*collections.CircularList[T]
+	lastChecks      map[string]time.Time
 }
 
-func (st *Storage[T]) AddRecord(appType string, rec Storable) {
-
+func (st *Storage[T]) AddRecord(rec T) {
+	if st.initialCapacity > 0 {
+		cid := rec.ClusteringClientID()
+		_, ok := st.data[cid]
+		if !ok {
+			st.data[cid] = collections.NewCircularList[T](1000)
+		}
+		st.data[cid].Append(rec)
+	}
 }
 
-func NewStorage[T Storable]() *Storage[T] {
-	return &Storage[T]{}
+func (st *Storage[T]) ConfirmRecordCheck(rec Storable) {
+	st.lastChecks[rec.ClusteringClientID()] = rec.GetTime()
+}
+
+func (st *Storage[T]) GetLastCheck(clusteringID string) time.Time {
+	v := st.lastChecks[clusteringID]
+	return v
+}
+
+func (st *Storage[T]) RemoveAnalyzedRecords(clusteringID string, dt time.Time) {
+	v, ok := st.data[clusteringID]
+	if !ok {
+		return
+	}
+	v.ShiftUntil(func(item T) bool {
+		return item.GetTime().Before(dt)
+	})
+}
+
+func (st *Storage[T]) NumOfRecords(clusteringID string) int {
+	v, ok := st.data[clusteringID]
+	if !ok {
+		return 0
+	}
+	return v.Len()
+}
+
+func (st *Storage[T]) ForEach(clusteringID string, fn func(item T)) {
+	v, ok := st.data[clusteringID]
+	if !ok {
+		return
+	}
+	v.ForEach(func(i int, item T) bool {
+		fn(item)
+		return true
+	})
+}
+
+func NewStorage[T Storable](bufferConf load.BufferConf) *Storage[T] {
+	return &Storage[T]{
+		data:            make(map[string]*collections.CircularList[T]),
+		initialCapacity: bufferConf.HistoryLookupItems,
+		lastChecks:      make(map[string]time.Time),
+	}
 }

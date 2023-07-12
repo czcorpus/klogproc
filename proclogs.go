@@ -93,22 +93,26 @@ func (clp *CNKLogProcessor) recordIsLoggable(logRec conversion.InputRecord) bool
 
 // ProcItem transforms input log record into an output format.
 // In case an unsupported record is encountered, nil is returned.
-func (clp *CNKLogProcessor) ProcItem(logRec conversion.InputRecord, tzShiftMin int) conversion.OutputRecord {
+func (clp *CNKLogProcessor) ProcItem(logRec conversion.InputRecord, tzShiftMin int) []conversion.OutputRecord {
 	if !clp.skipAnalysis {
 		clp.clientAnalyzer.Add(logRec)
 	}
 	if clp.recordIsLoggable(logRec) {
-		logRec = clp.logTransformer.Preprocess(logRec, clp.logBuffer)
-		rec, err := clp.logTransformer.Transform(logRec, clp.appType, tzShiftMin, clp.anonymousUsers)
-		if err != nil {
-			log.Error().Err(err).Msgf("Failed to transform item %s", logRec)
-			return nil
+		ans := make([]conversion.OutputRecord, 0, 2)
+		for _, precord := range clp.logTransformer.Preprocess(logRec, clp.logBuffer) {
+			clp.logBuffer.AddRecord(precord)
+			rec, err := clp.logTransformer.Transform(precord, clp.appType, tzShiftMin, clp.anonymousUsers)
+			ans = append(ans, rec)
+			if err != nil {
+				log.Error().Err(err).Msgf("Failed to transform item %s", precord)
+				return []conversion.OutputRecord{}
+			}
+			applyLocation(precord, clp.geoIPDb, rec)
 		}
-		applyLocation(logRec, clp.geoIPDb, rec)
-		return rec
+		return ans
 	}
 	clp.numNonLoggable++
-	return nil
+	return []conversion.OutputRecord{}
 }
 
 // GetAppType returns a string idenfier unique for a concrete application we

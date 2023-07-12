@@ -35,12 +35,12 @@ func (s *wsserverTransformer) Transform(logRec conversion.InputRecord, recType s
 	return nil, fmt.Errorf("invalid type for conversion by WSServer transformer %T", logRec)
 }
 
-func (k *wsserverTransformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *wsserverTransformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *wsserverTransformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

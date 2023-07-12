@@ -45,7 +45,7 @@ func runBatchAction(
 	lt, err := trfactory.GetLogTransformer(
 		conf.LogFiles.AppType,
 		conf.LogFiles.Version,
-		conf.LogFiles.HistoryLookupSecs,
+		conf.LogFiles.Buffer,
 		userMap,
 	)
 	if err != nil {
@@ -60,7 +60,7 @@ func runBatchAction(
 		anonymousUsers: conf.AnonymousUsers,
 		clientAnalyzer: analyzer,
 		skipAnalysis:   conf.LogFiles.SkipAnalysis,
-		logBuffer:      logbuffer.NewStorage[conversion.InputRecord](),
+		logBuffer:      logbuffer.NewStorage[conversion.InputRecord](conf.LogFiles.Buffer),
 	}
 	channelWriteES := make(chan *conversion.BoundOutputRecord, conf.ElasticSearch.PushChunkSize*2)
 	channelWriteInflux := make(chan *conversion.BoundOutputRecord, conf.InfluxDB.PushChunkSize)
@@ -76,18 +76,19 @@ func runBatchAction(
 	defer worklog.Save()
 
 	var wg sync.WaitGroup
+	wg.Add(2)
 	if options.dryRun || options.analysisOnly {
 		ch1 := save.RunWriteConsumer(channelWriteES, !options.analysisOnly)
 		go func() {
 			for range ch1 {
 			}
-			wg.Add(1)
+			wg.Done()
 		}()
 		ch2 := save.RunWriteConsumer(channelWriteInflux, !options.analysisOnly)
 		go func() {
 			for range ch2 {
 			}
-			wg.Add(1)
+			wg.Done()
 		}()
 		log.Warn().Msg("using dry-run mode, output goes to stdout")
 
@@ -101,7 +102,7 @@ func runBatchAction(
 					// TODO
 				}
 			}
-			wg.Add(1)
+			wg.Done()
 		}()
 		go func() {
 			for confirm := range ch2 {
@@ -110,15 +111,12 @@ func runBatchAction(
 					// TODO
 				}
 			}
-			wg.Add(1)
+			wg.Done()
 		}()
 	}
 	proc := batch.CreateLogFileProcFunc(processor, options.datetimeRange, channelWriteES, channelWriteInflux)
 	proc(&conf.LogFiles, worklog.GetLastRecord())
-	close(channelWriteES)
-	close(channelWriteInflux)
 	wg.Wait()
-	finishEvent <- true
 	log.Info().Msgf("Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)
 	if options.analysisOnly {
 		fmt.Println("Detected bot/script activities:")
@@ -130,4 +128,6 @@ func runBatchAction(
 			fmt.Println(string(js))
 		}
 	}
+	//time.Sleep(3 * time.Second)
+	finishEvent <- true
 }

@@ -32,6 +32,7 @@ import (
 
 	"klogproc/conversion"
 	"klogproc/fsop"
+	"klogproc/load"
 	"klogproc/load/alarm"
 
 	"github.com/rs/zerolog/log"
@@ -45,11 +46,11 @@ var (
 // Conf represents a configuration for a single batch task. Currently it is not
 // possible to have configured multiple tasks in a single file. (TODO)
 type Conf struct {
-	SrcPath                string `json:"srcPath"`
-	PartiallyMatchingFiles bool   `json:"partiallyMatchingFiles"`
-	WorklogPath            string `json:"worklogPath"`
-	AppType                string `json:"appType"`
-	HistoryLookupSecs      int    `json:"historyLookupSecs"`
+	SrcPath                string          `json:"srcPath"`
+	PartiallyMatchingFiles bool            `json:"partiallyMatchingFiles"`
+	WorklogPath            string          `json:"worklogPath"`
+	AppType                string          `json:"appType"`
+	Buffer                 load.BufferConf `json:"buffer"`
 
 	// Version represents a major and minor version signature as used in semantic versioning
 	// (e.g. 0.15, 1.2)
@@ -175,7 +176,7 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, tzShift
 
 // LogItemProcessor is an object handling a specific log file with a specific format
 type LogItemProcessor interface {
-	ProcItem(logRec conversion.InputRecord, tzShiftMin int) conversion.OutputRecord
+	ProcItem(logRec conversion.InputRecord, tzShiftMin int) []conversion.OutputRecord
 	GetAppType() string
 	GetAppVersion() string
 }
@@ -185,7 +186,11 @@ type LogFileProcFunc = func(conf *Conf, minTimestamp int64)
 
 // CreateLogFileProcFunc connects a defined log transformer with output channels and
 // returns a customized function for file/directory processing.
-func CreateLogFileProcFunc(processor LogItemProcessor, datetimeRange DatetimeRange, destChans ...chan *conversion.BoundOutputRecord) LogFileProcFunc {
+func CreateLogFileProcFunc(
+	processor LogItemProcessor,
+	datetimeRange DatetimeRange,
+	destChans ...chan *conversion.BoundOutputRecord,
+) LogFileProcFunc {
 	return func(conf *Conf, minTimestamp int64) {
 		var files []string
 		if fsop.IsDir(conf.SrcPath) {
@@ -208,6 +213,9 @@ func CreateLogFileProcFunc(processor LogItemProcessor, datetimeRange DatetimeRan
 		for _, file := range files {
 			p := newParser(file, conf.TZShift, processor.GetAppType(), processor.GetAppVersion(), procAlarm)
 			p.Parse(minTimestamp, processor, datetimeRange, destChans...)
+		}
+		for _, ch := range destChans {
+			close(ch)
 		}
 		procAlarm.Evaluate()
 		procAlarm.Reset()

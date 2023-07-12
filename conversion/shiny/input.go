@@ -56,6 +56,13 @@ func (rec *InputRecord) ClusteringClientID() string {
 	return conversion.GenerateRandomClusteringID()
 }
 
+func (rec *InputRecord) ClusterSize() int {
+	return 0
+}
+
+func (rec *InputRecord) SetCluster(size int) {
+}
+
 // GetUserAgent returns a raw HTTP user agent info as provided by the client
 func (rec *InputRecord) GetUserAgent() string {
 	return ""

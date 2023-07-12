@@ -35,12 +35,12 @@ func (s *masmTransformer) Transform(logRec conversion.InputRecord, recType strin
 	return nil, fmt.Errorf("invalid type for conversion by masm transformer %T", logRec)
 }
 
-func (k *masmTransformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *masmTransformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *masmTransformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

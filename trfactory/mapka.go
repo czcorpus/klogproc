@@ -39,13 +39,13 @@ func (s *mapkaTransformer) Transform(logRec conversion.InputRecord, recType stri
 	return nil, fmt.Errorf("invalid type for conversion by Mapka transformer %T", logRec)
 }
 
-func (k *mapkaTransformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *mapkaTransformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *mapkaTransformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
 
@@ -65,13 +65,13 @@ func (s *mapka2Transformer) Transform(logRec conversion.InputRecord, recType str
 	return nil, fmt.Errorf("invalid type for conversion by Mapka2 transformer %T", logRec)
 }
 
-func (k *mapka2Transformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *mapka2Transformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *mapka2Transformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
 
@@ -91,12 +91,12 @@ func (s *mapka3Transformer) Transform(logRec conversion.InputRecord, recType str
 	return nil, fmt.Errorf("invalid type for conversion by Mapka3 transformer %T", logRec)
 }
 
-func (k *mapka3Transformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *mapka3Transformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *mapka3Transformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

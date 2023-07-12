@@ -41,6 +41,7 @@ type OutputRecord struct {
 	IsAnonymous bool                     `json:"isAnonymous"`
 	IsQuery     bool                     `json:"isQuery"`
 	GeoIP       conversion.GeoDataRecord `json:"geoip,omitempty"`
+	ClusterSize int                      `json:"clusterSize"`
 }
 
 // SetLocation sets all the location related properties

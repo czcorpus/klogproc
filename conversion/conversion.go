@@ -156,6 +156,8 @@ type InputRecord interface {
 	// Please note that the values do not have to be directly the ones listed above.
 	// It is perfectly OK to hash the original values.
 	ClusteringClientID() string
+	ClusterSize() int
+	SetCluster(size int)
 	IsProcessable() bool
 }
 
@@ -240,18 +242,17 @@ func (r *BoundOutputRecord) GetType() string {
 // an input log record to an output one.
 type LogItemTransformer interface {
 
-	// HistoryLookupSecs provides information about whether
+	// HistoryLookupItems provides information about whether
 	// the transformer needs to look up to previously seen records.
 	// This can be used e.g. when clustering records.
 	//
 	// How the values are understood:
 	// x = 0: no buffer, i.e. the transformer will always gets only the current log line
-	// x > 0: records with datetime up to "current time - x seconds", will be available
-	//        to the transformer.
+	// x > 0: up to `x` previous records will be available along with the current one
 	// x < 0: illegal value
-	HistoryLookupSecs() int
+	HistoryLookupItems() int
 
-	Preprocess(rec InputRecord, prevRecs *logbuffer.Storage[InputRecord]) InputRecord
+	Preprocess(rec InputRecord, prevRecs *logbuffer.Storage[InputRecord]) []InputRecord
 
 	Transform(logRec InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (OutputRecord, error)
 }

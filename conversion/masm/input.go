@@ -54,6 +54,13 @@ func (rec *InputRecord) ClusteringClientID() string {
 	return conversion.GenerateRandomClusteringID()
 }
 
+func (rec *InputRecord) ClusterSize() int {
+	return 0
+}
+
+func (rec *InputRecord) SetCluster(size int) {
+}
+
 func (r *InputRecord) GetUserAgent() string {
 	return ""
 }

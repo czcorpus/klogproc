@@ -175,7 +175,10 @@ func (c *ESClient) Do(method string, path string, query []byte) ([]byte, error) 
 	if err != nil {
 		return []byte{}, err
 	}
-	respBody, _ := ioutil.ReadAll(resp.Body)
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return []byte{}, err
+	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		return respBody, newESClientError(
 			fmt.Sprintf("Request %s failed with code %d", path, resp.StatusCode), respBody, query)

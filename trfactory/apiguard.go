@@ -35,12 +35,12 @@ func (k *apiguardTransformer) Transform(logRec conversion.InputRecord, recType s
 	return nil, fmt.Errorf("invalid type for conversion by APIGuard transformer %T", logRec)
 }
 
-func (k *apiguardTransformer) HistoryLookupSecs() int {
-	return k.t.HistoryLookupSecs()
+func (k *apiguardTransformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
 }
 
 func (k *apiguardTransformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
+) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

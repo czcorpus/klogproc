@@ -36,6 +36,7 @@ import (
 	"klogproc/conversion/wag06"
 	"klogproc/conversion/wag07"
 	"klogproc/conversion/wsserver"
+	"klogproc/load"
 	"klogproc/users"
 )
 
@@ -43,7 +44,7 @@ import (
 func GetLogTransformer(
 	appType string,
 	version string,
-	historyLookupSecs int,
+	bufferConf load.BufferConf,
 	userMap *users.UserMap,
 ) (conversion.LogItemTransformer, error) {
 
@@ -77,7 +78,11 @@ func GetLogTransformer(
 		case "2":
 			return &mapka2Transformer{t: mapka2.NewTransformer()}, nil
 		case "3":
-			return &mapka3Transformer{t: mapka3.NewTransformer(historyLookupSecs)}, nil
+			return &mapka3Transformer{
+				t: mapka3.NewTransformer(
+					bufferConf,
+				),
+			}, nil
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported Mapka version: %s", version)
 		}

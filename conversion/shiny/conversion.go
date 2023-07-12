@@ -50,14 +50,14 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 	return ans, nil
 }
 
-func (t *Transformer) HistoryLookupSecs() int {
+func (t *Transformer) HistoryLookupItems() int {
 	return 0
 }
 
 func (t *Transformer) Preprocess(
 	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
-	return rec
+) []conversion.InputRecord {
+	return []conversion.InputRecord{rec}
 }
 
 func NewTransformer() *Transformer {

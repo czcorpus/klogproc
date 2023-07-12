@@ -22,7 +22,9 @@ import (
 	"strconv"
 	"time"
 
+	"klogproc/clustering"
 	"klogproc/conversion"
+	"klogproc/load"
 	"klogproc/logbuffer"
 )
 
@@ -35,7 +37,7 @@ func createID(rec *OutputRecord) string {
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	historyLookupSecs int
+	bufferConf load.BufferConf
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
@@ -55,27 +57,43 @@ func (t *Transformer) Transform(
 		IPAddress:   logRecord.Extra.IP,
 		UserAgent:   logRecord.GetUserAgent(),
 		IsAnonymous: userID == -1 || conversion.UserBelongsToList(userID, anonymousUsers),
-		IsQuery:     false,
+		IsQuery:     true,
+		Action:      "interaction",
 		UserID:      strconv.Itoa(userID),
+		ClusterSize: logRecord.clusterSize,
 	}
 	r.ID = createID(r)
-	r.IsQuery = true
-	r.Action = "interaction"
 	return r, nil
 }
 
-func (t *Transformer) HistoryLookupSecs() int {
-	return t.historyLookupSecs
+func (t *Transformer) HistoryLookupItems() int {
+	return t.bufferConf.HistoryLookupItems
 }
 
 func (t *Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
-) conversion.InputRecord {
-	return rec
+	rec conversion.InputRecord,
+	prevRecs *logbuffer.Storage[conversion.InputRecord],
+) []conversion.InputRecord {
+	clusteringID := rec.ClusteringClientID()
+	lastCheck := prevRecs.GetLastCheck(clusteringID)
+	ci := time.Duration(t.bufferConf.AnalysisIntervalSecs) * time.Second
+	if rec.GetTime().Sub(lastCheck) > ci {
+		items := make([]conversion.InputRecord, 0, prevRecs.NumOfRecords(clusteringID))
+		prevRecs.ForEach(clusteringID, func(item conversion.InputRecord) {
+			items = append(items, item)
+		})
+		clustered := clustering.Analyze(items)
+		prevRecs.RemoveAnalyzedRecords(clusteringID, rec.GetTime())
+		prevRecs.ConfirmRecordCheck(rec)
+		return clustered
+	}
+	return []conversion.InputRecord{rec}
 }
 
 // NewTransformer is a default constructor for the Transformer.
 // It also loads user ID map from a configured file (if exists).
-func NewTransformer(historyLookupSecs int) *Transformer {
-	return &Transformer{historyLookupSecs: historyLookupSecs}
+func NewTransformer(bufferConf load.BufferConf) *Transformer {
+	return &Transformer{
+		bufferConf: bufferConf,
+	}
 }
