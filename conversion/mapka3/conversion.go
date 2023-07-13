@@ -19,7 +19,6 @@ package mapka3
 import (
 	"crypto/sha1"
 	"encoding/hex"
-	"strconv"
 	"time"
 
 	"klogproc/clustering"
@@ -37,7 +36,7 @@ func createID(rec *OutputRecord) string {
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	bufferConf load.BufferConf
+	bufferConf *load.BufferConf
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
@@ -48,18 +47,17 @@ func (t *Transformer) Transform(
 	anonymousUsers []int,
 ) (*OutputRecord, error) {
 
-	userID := -1
-
 	r := &OutputRecord{
-		Type:        recType,
-		time:        logRecord.GetTime(),
-		Datetime:    logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		IPAddress:   logRecord.Extra.IP,
-		UserAgent:   logRecord.GetUserAgent(),
-		IsAnonymous: userID == -1 || conversion.UserBelongsToList(userID, anonymousUsers),
+		Type:      recType,
+		time:      logRecord.GetTime(),
+		Datetime:  logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		IPAddress: logRecord.Extra.IP,
+		UserAgent: logRecord.GetUserAgent(),
+		IsAnonymous: logRecord.Extra.UserID == "" ||
+			conversion.UserBelongsToList(logRecord.Extra.UserID, anonymousUsers),
 		IsQuery:     true,
 		Action:      "interaction",
-		UserID:      strconv.Itoa(userID),
+		UserID:      logRecord.Extra.UserID,
 		ClusterSize: logRecord.clusterSize,
 	}
 	r.ID = createID(r)
@@ -72,7 +70,7 @@ func (t *Transformer) HistoryLookupItems() int {
 
 func (t *Transformer) Preprocess(
 	rec conversion.InputRecord,
-	prevRecs *logbuffer.Storage[conversion.InputRecord],
+	prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
 ) []conversion.InputRecord {
 	clusteringID := rec.ClusteringClientID()
 	lastCheck := prevRecs.GetLastCheck(clusteringID)
@@ -82,7 +80,11 @@ func (t *Transformer) Preprocess(
 		prevRecs.ForEach(clusteringID, func(item conversion.InputRecord) {
 			items = append(items, item)
 		})
-		clustered := clustering.Analyze(items)
+		clustered := clustering.Analyze(
+			t.bufferConf.ClusteringDBScan.MinDensity,
+			t.bufferConf.ClusteringDBScan.Epsilon,
+			items,
+		)
 		prevRecs.RemoveAnalyzedRecords(clusteringID, rec.GetTime())
 		prevRecs.ConfirmRecordCheck(rec)
 		return clustered
@@ -92,7 +94,7 @@ func (t *Transformer) Preprocess(
 
 // NewTransformer is a default constructor for the Transformer.
 // It also loads user ID map from a configured file (if exists).
-func NewTransformer(bufferConf load.BufferConf) *Transformer {
+func NewTransformer(bufferConf *load.BufferConf) *Transformer {
 	return &Transformer{
 		bufferConf: bufferConf,
 	}

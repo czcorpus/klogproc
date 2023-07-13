@@ -41,7 +41,7 @@ func (k *wag06Transformer) HistoryLookupItems() int {
 }
 
 func (k *wag06Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
 ) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -67,7 +67,7 @@ func (k *wag07Transformer) HistoryLookupItems() int {
 }
 
 func (k *wag07Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
 ) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

@@ -78,7 +78,7 @@ type CNKLogProcessor struct {
 	skipAnalysis   bool
 	logTransformer conversion.LogItemTransformer
 	clientAnalyzer ClientAnalyzer
-	logBuffer      *logbuffer.Storage[conversion.InputRecord]
+	logBuffer      logbuffer.AbstractStorage[conversion.InputRecord]
 }
 
 func (clp *CNKLogProcessor) recordIsLoggable(logRec conversion.InputRecord) bool {

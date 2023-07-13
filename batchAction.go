@@ -51,6 +51,14 @@ func runBatchAction(
 	if err != nil {
 		log.Fatal().Msgf("%s", err)
 	}
+	var buffStorage logbuffer.AbstractStorage[conversion.InputRecord]
+	if conf.LogFiles.Buffer != nil {
+		buffStorage = logbuffer.NewStorage[conversion.InputRecord](conf.LogFiles.Buffer)
+
+	} else {
+		buffStorage = logbuffer.NewDummyStorage[conversion.InputRecord]()
+	}
+
 	processor := &CNKLogProcessor{
 		geoIPDb:        geoDB,
 		chunkSize:      conf.ElasticSearch.PushChunkSize,
@@ -60,7 +68,7 @@ func runBatchAction(
 		anonymousUsers: conf.AnonymousUsers,
 		clientAnalyzer: analyzer,
 		skipAnalysis:   conf.LogFiles.SkipAnalysis,
-		logBuffer:      logbuffer.NewStorage[conversion.InputRecord](conf.LogFiles.Buffer),
+		logBuffer:      buffStorage,
 	}
 	channelWriteES := make(chan *conversion.BoundOutputRecord, conf.ElasticSearch.PushChunkSize*2)
 	channelWriteInflux := make(chan *conversion.BoundOutputRecord, conf.InfluxDB.PushChunkSize)
@@ -115,7 +123,7 @@ func runBatchAction(
 		}()
 	}
 	proc := batch.CreateLogFileProcFunc(processor, options.datetimeRange, channelWriteES, channelWriteInflux)
-	proc(&conf.LogFiles, worklog.GetLastRecord())
+	proc(conf.LogFiles, worklog.GetLastRecord())
 	wg.Wait()
 	log.Info().Msgf("Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)
 	if options.analysisOnly {

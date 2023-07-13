@@ -22,6 +22,7 @@ package batch
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -35,6 +36,7 @@ import (
 	"klogproc/load"
 	"klogproc/load/alarm"
 
+	"github.com/czcorpus/cnc-gokit/fs"
 	"github.com/rs/zerolog/log"
 )
 
@@ -46,11 +48,11 @@ var (
 // Conf represents a configuration for a single batch task. Currently it is not
 // possible to have configured multiple tasks in a single file. (TODO)
 type Conf struct {
-	SrcPath                string          `json:"srcPath"`
-	PartiallyMatchingFiles bool            `json:"partiallyMatchingFiles"`
-	WorklogPath            string          `json:"worklogPath"`
-	AppType                string          `json:"appType"`
-	Buffer                 load.BufferConf `json:"buffer"`
+	SrcPath                string           `json:"srcPath"`
+	PartiallyMatchingFiles bool             `json:"partiallyMatchingFiles"`
+	WorklogPath            string           `json:"worklogPath"`
+	AppType                string           `json:"appType"`
+	Buffer                 *load.BufferConf `json:"buffer"`
 
 	// Version represents a major and minor version signature as used in semantic versioning
 	// (e.g. 0.15, 1.2)
@@ -58,6 +60,16 @@ type Conf struct {
 	NumErrorsAlarm int    `json:"numErrorsAlarm"`
 	TZShift        int    `json:"tzShift"`
 	SkipAnalysis   bool   `json:"skipAnalysis"`
+}
+
+func (conf *Conf) Validate() error {
+	if pathExists := fs.PathExists(conf.SrcPath); !pathExists {
+		return errors.New("failed to validate batch file processing srcPath: path does not exist")
+	}
+	if conf.Buffer != nil {
+		return conf.Buffer.Validate()
+	}
+	return nil
 }
 
 type DatetimeRange struct {

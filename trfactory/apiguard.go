@@ -40,7 +40,7 @@ func (k *apiguardTransformer) HistoryLookupItems() int {
 }
 
 func (k *apiguardTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
 ) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

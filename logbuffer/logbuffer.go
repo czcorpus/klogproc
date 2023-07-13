@@ -83,7 +83,7 @@ func (st *Storage[T]) ForEach(clusteringID string, fn func(item T)) {
 	})
 }
 
-func NewStorage[T Storable](bufferConf load.BufferConf) *Storage[T] {
+func NewStorage[T Storable](bufferConf *load.BufferConf) *Storage[T] {
 	return &Storage[T]{
 		data:            make(map[string]*collections.CircularList[T]),
 		initialCapacity: bufferConf.HistoryLookupItems,

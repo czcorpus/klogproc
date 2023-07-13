@@ -252,7 +252,7 @@ type LogItemTransformer interface {
 	// x < 0: illegal value
 	HistoryLookupItems() int
 
-	Preprocess(rec InputRecord, prevRecs *logbuffer.Storage[InputRecord]) []InputRecord
+	Preprocess(rec InputRecord, prevRecs logbuffer.AbstractStorage[InputRecord]) []InputRecord
 
 	Transform(logRec InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (OutputRecord, error)
 }
@@ -276,9 +276,22 @@ type AppErrorRegister interface {
 
 // UserBelongsToList tests whether a provided user can be
 // found in a provided array of users.
-func UserBelongsToList(userID int, anonymousUsers []int) bool {
+func UserBelongsToList[T int | string](userID T, anonymousUsers []int) bool {
+	var intUserID int
+	var err error
+	switch t := any(userID).(type) {
+	case int:
+		intUserID = t
+	case string:
+		intUserID, err = strconv.Atoi(t)
+		if err != nil {
+			return false
+		}
+	default:
+		return false
+	}
 	for _, v := range anonymousUsers {
-		if v == userID {
+		if v == intUserID {
 			return true
 		}
 	}

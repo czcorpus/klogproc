@@ -16,7 +16,33 @@
 
 package load
 
+import "errors"
+
 type BufferConf struct {
 	HistoryLookupItems   int `json:"historyLookupItems"`
 	AnalysisIntervalSecs int `json:"analysisIntervalSecs"`
+	ClusteringDBScan     struct {
+		MinDensity int     `json:"minDensity"`
+		Epsilon    float64 `json:"epsilon"`
+	} `json:"clusteringDbScan"`
+}
+
+func (bc *BufferConf) Validate() error {
+	if bc.HistoryLookupItems <= 0 {
+		return errors.New(
+			"failed to validate batch file processing buffer: historyLookupItems must be > 0")
+	}
+	if bc.AnalysisIntervalSecs <= 0 {
+		return errors.New(
+			"failed to validate batch file processing buffer: analysisIntervalSecs must be > 0")
+	}
+	if bc.ClusteringDBScan.Epsilon <= 0 {
+		return errors.New(
+			"failed to validate batch file processing buffer: clusteringDbScan.epsilon must be > 0")
+	}
+	if bc.ClusteringDBScan.MinDensity <= 0 {
+		return errors.New(
+			"failed to validate batch file processing buffer: clusteringDbScan.minDensity must be > 0")
+	}
+	return nil
 }

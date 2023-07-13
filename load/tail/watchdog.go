@@ -17,6 +17,7 @@
 package tail
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"sync"
@@ -28,6 +29,7 @@ import (
 	"klogproc/load"
 	"klogproc/save"
 
+	"github.com/czcorpus/cnc-gokit/fs"
 	"github.com/rs/zerolog/log"
 )
 
@@ -42,9 +44,16 @@ type FileConf struct {
 	AppType string `json:"appType"`
 	// Version represents a major and minor version signature as used in semantic versioning
 	// (e.g. 0.15, 1.2)
-	Version string          `json:"version"`
-	TZShift int             `json:"tzShift"`
-	Buffer  load.BufferConf `json:"buffer"`
+	Version string           `json:"version"`
+	TZShift int              `json:"tzShift"`
+	Buffer  *load.BufferConf `json:"buffer"`
+}
+
+func (fc *FileConf) Validate() error {
+	if pathExists := fs.PathExists(fc.Path); !pathExists {
+		return fmt.Errorf("failed to validate FileConf for %s - path does not exist	", fc.Path)
+	}
+	return nil
 }
 
 func (fc *FileConf) GetPath() string {
