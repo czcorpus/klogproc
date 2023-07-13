@@ -44,7 +44,7 @@ func (k *mapkaTransformer) HistoryLookupItems() int {
 }
 
 func (k *mapkaTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
 ) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -70,7 +70,7 @@ func (k *mapka2Transformer) HistoryLookupItems() int {
 }
 
 func (k *mapka2Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
 ) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -96,7 +96,7 @@ func (k *mapka3Transformer) HistoryLookupItems() int {
 }
 
 func (k *mapka3Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
 ) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

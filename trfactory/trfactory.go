@@ -44,7 +44,7 @@ import (
 func GetLogTransformer(
 	appType string,
 	version string,
-	bufferConf load.BufferConf,
+	bufferConf *load.BufferConf,
 	userMap *users.UserMap,
 ) (conversion.LogItemTransformer, error) {
 

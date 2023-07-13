@@ -39,8 +39,8 @@ type Email struct {
 
 // Main describes klogproc's configuration
 type Main struct {
-	LogFiles          batch.Conf                `json:"logFiles"`
-	LogTail           tail.Conf                 `json:"logTail"`
+	LogFiles          *batch.Conf               `json:"logFiles"`
+	LogTail           *tail.Conf                `json:"logTail"`
 	CeleryStatus      celery.Conf               `json:"celeryStatus"`
 	GeoIPDbPath       string                    `json:"geoIpDbPath"`
 	AnonymousUsers    []int                     `json:"anonymousUsers"`
@@ -79,12 +79,22 @@ func Validate(conf *Main) {
 	if !fsop.IsFile(conf.GeoIPDbPath) {
 		log.Fatal().Msgf("Invalid GeoIPDbPath: '%s'", conf.GeoIPDbPath)
 	}
-	if len(conf.LogTail.Files) > 0 {
+	if conf.LogTail != nil {
 		if conf.LogTail.IntervalSecs < 10 {
 			log.Fatal().Msg("logTail.intervalSecs must be at least 10")
 		}
 		if conf.LogTail.MaxLinesPerCheck < conf.LogTail.IntervalSecs*100 {
 			log.Fatal().Msg("logTail.maxLinesPerCheck must be at least logTail.intervalSecs * 10")
+		}
+		for _, fc := range conf.LogTail.Files {
+			if err := fc.Validate(); err != nil {
+				log.Fatal().Err(err).Msg("logTail.files  validation error")
+			}
+		}
+	}
+	if conf.LogFiles != nil {
+		if err := conf.LogFiles.Validate(); err != nil {
+			log.Fatal().Err(err).Msg("logFiles validation error")
 		}
 	}
 }

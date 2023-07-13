@@ -66,7 +66,7 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
 ) []conversion.InputRecord {
 	return []conversion.InputRecord{rec}
 }

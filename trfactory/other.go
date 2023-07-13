@@ -50,7 +50,7 @@ func (k *kwordsTransformer) HistoryLookupItems() int {
 }
 
 func (k *kwordsTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
 ) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -76,7 +76,7 @@ func (k *korpusDBTransformer) HistoryLookupItems() int {
 }
 
 func (k *korpusDBTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
 ) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -102,7 +102,7 @@ func (k *morfioTransformer) HistoryLookupItems() int {
 }
 
 func (k *morfioTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
 ) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -128,7 +128,7 @@ func (k *skeTransformer) HistoryLookupItems() int {
 }
 
 func (k *skeTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
 ) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -154,7 +154,7 @@ func (k *shinyTransformer) HistoryLookupItems() int {
 }
 
 func (k *shinyTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
 ) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -180,7 +180,7 @@ func (k *sydTransformer) HistoryLookupItems() int {
 }
 
 func (k *sydTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
 ) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -206,7 +206,7 @@ func (k *treqTransformer) HistoryLookupItems() int {
 }
 
 func (k *treqTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs *logbuffer.Storage[conversion.InputRecord],
+	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
 ) []conversion.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

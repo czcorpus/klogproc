@@ -55,7 +55,7 @@ type tailProcessor struct {
 	influxChunkSize   int
 	alarm             conversion.AppErrorRegister
 	analysis          chan<- conversion.InputRecord
-	logBuffer         *logbuffer.Storage[conversion.InputRecord]
+	logBuffer         logbuffer.AbstractStorage[conversion.InputRecord]
 }
 
 func (tp *tailProcessor) OnCheckStart() (tail.LineProcConfirmChan, *tail.LogDataWriter) {
@@ -196,7 +196,7 @@ func newTailProcessor(
 	userMap *users.UserMap,
 	analysis chan<- conversion.InputRecord,
 ) *tailProcessor {
-	procAlarm, err := newProcAlarm(&tailConf, &conf.LogTail, &conf.EmailNotification)
+	procAlarm, err := newProcAlarm(&tailConf, conf.LogTail, &conf.EmailNotification)
 	if err != nil {
 		log.Fatal().Msgf("Failed to initialize alarm: %s", err)
 	}
@@ -212,6 +212,14 @@ func newTailProcessor(
 	log.Info().Msgf(
 		"Creating tail processor for %s, app type: %s, app version: %s, tzShift: %d",
 		filepath.Clean(tailConf.Path), tailConf.AppType, tailConf.Version, tailConf.TZShift)
+
+	var buffStorage logbuffer.AbstractStorage[conversion.InputRecord]
+	if conf.LogFiles.Buffer != nil {
+		buffStorage = logbuffer.NewStorage[conversion.InputRecord](conf.LogFiles.Buffer)
+
+	} else {
+		buffStorage = logbuffer.NewDummyStorage[conversion.InputRecord]()
+	}
 
 	return &tailProcessor{
 		appType:           tailConf.AppType,
@@ -229,7 +237,7 @@ func newTailProcessor(
 		influxChunkSize:   conf.InfluxDB.PushChunkSize,
 		alarm:             procAlarm,
 		analysis:          analysis,
-		logBuffer:         logbuffer.NewStorage[conversion.InputRecord](conf.LogFiles.Buffer),
+		logBuffer:         buffStorage,
 	}
 }
 
@@ -260,5 +268,5 @@ func runTailAction(
 		wg.Wait()
 		analyzer.Close()
 	}()
-	go tail.Run(&conf.LogTail, tailProcessors, analyzer, finishEvt)
+	go tail.Run(conf.LogTail, tailProcessors, analyzer, finishEvt)
 }

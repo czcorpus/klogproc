@@ -48,9 +48,11 @@ func wrapInputRecords(input []conversion.InputRecord) []dbscan.Point {
 	return ans
 }
 
-func Analyze(input []conversion.InputRecord) []conversion.InputRecord {
+func Analyze(
+	minDensity int, epsilon float64, input []conversion.InputRecord,
+) []conversion.InputRecord {
 	input2 := wrapInputRecords(input)
-	clusters := dbscan.Cluster(3, 60, input2...) // TODO extract parameters of DBSCAN
+	clusters := dbscan.Cluster(minDensity, epsilon, input2...)
 	ans := make([]conversion.InputRecord, len(clusters))
 	for i, cl := range clusters {
 		rec := (cl[0].(ClusterableRecord)).rec
