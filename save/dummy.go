@@ -28,16 +28,29 @@ import (
 func RunWriteConsumer(incomingData <-chan *conversion.BoundOutputRecord, printOut bool) <-chan ConfirmMsg {
 	confirmChan := make(chan ConfirmMsg)
 	go func() {
+		var chunkPosition *conversion.LogRange
 		for item := range incomingData {
-			out, err := item.ToJSON()
-			if err != nil {
-				log.Error().Err(err).Msg("")
+			var jsonError error
+			if chunkPosition == nil {
+				chunkPosition = &item.FilePos
+			}
+			chunkPosition.SeekEnd = item.FilePos.SeekEnd
+			out, jsonError := item.ToJSON()
+			if jsonError != nil {
+				log.Error().Err(jsonError).Msg("")
 
 			} else {
 				if printOut {
 					fmt.Println(string(out))
 				}
 			}
+			chunkPosition.Written = true
+			confirmMsg := ConfirmMsg{
+				FilePath: item.FilePath,
+				Position: *chunkPosition,
+				Error:    jsonError,
+			}
+			confirmChan <- confirmMsg
 		}
 		defer func() {
 			close(confirmChan)

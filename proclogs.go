@@ -159,11 +159,11 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 	finishEvent := make(chan bool)
 	go func() {
 		switch action {
-		case actionBatch:
+		case config.ActionBatch:
 			runBatchAction(conf, options, geoDb, userMap, clientTypeDetector, finishEvent)
 
-		case actionTail:
-			runTailAction(conf, geoDb, userMap, clientTypeDetector, finishEvent)
+		case config.ActionTail:
+			runTailAction(conf, geoDb, userMap, options.dryRun, clientTypeDetector, finishEvent)
 		}
 	}()
 	<-finishEvent

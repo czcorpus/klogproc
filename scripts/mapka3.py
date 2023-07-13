@@ -104,5 +104,5 @@ if __name__ == "__main__":
             i += 1
         #if i > 1000:
 
-    for entry in sorted(entries, key=lambda x: x['datetime']):
+    for entry in sorted(entries, key=lambda x: x['datetime'][:-6]):
         print(json.dumps(entry))
