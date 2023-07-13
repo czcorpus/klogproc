@@ -56,6 +56,7 @@ type tailProcessor struct {
 	alarm             conversion.AppErrorRegister
 	analysis          chan<- conversion.InputRecord
 	logBuffer         logbuffer.AbstractStorage[conversion.InputRecord]
+	dryRun            bool
 }
 
 func (tp *tailProcessor) OnCheckStart() (tail.LineProcConfirmChan, *tail.LogDataWriter) {
@@ -69,22 +70,41 @@ func (tp *tailProcessor) OnCheckStart() (tail.LineProcConfirmChan, *tail.LogData
 	go func() {
 		var waitMergeEnd sync.WaitGroup
 		waitMergeEnd.Add(3)
-		confirmChan1 := elastic.RunWriteConsumer(
-			tp.appType, &tp.conf.ElasticSearch, dataWriter.Elastic)
-		go func() {
-			for item := range confirmChan1 {
-				itemConfirm <- item
-			}
-			waitMergeEnd.Done()
-		}()
-		confirmChan2 := influx.RunWriteConsumer(
-			&tp.conf.InfluxDB, dataWriter.Influx)
-		go func() {
-			for item := range confirmChan2 {
-				itemConfirm <- item
-			}
-			waitMergeEnd.Done()
-		}()
+		if tp.dryRun {
+			confirmChan1 := save.RunWriteConsumer(dataWriter.Elastic, false)
+			go func() {
+				for item := range confirmChan1 {
+					itemConfirm <- item
+				}
+				waitMergeEnd.Done()
+			}()
+			confirmChan2 := save.RunWriteConsumer(dataWriter.Influx, false)
+			go func() {
+				for item := range confirmChan2 {
+					itemConfirm <- item
+				}
+				waitMergeEnd.Done()
+			}()
+			log.Warn().Msg("using dry-run mode, output goes to stdout")
+
+		} else {
+			confirmChan1 := elastic.RunWriteConsumer(
+				tp.appType, &tp.conf.ElasticSearch, dataWriter.Elastic)
+			go func() {
+				for item := range confirmChan1 {
+					itemConfirm <- item
+				}
+				waitMergeEnd.Done()
+			}()
+			confirmChan2 := influx.RunWriteConsumer(
+				&tp.conf.InfluxDB, dataWriter.Influx)
+			go func() {
+				for item := range confirmChan2 {
+					itemConfirm <- item
+				}
+				waitMergeEnd.Done()
+			}()
+		}
 		go func() {
 			for msg := range dataWriter.Ignored {
 				itemConfirm <- msg
@@ -194,9 +214,10 @@ func newTailProcessor(
 	conf config.Main,
 	geoDB *geoip2.Reader,
 	userMap *users.UserMap,
+	dryRun bool,
 	analysis chan<- conversion.InputRecord,
 ) *tailProcessor {
-	procAlarm, err := newProcAlarm(&tailConf, conf.LogTail, &conf.EmailNotification)
+	procAlarm, err := newProcAlarm(&tailConf, conf.LogTail, conf.EmailNotification)
 	if err != nil {
 		log.Fatal().Msgf("Failed to initialize alarm: %s", err)
 	}
@@ -238,6 +259,7 @@ func newTailProcessor(
 		alarm:             procAlarm,
 		analysis:          analysis,
 		logBuffer:         buffStorage,
+		dryRun:            dryRun,
 	}
 }
 
@@ -247,6 +269,7 @@ func runTailAction(
 	conf *config.Main,
 	geoDB *geoip2.Reader,
 	userMap *users.UserMap,
+	dryRun bool,
 	analyzer ClientAnalyzer,
 	finishEvt chan bool,
 ) {
@@ -262,7 +285,7 @@ func runTailAction(
 			}
 			wg.Done()
 		}(tpAnalysis)
-		tailProcessors[i] = newTailProcessor(f, *conf, geoDB, userMap, tpAnalysis)
+		tailProcessors[i] = newTailProcessor(f, *conf, geoDB, userMap, dryRun, tpAnalysis)
 	}
 	go func() {
 		wg.Wait()

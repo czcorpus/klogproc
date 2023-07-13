@@ -16,6 +16,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 
 	"klogproc/botwatch"
@@ -30,11 +31,35 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	ActionBatch     = "batch"
+	ActionTail      = "tail"
+	ActionRedis     = "redis"
+	ActionCelery    = "celery"
+	ActionKeyremove = "keyremove"
+	ActionDocupdate = "docupdate"
+	ActionHelp      = "help"
+	ActionVersion   = "version"
+)
+
 // Email configures e-mail client for sending misc. notifications and alarms
 type Email struct {
 	NotificationEmails []string `json:"notificationEmails"`
 	SMTPServer         string   `json:"smtpServer"`
 	Sender             string   `json:"sender"`
+}
+
+func (e *Email) Validate() error {
+	if e == nil {
+		return errors.New("missing whole e-mail notification section")
+	}
+	if len(e.NotificationEmails) == 0 {
+		return errors.New("missing notification e-mails")
+	}
+	if e.SMTPServer == "" {
+		return errors.New("missing SMTP server")
+	}
+	return nil
 }
 
 // Main describes klogproc's configuration
@@ -50,7 +75,7 @@ type Main struct {
 	RecUpdate         elastic.DocUpdConf        `json:"recordUpdate"`
 	ElasticSearch     elastic.ConnectionConf    `json:"elasticSearch"`
 	InfluxDB          influx.ConnectionConf     `json:"influxDb"`
-	EmailNotification Email                     `json:"emailNotification"`
+	EmailNotification *Email                    `json:"emailNotification"`
 	BotDetection      botwatch.BotDetectionConf `json:"botDetection"`
 }
 
@@ -62,7 +87,7 @@ func (c *Main) HasInfluxOut() bool {
 
 // Validate checks for some essential config properties
 // TODO test additional important items
-func Validate(conf *Main) {
+func Validate(conf *Main, action string) {
 	var err error
 	if conf.ElasticSearch.IsConfigured() {
 		err = conf.ElasticSearch.Validate()
@@ -79,16 +104,20 @@ func Validate(conf *Main) {
 	if !fsop.IsFile(conf.GeoIPDbPath) {
 		log.Fatal().Msgf("Invalid GeoIPDbPath: '%s'", conf.GeoIPDbPath)
 	}
+	if action == ActionBatch && conf.LogFiles == nil {
+		log.Fatal().Msg("missing configuration data for the `batch` action")
+	}
+	if action == ActionTail && conf.LogTail == nil {
+		log.Fatal().Msg("missing configuration data for the `tail` action")
+	}
 	if conf.LogTail != nil {
-		if conf.LogTail.IntervalSecs < 10 {
-			log.Fatal().Msg("logTail.intervalSecs must be at least 10")
+		err := conf.LogTail.Validate()
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to validate `tail` action configuration")
 		}
-		if conf.LogTail.MaxLinesPerCheck < conf.LogTail.IntervalSecs*100 {
-			log.Fatal().Msg("logTail.maxLinesPerCheck must be at least logTail.intervalSecs * 10")
-		}
-		for _, fc := range conf.LogTail.Files {
-			if err := fc.Validate(); err != nil {
-				log.Fatal().Err(err).Msg("logTail.files  validation error")
+		if conf.LogTail.RequiresMailConfiguration() {
+			if err := conf.EmailNotification.Validate(); err != nil {
+				log.Fatal().Err(err).Msg("failed to validate `tail` action configuration")
 			}
 		}
 	}

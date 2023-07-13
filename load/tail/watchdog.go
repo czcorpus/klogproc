@@ -17,6 +17,7 @@
 package tail
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -72,6 +73,25 @@ type Conf struct {
 	Files                 []FileConf `json:"files"`
 	NumErrorsAlarm        int        `json:"numErrorsAlarm"`
 	ErrCountTimeRangeSecs int        `json:"errCountTimeRangeSecs"`
+}
+
+func (conf *Conf) RequiresMailConfiguration() bool {
+	return conf.NumErrorsAlarm > 0 && conf.ErrCountTimeRangeSecs > 0
+}
+
+func (conf *Conf) Validate() error {
+	if conf.IntervalSecs < 10 {
+		return errors.New("logTail.intervalSecs must be at least 10")
+	}
+	if conf.MaxLinesPerCheck < conf.IntervalSecs*100 {
+		return errors.New("logTail.maxLinesPerCheck must be at least logTail.intervalSecs * 100")
+	}
+	for _, fc := range conf.Files {
+		if err := fc.Validate(); err != nil {
+			return fmt.Errorf("logTail.files validation error: %w", err)
+		}
+	}
+	return nil
 }
 
 type LineProcConfirmChan chan interface{}

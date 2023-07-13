@@ -22,7 +22,6 @@ package email
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"net/mail"
 	"net/smtp"
@@ -91,9 +90,7 @@ func (den *DefaultEmailNotifier) SendNotification(subject, message string) error
 // In case of missing configuration, the function returns an error.
 // Missing sender is replaced by a default value.
 func NewEmailNotifier(conf *config.Email) (*DefaultEmailNotifier, error) {
-	if len(conf.NotificationEmails) == 0 || conf.SMTPServer == "" {
-		return nil, errors.New("cannot create e-mail sender, missing configuration")
-	}
+
 	if conf.Sender == "" {
 		log.Warn().Msgf("e-mail sender not set - using default %s", defaultSender)
 		conf.Sender = defaultSender

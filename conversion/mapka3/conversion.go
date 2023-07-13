@@ -25,6 +25,8 @@ import (
 	"klogproc/conversion"
 	"klogproc/load"
 	"klogproc/logbuffer"
+
+	"github.com/rs/zerolog/log"
 )
 
 // createID creates an idempotent ID of rec based on its properties.
@@ -87,6 +89,13 @@ func (t *Transformer) Preprocess(
 		)
 		prevRecs.RemoveAnalyzedRecords(clusteringID, rec.GetTime())
 		prevRecs.ConfirmRecordCheck(rec)
+		log.Debug().
+			Int("minDensity", t.bufferConf.ClusteringDBScan.MinDensity).
+			Float64("epsilon", t.bufferConf.ClusteringDBScan.Epsilon).
+			Time("searchStart", lastCheck).
+			Time("searchEnd", rec.GetTime()).
+			Int("foundClusters", len(clustered)).
+			Msgf("log clustering in mapka3")
 		return clustered
 	}
 	return []conversion.InputRecord{rec}

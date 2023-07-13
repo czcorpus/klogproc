@@ -32,15 +32,6 @@ import (
 )
 
 const (
-	actionBatch     = "batch"
-	actionTail      = "tail"
-	actionRedis     = "redis"
-	actionCelery    = "celery"
-	actionKeyremove = "keyremove"
-	actionDocupdate = "docupdate"
-	actionHelp      = "help"
-	actionVersion   = "version"
-
 	startingServiceMsg = "INFO: ######################## Starting klogproc ########################"
 )
 
@@ -91,13 +82,13 @@ func help(topic string) {
 	}
 	fmt.Printf("\n[%s]\n\n", topic)
 	switch topic {
-	case actionBatch:
+	case config.ActionBatch:
 		fmt.Println(helpTexts[0])
-	case actionTail:
+	case config.ActionTail:
 		fmt.Println(helpTexts[1])
-	case actionRedis:
+	case config.ActionRedis:
 		fmt.Println(helpTexts[2])
-	case actionDocupdate:
+	case config.ActionDocupdate:
 		fmt.Println(helpTexts[3])
 	default:
 		fmt.Println("- no information available -")
@@ -128,9 +119,9 @@ func setupLog(path, level string) {
 	}
 }
 
-func setup(confPath string) *config.Main {
+func setup(confPath, action string) *config.Main {
 	conf := config.Load(confPath)
-	config.Validate(conf)
+	config.Validate(conf, action)
 	llevel := "info"
 	if conf.LogLevel != "" {
 		llevel = conf.LogLevel
@@ -149,7 +140,17 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending CNC app logs to ElasticSearch & InfluxDB\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\t%s\n\nOptions:\n",
-			filepath.Base(os.Args[0]), strings.Join([]string{actionBatch, actionTail, actionRedis, actionDocupdate, actionKeyremove, actionHelp, actionVersion}, ", "))
+			filepath.Base(
+				os.Args[0]),
+			strings.Join([]string{
+				config.ActionBatch,
+				config.ActionTail,
+				config.ActionRedis,
+				config.ActionDocupdate,
+				config.ActionKeyremove,
+				config.ActionHelp,
+				config.ActionVersion,
+			}, ", "))
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -164,23 +165,23 @@ func main() {
 	action := flag.Arg(0)
 
 	switch action {
-	case actionHelp:
+	case config.ActionHelp:
 		help(flag.Arg(1))
-	case actionDocupdate:
-		conf = setup(flag.Arg(1))
+	case config.ActionDocupdate:
+		conf = setup(flag.Arg(1), action)
 		updateRecords(conf, procOpts)
-	case actionKeyremove:
-		conf = setup(flag.Arg(1))
+	case config.ActionKeyremove:
+		conf = setup(flag.Arg(1), action)
 		removeKeyFromRecords(conf, procOpts)
-	case actionBatch, actionTail, actionRedis:
-		conf = setup(flag.Arg(1))
+	case config.ActionBatch, config.ActionTail, config.ActionRedis:
+		conf = setup(flag.Arg(1), action)
 		log.Print(startingServiceMsg)
 		processLogs(conf, action, procOpts)
-	case actionCelery:
-		conf = setup(flag.Arg(1))
+	case config.ActionCelery:
+		conf = setup(flag.Arg(1), action)
 		log.Print(startingServiceMsg)
 		processCeleryStatus(conf)
-	case actionVersion:
+	case config.ActionVersion:
 		fmt.Printf("Klogproc %s\nbuild date: %s\nlast commit: %s\n", version, build, gitCommit)
 	default:
 		fmt.Printf("Unknown action [%s]. Try -h for help\n", flag.Arg(0))
