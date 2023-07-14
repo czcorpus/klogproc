@@ -235,8 +235,8 @@ func newTailProcessor(
 		filepath.Clean(tailConf.Path), tailConf.AppType, tailConf.Version, tailConf.TZShift)
 
 	var buffStorage logbuffer.AbstractStorage[conversion.InputRecord]
-	if conf.LogFiles.Buffer != nil {
-		buffStorage = logbuffer.NewStorage[conversion.InputRecord](conf.LogFiles.Buffer)
+	if tailConf.Buffer != nil {
+		buffStorage = logbuffer.NewStorage[conversion.InputRecord](tailConf.Buffer)
 
 	} else {
 		buffStorage = logbuffer.NewDummyStorage[conversion.InputRecord]()
