@@ -66,7 +66,7 @@ func (r *InputRecord) GetClientIP() net.IP {
 }
 
 func (r *InputRecord) ClusteringClientID() string {
-	return conversion.GenerateRandomClusteringID()
+	return r.GetClientIP().String()
 }
 
 func (r *InputRecord) ClusterSize() int {

@@ -33,14 +33,39 @@ func (st *DummyStorage[T]) GetLastCheck(clusteringID string) time.Time {
 	return time.Time{}
 }
 
+func (st *DummyStorage[T]) SetTimestamp(t time.Time) time.Time {
+	return time.Time{}
+}
+
+func (st *DummyStorage[T]) GetTimestamp() time.Time {
+	return time.Time{}
+}
+
 func (st *DummyStorage[T]) RemoveAnalyzedRecords(clusteringID string, dt time.Time) {
+}
+
+func (st *DummyStorage[T]) TotalRemoveAnalyzedRecords(dt time.Time) {
 }
 
 func (st *DummyStorage[T]) NumOfRecords(clusteringID string) int {
 	return 0
 }
 
+func (st *DummyStorage[T]) TotalNumOfRecords() int {
+	return 0
+}
+
 func (st *DummyStorage[T]) ForEach(clusteringID string, fn func(item T)) {
+}
+
+func (st *DummyStorage[T]) TotalForEach(fn func(item T)) {
+}
+
+func (st *DummyStorage[T]) SetAuxNumber(name string, value float64) {
+}
+
+func (st *DummyStorage[T]) GetAuxNumber(name string) (float64, bool) {
+	return 0, false
 }
 
 func NewDummyStorage[T Storable]() *DummyStorage[T] {

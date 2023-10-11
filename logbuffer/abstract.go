@@ -20,9 +20,48 @@ import "time"
 
 type AbstractStorage[T Storable] interface {
 	AddRecord(rec T)
+
+	// ConfirmRecordCheck sets a time of last check
+	// for the records with the same clustering ID
+	// as `rec`.
+	// Please note that this also sets the global
+	// timestamp (the same as `SetTimestamp` does).
 	ConfirmRecordCheck(rec Storable)
+
+	// GetLastCheck returns time of the last time items
+	// with specified `clusteringID` where checked.
+	// Note: global timestamp (`SetTimestamp`, `GetTimestamp`)
+	// has no effect on this
 	GetLastCheck(clusteringID string) time.Time
+
+	// SetTimestamp stores provided time value typically to be able
+	// to determine some previous global action. The function
+	// returns previous stored timestamp
+	SetTimestamp(t time.Time) time.Time
+
+	// GetTimestamp returns stored timestamp
+	GetTimestamp() time.Time
+
+	// RemoveAnalyzedRecords removes all the records with specified
+	// `clusteringID` up until the defined time.
 	RemoveAnalyzedRecords(clusteringID string, dt time.Time)
+
+	TotalRemoveAnalyzedRecords(dt time.Time)
+
 	NumOfRecords(clusteringID string) int
+
+	TotalNumOfRecords() int
+
 	ForEach(clusteringID string, fn func(item T))
+
+	// TotalForEach apply a provided function on all items
+	// no matter what clusteringID they belong to
+	TotalForEach(fn func(item T))
+
+	// SetAuxNumber can be used to store custom data for later usage
+	// (e.g. summaries of previous 'Preprocess' calls)
+	SetAuxNumber(name string, value float64)
+
+	// GetAuxNumber returns previously stored custom float value
+	GetAuxNumber(name string) (float64, bool)
 }

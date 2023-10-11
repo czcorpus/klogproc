@@ -17,15 +17,61 @@
 package wag07
 
 import (
+	"fmt"
+	"net"
+	"sort"
 	"strconv"
+	"time"
 
 	"klogproc/conversion"
 	"klogproc/conversion/wag06"
+	"klogproc/email"
+	"klogproc/load"
 	"klogproc/logbuffer"
+
+	"github.com/czcorpus/cnc-gokit/collections"
+	"github.com/czcorpus/cnc-gokit/maths"
+	"github.com/rs/zerolog/log"
 )
+
+type sitemsWrapper struct {
+	data collections.BinTree[ReqCalcItem]
+}
+
+func (w *sitemsWrapper) Get(idx int) maths.FreqInfo {
+	return w.data.Get(idx)
+}
+
+func (w *sitemsWrapper) Len() int {
+	return w.data.Len()
+}
+
+type ReqCalcItem struct {
+	IP    string
+	Count int
+	Known bool
+}
+
+// Freq is implemented to satisfy cnc-gokit utils
+func (rc ReqCalcItem) Freq() int {
+	return rc.Count
+}
+
+func (rc ReqCalcItem) Compare(other collections.Comparable) int {
+	if rc.Count > other.(ReqCalcItem).Count {
+		return 1
+
+	} else if rc.Count == other.(ReqCalcItem).Count {
+		return 0
+	}
+	return -1
+}
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
+	bufferConf    *load.BufferConf
+	emailNotifier email.MailNotifier
+	realtimeClock bool
 }
 
 func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*wag06.OutputRecord, error) {
@@ -53,8 +99,147 @@ func (t *Transformer) HistoryLookupItems() int {
 	return 0
 }
 
+func (t *Transformer) isIgnoredIP(ip net.IP) bool {
+	return ip == nil || ip.IsLoopback() || ip.IsUnspecified()
+}
+
 func (t *Transformer) Preprocess(
 	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
 ) []conversion.InputRecord {
-	return []conversion.InputRecord{rec}
+	tRec, ok := rec.(*InputRecord)
+	ans := []conversion.InputRecord{rec}
+	if !ok {
+		log.Warn().Msg("invalid record passed to wag07.Preprocess()")
+		return ans
+	}
+	if t.bufferConf.BotDetection == nil || (tRec.Action != "search" &&
+		tRec.Action != "compare" &&
+		tRec.Action != "translate") {
+		return ans
+	}
+
+	lastCheck := prevRecs.GetTimestamp()
+	currTime := rec.GetTime()
+	if t.realtimeClock {
+		currTime = time.Now()
+	}
+	ci := time.Duration(t.bufferConf.AnalysisIntervalSecs) * time.Second
+	if lastCheck.IsZero() {
+		prevRecs.SetTimestamp(currTime)
+
+	} else if rec.GetTime().Sub(lastCheck) > ci {
+		defer prevRecs.SetTimestamp(currTime)
+		numRec := prevRecs.TotalNumOfRecords()
+		prev, _ := prevRecs.GetAuxNumber("prevNumRec")
+		prevRecs.SetAuxNumber("prevNumRec", float64(numRec))
+		if prev == 0 {
+			return ans
+		}
+
+		counter := make(map[string]ReqCalcItem)
+		prevRecs.TotalForEach(func(item conversion.InputRecord) {
+			if t.isIgnoredIP(item.GetClientIP()) {
+				return
+			}
+			curr, ok := counter[item.GetClientIP().String()]
+			if !ok {
+				curr = ReqCalcItem{
+					IP: item.GetClientIP().String(),
+				}
+			}
+			curr.Count++
+			counter[item.GetClientIP().String()] = curr
+		})
+		sortedItems := collections.BinTree[ReqCalcItem]{}
+		for _, v := range counter {
+			sortedItems.Add(v)
+		}
+
+		qrt, err := maths.GetQuartiles[maths.FreqInfo](&sitemsWrapper{sortedItems})
+		if err == maths.ErrTooSmallDataset {
+			return ans
+		}
+		threshold := int(float64(qrt.Q3) + t.bufferConf.BotDetection.IPOutlierCoeff*float64(qrt.IQR()))
+
+		// TODO store more info (even a random sample from some prev. data would be better)
+		// and use IQR
+		if float64(numRec)/prev >= 1.5 {
+			go func() {
+				t.emailNotifier.SendNotification(
+					"Klogproc: suspicious increase in traffic for the WaG service",
+					fmt.Sprintf("previous: %d, current: %d", int(prev), numRec),
+					fmt.Sprintf("last check: %v", lastCheck),
+					fmt.Sprintf("checking interval (seconds): %s", ci.String()),
+				)
+			}()
+		}
+
+		suspiciousRecords := make([]ReqCalcItem, 0, sortedItems.Len()/2)
+		sortedItems.ForEach(func(i int, v ReqCalcItem) bool {
+			if v.Count > threshold {
+				if collections.SliceContains[string](t.bufferConf.BotDetection.BlocklistIP, v.IP) {
+					v.Known = true
+				}
+				suspiciousRecords = append(suspiciousRecords, v)
+			}
+			return true
+		})
+
+		if len(suspiciousRecords) > 0 {
+
+			log.Info().
+				Int("numOutliers", len(suspiciousRecords)).
+				Msg("found outlier IP requests - going to report")
+
+			sort.SliceStable(suspiciousRecords, func(i, j int) bool {
+				return suspiciousRecords[i].Count > suspiciousRecords[j].Count
+			})
+
+			prevRecs.TotalRemoveAnalyzedRecords(lastCheck)
+			numCellStyle := "text-align: right; border: 1px solid #777777; padding: 0.2em 0.4em"
+			cellStyle := "border: 1px solid #777777; padding: 0.2em 0.4em"
+			thStyle := "text-align: left; padding: 0.2em 0.4em"
+
+			ipTable := new(email.Table)
+			tbody := ipTable.
+				Init("border-collapse: collapse").
+				AddBody().
+				AddTR().
+				AddTH("IP", thStyle).
+				AddTH("req. count", thStyle).
+				AddTH("known", thStyle).Close()
+			for _, susp := range suspiciousRecords {
+				tbody.AddTR().
+					AddTD(susp.IP, cellStyle).
+					AddTD(fmt.Sprintf("%d", susp.Count), numCellStyle).
+					AddTD(fmt.Sprintf("%t", susp.Known), numCellStyle).
+					Close()
+			}
+
+			go func() {
+				t.emailNotifier.SendNotification(
+					"Klogproc: suspicious IP activity in WaG service",
+					"suspicious records:",
+					ipTable.String(),
+					fmt.Sprintf("total IPs: %d", sortedItems.Len()),
+					fmt.Sprintf("last check: %v", lastCheck),
+					fmt.Sprintf("checking interval (seconds): %s", ci.String()),
+				)
+			}()
+		}
+	}
+
+	return ans
+}
+
+func NewTransformer(
+	bufferConf *load.BufferConf,
+	realtimeClock bool,
+	emailNotifier email.MailNotifier,
+) *Transformer {
+	return &Transformer{
+		bufferConf:    bufferConf,
+		realtimeClock: realtimeClock,
+		emailNotifier: emailNotifier,
+	}
 }

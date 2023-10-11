@@ -32,6 +32,10 @@ type Storage[T Storable] struct {
 	initialCapacity int
 	data            map[string]*collections.CircularList[T]
 	lastChecks      map[string]time.Time
+
+	// auxNumbers can be used to store some auxiliary summaries
+	auxNumbers map[string]float64
+	timestamp  time.Time
 }
 
 func (st *Storage[T]) AddRecord(rec T) {
@@ -54,6 +58,16 @@ func (st *Storage[T]) GetLastCheck(clusteringID string) time.Time {
 	return v
 }
 
+func (st *Storage[T]) SetTimestamp(t time.Time) time.Time {
+	prev := st.timestamp
+	st.timestamp = t
+	return prev
+}
+
+func (st *Storage[T]) GetTimestamp() time.Time {
+	return st.timestamp
+}
+
 func (st *Storage[T]) RemoveAnalyzedRecords(clusteringID string, dt time.Time) {
 	v, ok := st.data[clusteringID]
 	if !ok {
@@ -64,12 +78,28 @@ func (st *Storage[T]) RemoveAnalyzedRecords(clusteringID string, dt time.Time) {
 	})
 }
 
+func (st *Storage[T]) TotalRemoveAnalyzedRecords(dt time.Time) {
+	for _, v := range st.data {
+		v.ShiftUntil(func(item T) bool {
+			return item.GetTime().Before(dt)
+		})
+	}
+}
+
 func (st *Storage[T]) NumOfRecords(clusteringID string) int {
 	v, ok := st.data[clusteringID]
 	if !ok {
 		return 0
 	}
 	return v.Len()
+}
+
+func (st *Storage[T]) TotalNumOfRecords() int {
+	var ans int
+	for _, v := range st.data {
+		ans += v.Len()
+	}
+	return ans
 }
 
 func (st *Storage[T]) ForEach(clusteringID string, fn func(item T)) {
@@ -83,10 +113,29 @@ func (st *Storage[T]) ForEach(clusteringID string, fn func(item T)) {
 	})
 }
 
+func (st *Storage[T]) TotalForEach(fn func(item T)) {
+	for _, v := range st.data {
+		v.ForEach(func(i int, item T) bool {
+			fn(item)
+			return true
+		})
+	}
+}
+
+func (st *Storage[T]) SetAuxNumber(name string, value float64) {
+	st.auxNumbers[name] = value
+}
+
+func (st *Storage[T]) GetAuxNumber(name string) (float64, bool) {
+	v, ok := st.auxNumbers[name]
+	return v, ok
+}
+
 func NewStorage[T Storable](bufferConf *load.BufferConf) *Storage[T] {
 	return &Storage[T]{
 		data:            make(map[string]*collections.CircularList[T]),
 		initialCapacity: bufferConf.HistoryLookupItems,
 		lastChecks:      make(map[string]time.Time),
+		auxNumbers:      make(map[string]float64),
 	}
 }

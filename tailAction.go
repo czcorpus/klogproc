@@ -192,12 +192,12 @@ func (tp *tailProcessor) MaxLinesPerCheck() int {
 
 // -----
 
-func newProcAlarm(tailConf *tail.FileConf, conf *tail.Conf, mailConf *config.Email) (conversion.AppErrorRegister, error) {
-	if conf.NumErrorsAlarm > 0 && conf.ErrCountTimeRangeSecs > 0 {
-		notifier, err := email.NewEmailNotifier(mailConf)
-		if err != nil {
-			return nil, err
-		}
+func newProcAlarm(
+	tailConf *tail.FileConf,
+	conf *tail.Conf,
+	notifier email.MailNotifier,
+) (conversion.AppErrorRegister, error) {
+	if conf.NumErrorsAlarm > 0 && conf.ErrCountTimeRangeSecs > 0 && notifier != nil {
 		return alarm.NewTailProcAlarm(
 			conf.NumErrorsAlarm,
 			conf.ErrCountTimeRangeSecs,
@@ -217,7 +217,14 @@ func newTailProcessor(
 	dryRun bool,
 	analysis chan<- conversion.InputRecord,
 ) *tailProcessor {
-	procAlarm, err := newProcAlarm(&tailConf, conf.LogTail, conf.EmailNotification)
+
+	var notifier email.MailNotifier
+	notifier, err := email.NewEmailNotifier(conf.EmailNotification, conf.TimezoneLocation())
+	if err != nil {
+		log.Fatal().Msgf("Failed to initialize e-mail notifier: %s", err)
+	}
+
+	procAlarm, err := newProcAlarm(&tailConf, conf.LogTail, notifier)
 	if err != nil {
 		log.Fatal().Msgf("Failed to initialize alarm: %s", err)
 	}
@@ -226,7 +233,7 @@ func newTailProcessor(
 		log.Fatal().Msgf("Failed to initialize parser: %s", err)
 	}
 	logTransformer, err := trfactory.GetLogTransformer(
-		tailConf.AppType, tailConf.Version, tailConf.Buffer, userMap)
+		tailConf.AppType, tailConf.Version, tailConf.Buffer, userMap, true, notifier)
 	if err != nil {
 		log.Fatal().Msgf("Failed to initialize transformer: %s", err)
 	}
