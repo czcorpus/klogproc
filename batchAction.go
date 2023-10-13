@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"klogproc/config"
 	"klogproc/conversion"
+	"klogproc/email"
 	"klogproc/load/batch"
 	"klogproc/logbuffer"
 	"klogproc/save"
@@ -42,11 +43,15 @@ func runBatchAction(
 	finishEvent chan<- bool,
 ) {
 
+	nullMailNot, _ := email.NewEmailNotifier(
+		conf.EmailNotification, conf.TimezoneLocation()) // TODO REMOVE real notifier
 	lt, err := trfactory.GetLogTransformer(
 		conf.LogFiles.AppType,
 		conf.LogFiles.Version,
 		conf.LogFiles.Buffer,
 		userMap,
+		false,
+		nullMailNot,
 	)
 	if err != nil {
 		log.Fatal().Msgf("%s", err)

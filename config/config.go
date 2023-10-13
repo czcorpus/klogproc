@@ -16,8 +16,8 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
 	"flag"
+	"time"
 
 	"klogproc/botwatch"
 	"klogproc/common"
@@ -28,6 +28,7 @@ import (
 	"klogproc/save/elastic"
 	"klogproc/save/influx"
 
+	"github.com/czcorpus/cnc-gokit/mail"
 	"github.com/rs/zerolog/log"
 )
 
@@ -40,27 +41,9 @@ const (
 	ActionDocupdate = "docupdate"
 	ActionHelp      = "help"
 	ActionVersion   = "version"
+
+	DefaultTimeZone = "Europe/Prague"
 )
-
-// Email configures e-mail client for sending misc. notifications and alarms
-type Email struct {
-	NotificationEmails []string `json:"notificationEmails"`
-	SMTPServer         string   `json:"smtpServer"`
-	Sender             string   `json:"sender"`
-}
-
-func (e *Email) Validate() error {
-	if e == nil {
-		return errors.New("missing whole e-mail notification section")
-	}
-	if len(e.NotificationEmails) == 0 {
-		return errors.New("missing notification e-mails")
-	}
-	if e.SMTPServer == "" {
-		return errors.New("missing SMTP server")
-	}
-	return nil
-}
 
 // Main describes klogproc's configuration
 type Main struct {
@@ -75,14 +58,23 @@ type Main struct {
 	RecUpdate         elastic.DocUpdConf        `json:"recordUpdate"`
 	ElasticSearch     elastic.ConnectionConf    `json:"elasticSearch"`
 	InfluxDB          influx.ConnectionConf     `json:"influxDb"`
-	EmailNotification *Email                    `json:"emailNotification"`
+	EmailNotification *mail.NotificationConf    `json:"emailNotification"`
 	BotDetection      botwatch.BotDetectionConf `json:"botDetection"`
+	TimeZone          string                    `json:"timeZone"`
 }
 
 // HasInfluxOut tests whether an InfluxDB
 // output is confgured
 func (c *Main) HasInfluxOut() bool {
 	return c.InfluxDB.Server != ""
+}
+
+func (c *Main) TimezoneLocation() *time.Location {
+	// we can ignore the error here as we always call c.Validate()
+	// first (which also tries to load the location and report possible
+	// error)
+	loc, _ := time.LoadLocation(c.TimeZone)
+	return loc
 }
 
 // Validate checks for some essential config properties
@@ -115,16 +107,16 @@ func Validate(conf *Main, action string) {
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to validate `tail` action configuration")
 		}
-		if conf.LogTail.RequiresMailConfiguration() {
-			if err := conf.EmailNotification.Validate(); err != nil {
-				log.Fatal().Err(err).Msg("failed to validate `tail` action configuration")
-			}
-		}
 	}
 	if conf.LogFiles != nil {
 		if err := conf.LogFiles.Validate(); err != nil {
 			log.Fatal().Err(err).Msg("logFiles validation error")
 		}
+	}
+	if conf.TimeZone == "" {
+		conf.TimeZone = DefaultTimeZone
+		log.Warn().Str("timezone", conf.TimeZone).
+			Msg("timeZone not specified, using default")
 	}
 }
 

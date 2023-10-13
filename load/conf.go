@@ -21,10 +21,14 @@ import "errors"
 type BufferConf struct {
 	HistoryLookupItems   int `json:"historyLookupItems"`
 	AnalysisIntervalSecs int `json:"analysisIntervalSecs"`
-	ClusteringDBScan     struct {
+	ClusteringDBScan     *struct {
 		MinDensity int     `json:"minDensity"`
 		Epsilon    float64 `json:"epsilon"`
 	} `json:"clusteringDbScan"`
+	BotDetection *struct {
+		IPOutlierCoeff float64  `json:"ipOutlierCoeff"`
+		BlocklistIP    []string `json:"blocklistIp"`
+	} `json:"botDetection"`
 }
 
 func (bc *BufferConf) Validate() error {
@@ -36,13 +40,15 @@ func (bc *BufferConf) Validate() error {
 		return errors.New(
 			"failed to validate batch file processing buffer: analysisIntervalSecs must be > 0")
 	}
-	if bc.ClusteringDBScan.Epsilon <= 0 {
-		return errors.New(
-			"failed to validate batch file processing buffer: clusteringDbScan.epsilon must be > 0")
-	}
-	if bc.ClusteringDBScan.MinDensity <= 0 {
-		return errors.New(
-			"failed to validate batch file processing buffer: clusteringDbScan.minDensity must be > 0")
+	if bc.ClusteringDBScan != nil {
+		if bc.ClusteringDBScan.Epsilon <= 0 {
+			return errors.New(
+				"failed to validate batch file processing buffer: clusteringDbScan.epsilon must be > 0")
+		}
+		if bc.ClusteringDBScan.MinDensity <= 0 {
+			return errors.New(
+				"failed to validate batch file processing buffer: clusteringDbScan.minDensity must be > 0")
+		}
 	}
 	return nil
 }

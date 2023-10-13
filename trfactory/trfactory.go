@@ -36,6 +36,7 @@ import (
 	"klogproc/conversion/wag06"
 	"klogproc/conversion/wag07"
 	"klogproc/conversion/wsserver"
+	"klogproc/email"
 	"klogproc/load"
 	"klogproc/users"
 )
@@ -46,6 +47,8 @@ func GetLogTransformer(
 	version string,
 	bufferConf *load.BufferConf,
 	userMap *users.UserMap,
+	realtimeClock bool,
+	emailNotifier email.MailNotifier,
 ) (conversion.LogItemTransformer, error) {
 
 	switch appType {
@@ -99,7 +102,13 @@ func GetLogTransformer(
 		case "0.6":
 			return &wag06Transformer{t: &wag06.Transformer{}}, nil
 		case "0.7":
-			return &wag07Transformer{t: &wag07.Transformer{}}, nil
+			return &wag07Transformer{
+				t: wag07.NewTransformer(
+					bufferConf,
+					realtimeClock,
+					emailNotifier,
+				),
+			}, nil
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported WaG version: %s", version)
 		}

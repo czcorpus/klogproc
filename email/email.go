@@ -21,14 +21,12 @@
 package email
 
 import (
-	"bytes"
 	"fmt"
-	"net/mail"
-	"net/smtp"
+	goMail "net/mail"
 	"strings"
+	"time"
 
-	"klogproc/config"
-
+	"github.com/czcorpus/cnc-gokit/mail"
 	"github.com/rs/zerolog/log"
 )
 
@@ -36,73 +34,64 @@ const (
 	defaultSender = "klogproc@localhost"
 )
 
-// DefaultEmailNotifier provides basic e-mail notification
+// MailNotifier is a general type allowing sending messages to
+// a predefined list of recipients
+type MailNotifier interface {
+	SendNotification(subject string, message ...string) error
+}
+
+// nullEmailNotifier is a regular mail sender replacement
+// in case mailing is not configured
+type nullEmailNotifier struct {
+}
+
+func (den *nullEmailNotifier) SendNotification(subject string, message ...string) error {
+	log.Warn().
+		Str("subject", subject).
+		Strs("body", message).
+		Msg("not sending e-mail notification - not configured")
+	return nil
+}
+
+// defaultEmailNotifier provides basic e-mail notification
 // as used by other parts of klogproc (e.g. sending alarm info).
 // It should be instantiated via NewEmailNotifier.
-type DefaultEmailNotifier struct {
-	conf       *config.Email
-	recipients []*mail.Address
+type defaultEmailNotifier struct {
+	conf *mail.NotificationConf
+	loc  *time.Location
 }
 
 // SendNotification sends a general e-mail notification based on
 // a respective monitoring configuration. The 'alarmToken' argument
 // can be nil - in such case the 'turn of the alarm' text won't be
 // part of the message.
-func (den *DefaultEmailNotifier) SendNotification(subject, message string) error {
-	client, err := smtp.Dial(den.conf.SMTPServer)
-	if err != nil {
-		return err
-	}
-	defer client.Close()
-	client.Mail(den.conf.Sender)
-	for _, rcpt := range den.recipients {
-		err = client.Rcpt(rcpt.Address)
-
-		if err != nil {
-			return err
-		}
-	}
-
-	wc, err := client.Data()
-	if err != nil {
-		return err
-	}
-	defer wc.Close()
-
-	headers := make(map[string]string)
-	headers["From"] = den.conf.Sender
-	headers["To"] = strings.Join(den.conf.NotificationEmails, ",")
-	headers["Subject"] = subject
-	headers["MIME-Version"] = "1.0"
-	headers["Content-Type"] = "text/html; charset=UTF-8"
-
-	body := ""
-	for k, v := range headers {
-		body += fmt.Sprintf("%s: %s\r\n", k, v)
-	}
-	body += "<p>" + message + "</p>\r\n\r\n"
-	buf := bytes.NewBufferString(body)
-	_, err = buf.WriteTo(wc)
-	return err
+func (den *defaultEmailNotifier) SendNotification(subject string, message ...string) error {
+	return mail.SendNotification(den.conf, den.loc, mail.Notification{
+		Subject:    subject,
+		Paragraphs: message,
+	})
 }
 
 // NewEmailNotifier is a factory function for email notification
 // In case of missing configuration, the function returns an error.
 // Missing sender is replaced by a default value.
-func NewEmailNotifier(conf *config.Email) (*DefaultEmailNotifier, error) {
-
+func NewEmailNotifier(
+	conf *mail.NotificationConf,
+	loc *time.Location,
+) (MailNotifier, error) {
+	if conf == nil {
+		return &nullEmailNotifier{}, nil
+	}
 	if conf.Sender == "" {
 		log.Warn().Msgf("e-mail sender not set - using default %s", defaultSender)
 		conf.Sender = defaultSender
 	}
-	recipients := make([]*mail.Address, len(conf.NotificationEmails))
-	var err error
-	for i, addr := range conf.NotificationEmails {
-		recipients[i], err = mail.ParseAddress(addr)
-		if err != nil {
-			return nil, fmt.Errorf("address <%s> not parsed: %s", addr, err)
+	validated := append([]string{conf.Sender}, conf.Recipients...)
+	for _, addr := range validated {
+		if _, err := goMail.ParseAddress(addr); err != nil {
+			return nil, fmt.Errorf("incorrect e-mail address %s: %s", addr, err)
 		}
 	}
-	log.Info().Msgf("creating e-mail sender with recipient(s) %s", strings.Join(conf.NotificationEmails, ", "))
-	return &DefaultEmailNotifier{conf: conf, recipients: recipients}, nil
+	log.Info().Msgf("creating e-mail sender with recipient(s) %s", strings.Join(conf.Recipients, ", "))
+	return &defaultEmailNotifier{conf: conf, loc: loc}, nil
 }

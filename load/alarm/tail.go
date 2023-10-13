@@ -22,6 +22,7 @@ package alarm
 
 import (
 	"fmt"
+	"klogproc/email"
 	"strings"
 	"sync"
 	"time"
@@ -54,7 +55,7 @@ func findRange(itemList []errorRecord) (int64, int64) {
 // e-mail notification is triggered.
 type TailProcAlarm struct {
 	errCountTimeRangeSecs int
-	notifier              mailNotifier
+	notifier              email.MailNotifier
 	lastErrors            []errorRecord
 	errIdx                int
 	fileInfo              tailFileDescriber
@@ -118,7 +119,12 @@ func (tpa *TailProcAlarm) Reset() {
 }
 
 // NewTailProcAlarm is a recommended factory for TailProcAlarm type
-func NewTailProcAlarm(maxNumErr int, errCountTimeRangeSecs int, fileInfo tailFileDescriber, notifier mailNotifier) *TailProcAlarm {
+func NewTailProcAlarm(
+	maxNumErr int,
+	errCountTimeRangeSecs int,
+	fileInfo tailFileDescriber,
+	notifier email.MailNotifier,
+) *TailProcAlarm {
 	return &TailProcAlarm{
 		notifier:              notifier,
 		errCountTimeRangeSecs: errCountTimeRangeSecs,

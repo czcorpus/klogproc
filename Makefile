@@ -1,4 +1,4 @@
-VERSION=`git describe --tags`
+VERSION=`git describe --tags --always`
 BUILD=`date +%FT%T%z`
 HASH=`git rev-parse --short HEAD`
 

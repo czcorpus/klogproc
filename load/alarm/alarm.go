@@ -20,12 +20,6 @@
 
 package alarm
 
-// mailNotifier is a general type allowing sending messages to
-// a predefined list of recipients
-type mailNotifier interface {
-	SendNotification(subject, message string) error
-}
-
 // tailFileDescriber is a type able providing processed file
 // along with some auxiliary info as needed when reporting stuff.
 type tailFileDescriber interface {
