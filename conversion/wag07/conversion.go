@@ -30,6 +30,7 @@ import (
 	"klogproc/logbuffer"
 
 	"github.com/czcorpus/cnc-gokit/collections"
+	"github.com/czcorpus/cnc-gokit/datetime"
 	"github.com/czcorpus/cnc-gokit/maths"
 	"github.com/rs/zerolog/log"
 )
@@ -152,11 +153,13 @@ func (t *Transformer) Preprocess(
 				Msg("found suspicious increase in traffic - going to report")
 
 			go func() {
-				t.emailNotifier.SendNotification(
+				t.emailNotifier.SendFormattedNotification(
 					"Klogproc for WaG: suspicious increase in traffic",
-					fmt.Sprintf("previous (sampled): %d, current: %d", int(meanReqs), numRec),
-					fmt.Sprintf("checking interval (seconds): %s", ci.String()),
-					fmt.Sprintf("last check: %v", lastCheck),
+					fmt.Sprintf(
+						"<p>previous (sampled): <strong>%d</strong>, current: <strong>%d</strong><br />",
+						int(meanReqs), numRec),
+					fmt.Sprintf("checking interval: <strong>%s</strong><br />", ci.String()),
+					fmt.Sprintf("last check: <strong>%v</strong></p>", datetime.FormatDatetime(lastCheck)),
 				)
 			}()
 		}
@@ -233,9 +236,9 @@ func (t *Transformer) Preprocess(
 					"Klogproc for WaG: suspicious IP addresses detected",
 					"suspicious records:",
 					ipTable.String(),
-					fmt.Sprintf("<p>total IPs: %d", sortedItems.Len()),
-					fmt.Sprintf("last check: %v<br />", lastCheck),
-					fmt.Sprintf("checking interval (seconds): %s</br></p>", ci.String()),
+					fmt.Sprintf("<p>total requesting IPs: <strong>%d</strong><br />", sortedItems.Len()),
+					fmt.Sprintf("last check: <strong>%v</strong><br />", datetime.FormatDatetime(lastCheck)),
+					fmt.Sprintf("checking interval: <strong>%s</strong><br /></p>", ci.String()),
 				)
 			}()
 		}
