@@ -64,4 +64,10 @@ type AbstractStorage[T Storable] interface {
 
 	// GetAuxNumber returns previously stored custom float value
 	GetAuxNumber(name string) (float64, bool)
+
+	// AddNumberSample adds a new value to the "sample storage".
+	// It returns the sample size after the value was added
+	AddNumberSample(storageKey string, value float64) int
+
+	GetNumberSamples(storageKey string) []float64
 }

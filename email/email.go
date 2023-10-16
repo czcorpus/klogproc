@@ -38,6 +38,7 @@ const (
 // a predefined list of recipients
 type MailNotifier interface {
 	SendNotification(subject string, message ...string) error
+	SendFormattedNotification(subject string, divContents ...string) error
 }
 
 // nullEmailNotifier is a regular mail sender replacement
@@ -49,6 +50,14 @@ func (den *nullEmailNotifier) SendNotification(subject string, message ...string
 	log.Warn().
 		Str("subject", subject).
 		Strs("body", message).
+		Msg("not sending e-mail notification - not configured")
+	return nil
+}
+
+func (den *nullEmailNotifier) SendFormattedNotification(subject string, divContents ...string) error {
+	log.Warn().
+		Str("subject", subject).
+		Strs("body", divContents).
 		Msg("not sending e-mail notification - not configured")
 	return nil
 }
@@ -69,6 +78,13 @@ func (den *defaultEmailNotifier) SendNotification(subject string, message ...str
 	return mail.SendNotification(den.conf, den.loc, mail.Notification{
 		Subject:    subject,
 		Paragraphs: message,
+	})
+}
+
+func (den *defaultEmailNotifier) SendFormattedNotification(subject string, divContents ...string) error {
+	return mail.SendNotification(den.conf, den.loc, mail.FormattedNotification{
+		Subject: subject,
+		Divs:    divContents,
 	})
 }
 

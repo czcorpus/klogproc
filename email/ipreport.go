@@ -50,7 +50,7 @@ func (tr *TR) AddTD(text string, style string) *TR {
 }
 
 func (tr *TR) Close() *TBody {
-	tr.tbody.table.writer.WriteString("</tr>")
+	tr.tbody.table.writer.WriteString("</tr>\r\n")
 	return tr.tbody
 }
 
@@ -59,12 +59,12 @@ type TBody struct {
 }
 
 func (t *TBody) AddTR() *TR {
-	t.table.writer.WriteString("<tr>")
+	t.table.writer.WriteString("<tr>\r\n")
 	return &TR{tbody: t}
 }
 
 func (t *TBody) Close() *Table {
-	t.table.writer.WriteString("</tbody>")
+	t.table.writer.WriteString("</tbody>\r\n")
 	return t.table
 }
 
@@ -74,17 +74,17 @@ type Table struct {
 
 func (t *Table) Init(style string) *Table {
 	t.writer = &strings.Builder{}
-	t.writer.WriteString(fmt.Sprintf("<table style=\"%s\">", style))
+	t.writer.WriteString(fmt.Sprintf("<table style=\"%s\">\r\n", style))
 	return t
 }
 
 func (t *Table) AddBody() *TBody {
-	t.writer.WriteString("<tbody>")
+	t.writer.WriteString("<tbody>\r\n")
 	return &TBody{table: t}
 }
 
 func (t *Table) Close() {
-	t.writer.WriteString("</table>")
+	t.writer.WriteString("</table>\r\n")
 }
 
 func (t *Table) String() string {
