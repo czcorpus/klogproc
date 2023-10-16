@@ -3,7 +3,7 @@ module klogproc
 go 1.19
 
 require (
-	github.com/czcorpus/cnc-gokit v0.5.3
+	github.com/czcorpus/cnc-gokit v0.5.5
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/uuid v1.3.0
 	github.com/influxdata/influxdb1-client v0.0.0-20220302092344-a9ab5670611c

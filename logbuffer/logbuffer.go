@@ -35,7 +35,10 @@ type Storage[T Storable] struct {
 
 	// auxNumbers can be used to store some auxiliary summaries
 	auxNumbers map[string]float64
-	timestamp  time.Time
+
+	auxNumberSamples map[string]*SampleWithReplac[float64]
+
+	timestamp time.Time
 }
 
 func (st *Storage[T]) AddRecord(rec T) {
@@ -131,11 +134,29 @@ func (st *Storage[T]) GetAuxNumber(name string) (float64, bool) {
 	return v, ok
 }
 
+func (st *Storage[T]) AddNumberSample(storageKey string, value float64) int {
+	samples, ok := st.auxNumberSamples[storageKey]
+	if !ok {
+		samples = NewSampleWithReplac[float64](st.initialCapacity)
+		st.auxNumberSamples[storageKey] = samples
+	}
+	return samples.Add(value)
+}
+
+func (st *Storage[T]) GetNumberSamples(storageKey string) []float64 {
+	samples, ok := st.auxNumberSamples[storageKey]
+	if !ok {
+		return []float64{}
+	}
+	return samples.GetAll()
+}
+
 func NewStorage[T Storable](bufferConf *load.BufferConf) *Storage[T] {
 	return &Storage[T]{
-		data:            make(map[string]*collections.CircularList[T]),
-		initialCapacity: bufferConf.HistoryLookupItems,
-		lastChecks:      make(map[string]time.Time),
-		auxNumbers:      make(map[string]float64),
+		data:             make(map[string]*collections.CircularList[T]),
+		initialCapacity:  bufferConf.HistoryLookupItems,
+		lastChecks:       make(map[string]time.Time),
+		auxNumbers:       make(map[string]float64),
+		auxNumberSamples: make(map[string]*SampleWithReplac[float64]),
 	}
 }

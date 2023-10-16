@@ -129,11 +129,36 @@ func (t *Transformer) Preprocess(
 
 	} else if rec.GetTime().Sub(lastCheck) > ci {
 		defer prevRecs.SetTimestamp(currTime)
+
 		numRec := prevRecs.TotalNumOfRecords()
-		prev, _ := prevRecs.GetAuxNumber("prevNumRec")
-		prevRecs.SetAuxNumber("prevNumRec", float64(numRec))
-		if prev == 0 {
+		sampleSize := prevRecs.AddNumberSample("prevNums", float64(numRec))
+		if sampleSize == 1 {
 			return ans
+		}
+
+		prevNumsRecs := prevRecs.GetNumberSamples("prevNums")
+		var meanReqs float64
+		for _, v := range prevNumsRecs {
+			meanReqs += v
+		}
+		meanReqs /= float64(len(prevNumsRecs))
+		if float64(numRec)/meanReqs >= 1.3 {
+
+			log.Info().
+				Str("appType", "wag").
+				Float64("prevReqsSampleMean", meanReqs).
+				Int("currentReqs", numRec).
+				Float64("increase", float64(numRec)/meanReqs).
+				Msg("found suspicious increase in traffic - going to report")
+
+			go func() {
+				t.emailNotifier.SendNotification(
+					"Klogproc for WaG: suspicious increase in traffic",
+					fmt.Sprintf("previous (sampled): %d, current: %d", int(meanReqs), numRec),
+					fmt.Sprintf("checking interval (seconds): %s", ci.String()),
+					fmt.Sprintf("last check: %v", lastCheck),
+				)
+			}()
 		}
 
 		counter := make(map[string]ReqCalcItem)
@@ -160,20 +185,6 @@ func (t *Transformer) Preprocess(
 			return ans
 		}
 		threshold := int(float64(qrt.Q3) + t.bufferConf.BotDetection.IPOutlierCoeff*float64(qrt.IQR()))
-
-		// TODO store more info (even a random sample from some prev. data would be better)
-		// and use IQR
-		if float64(numRec)/prev >= 1.5 {
-			go func() {
-				t.emailNotifier.SendNotification(
-					"Klogproc: suspicious increase in traffic for the WaG service",
-					fmt.Sprintf("previous: %d, current: %d", int(prev), numRec),
-					fmt.Sprintf("last check: %v", lastCheck),
-					fmt.Sprintf("checking interval (seconds): %s", ci.String()),
-				)
-			}()
-		}
-
 		suspiciousRecords := make([]ReqCalcItem, 0, sortedItems.Len()/2)
 		sortedItems.ForEach(func(i int, v ReqCalcItem) bool {
 			if v.Count > threshold {
@@ -188,6 +199,7 @@ func (t *Transformer) Preprocess(
 		if len(suspiciousRecords) > 0 {
 
 			log.Info().
+				Str("appType", "wag").
 				Int("numOutliers", len(suspiciousRecords)).
 				Msg("found outlier IP requests - going to report")
 
@@ -217,13 +229,13 @@ func (t *Transformer) Preprocess(
 			}
 
 			go func() {
-				t.emailNotifier.SendNotification(
-					"Klogproc: suspicious IP activity in WaG service",
+				t.emailNotifier.SendFormattedNotification(
+					"Klogproc for WaG: suspicious IP addresses detected",
 					"suspicious records:",
 					ipTable.String(),
-					fmt.Sprintf("total IPs: %d", sortedItems.Len()),
-					fmt.Sprintf("last check: %v", lastCheck),
-					fmt.Sprintf("checking interval (seconds): %s", ci.String()),
+					fmt.Sprintf("<p>total IPs: %d", sortedItems.Len()),
+					fmt.Sprintf("last check: %v<br />", lastCheck),
+					fmt.Sprintf("checking interval (seconds): %s</br></p>", ci.String()),
 				)
 			}()
 		}

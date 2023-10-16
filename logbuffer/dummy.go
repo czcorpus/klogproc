@@ -68,6 +68,14 @@ func (st *DummyStorage[T]) GetAuxNumber(name string) (float64, bool) {
 	return 0, false
 }
 
+func (st *DummyStorage[T]) AddNumberSample(storageKey string, value float64) int {
+	return 0
+}
+
+func (st *DummyStorage[T]) GetNumberSamples(storageKey string) []float64 {
+	return []float64{}
+}
+
 func NewDummyStorage[T Storable]() *DummyStorage[T] {
 	return &DummyStorage[T]{}
 }
