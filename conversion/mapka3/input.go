@@ -74,16 +74,19 @@ func (r *InputRecord) GetClientIP() net.IP {
 
 func (rec *InputRecord) ClusteringClientID() string {
 	var inp string
-	if rec.Extra.UserID != "" {
-		inp = fmt.Sprint(rec.Extra.UserID)
-
-	} else if rec.Extra.IP != "" {
-		inp = rec.Extra.IP
+	if rec.Extra.SessionSelector != "" || rec.Extra.UserID != "" || rec.Extra.IP != "" {
+		inp = fmt.Sprintf(
+			"%s#%s#%s",
+			rec.Extra.SessionSelector,
+			rec.Extra.UserID,
+			rec.Extra.IP,
+		)
 
 	} else {
-		log.Warn().Msgf(
-			"unable to get a proper clustering client ID for app %s (time: %s) - using uuid",
-			rec.Type, rec.Datetime)
+		log.Warn().
+			Str("recDatetime", rec.Datetime).
+			Str("appType", rec.Type).
+			Msg("unable to get a proper clustering client ID - using uuid instead")
 		id := uuid.New()
 		inp = id.String()
 	}
