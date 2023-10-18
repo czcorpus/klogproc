@@ -18,17 +18,45 @@ package load
 
 import "errors"
 
+type ClusteringDBScanConf struct {
+	MinDensity int     `json:"minDensity"`
+	Epsilon    float64 `json:"epsilon"`
+}
+
+type BotDetectionConf struct {
+	// IPOutlierCoeff specifies how far from the Q3 must a value be
+	// to be considered an outlier (the formula is `Q3 + ipOutlierCoeff * IQR`)
+	IPOutlierCoeff float64 `json:"ipOutlierCoeff"`
+
+	// IPOutlierMinFreq specifies minimum number of requests for
+	// an IP (per interval defined in buffer config `AnalysisIntervalSecs`)
+	// to be actually reported. Because in case there is small traffic, even
+	// legit IP requests may be evaluated as outliers.
+	IPOutlierMinFreq int `json:"ipOutlierMinFreq"`
+
+	// BlocklistIP is just for "known" IPs reporting (i.e. there is no
+	// actual blocking involved - klogproc indeed cannot block anything).
+	BlocklistIP []string `json:"blocklistIp"`
+
+	// TrafficReportingThreshold defines a number specifying how much
+	// a number of requests must have changed from the last check
+	// (see `AnalysisIntervalSecs`) to be considered abnormal.
+	// Please note that this number is really hard to tune as during
+	// day, there are natural increases of traffic and without knowing
+	// a typical (or even current) day requests progression, this is
+	// rather a hint then a 100% evidence of bot activity.
+	TrafficReportingThreshold float64 `json:"trafficReportingThreshold"`
+}
+
 type BufferConf struct {
-	HistoryLookupItems   int `json:"historyLookupItems"`
-	AnalysisIntervalSecs int `json:"analysisIntervalSecs"`
-	ClusteringDBScan     *struct {
-		MinDensity int     `json:"minDensity"`
-		Epsilon    float64 `json:"epsilon"`
-	} `json:"clusteringDbScan"`
-	BotDetection *struct {
-		IPOutlierCoeff float64  `json:"ipOutlierCoeff"`
-		BlocklistIP    []string `json:"blocklistIp"`
-	} `json:"botDetection"`
+	HistoryLookupItems int `json:"historyLookupItems"`
+
+	// AnalysisIntervalSecs specifies how often klogproc analyses previous
+	// records. The interval is also important because it is a base for other
+	// configured values (typically different limits/thresholds)
+	AnalysisIntervalSecs int                   `json:"analysisIntervalSecs"`
+	ClusteringDBScan     *ClusteringDBScanConf `json:"clusteringDbScan"`
+	BotDetection         *BotDetectionConf     `json:"botDetection"`
 }
 
 func (bc *BufferConf) Validate() error {
