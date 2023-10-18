@@ -187,7 +187,10 @@ func (t *Transformer) Preprocess(
 		if err == maths.ErrTooSmallDataset {
 			return ans
 		}
-		threshold := int(float64(qrt.Q3) + t.bufferConf.BotDetection.IPOutlierCoeff*float64(qrt.IQR()))
+		threshold := maths.Max(
+			t.bufferConf.BotDetection.IPOutlierMinFreq,
+			int(float64(qrt.Q3)+t.bufferConf.BotDetection.IPOutlierCoeff*float64(qrt.IQR())),
+		)
 		suspiciousRecords := make([]ReqCalcItem, 0, sortedItems.Len()/2)
 		sortedItems.ForEach(func(i int, v ReqCalcItem) bool {
 			if v.Count > threshold {

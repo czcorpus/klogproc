@@ -18,17 +18,32 @@ package load
 
 import "errors"
 
+type ClusteringDBScanConf struct {
+	MinDensity int     `json:"minDensity"`
+	Epsilon    float64 `json:"epsilon"`
+}
+
+type BotDetectionConf struct {
+	// IPOutlierCoeff specifies how far from the Q3 must a value be
+	// to be considered an outlier (the formula is `Q3 + ipOutlierCoeff * IQR`)
+	IPOutlierCoeff float64 `json:"ipOutlierCoeff"`
+
+	// IPOutlierMinFreq specifies minimum number of requests for
+	// an IP (per interval defined in buffer config `AnalysisIntervalSecs`)
+	// to be actually reported. Because in case there is small traffic, even
+	// legit IP requests may be evaluated as outliers.
+	IPOutlierMinFreq int `json:"ipOutlierMinFreq"`
+
+	// BlocklistIP is just for "known" IPs reporting (i.e. there is no
+	// actual blocking involved - klogproc indeed cannot block anything).
+	BlocklistIP []string `json:"blocklistIp"`
+}
+
 type BufferConf struct {
-	HistoryLookupItems   int `json:"historyLookupItems"`
-	AnalysisIntervalSecs int `json:"analysisIntervalSecs"`
-	ClusteringDBScan     *struct {
-		MinDensity int     `json:"minDensity"`
-		Epsilon    float64 `json:"epsilon"`
-	} `json:"clusteringDbScan"`
-	BotDetection *struct {
-		IPOutlierCoeff float64  `json:"ipOutlierCoeff"`
-		BlocklistIP    []string `json:"blocklistIp"`
-	} `json:"botDetection"`
+	HistoryLookupItems   int                   `json:"historyLookupItems"`
+	AnalysisIntervalSecs int                   `json:"analysisIntervalSecs"`
+	ClusteringDBScan     *ClusteringDBScanConf `json:"clusteringDbScan"`
+	BotDetection         *BotDetectionConf     `json:"botDetection"`
 }
 
 func (bc *BufferConf) Validate() error {
