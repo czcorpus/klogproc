@@ -37,10 +37,23 @@ type BotDetectionConf struct {
 	// BlocklistIP is just for "known" IPs reporting (i.e. there is no
 	// actual blocking involved - klogproc indeed cannot block anything).
 	BlocklistIP []string `json:"blocklistIp"`
+
+	// TrafficReportingThreshold defines a number specifying how much
+	// a number of requests must have changed from the last check
+	// (see `AnalysisIntervalSecs`) to be considered abnormal.
+	// Please note that this number is really hard to tune as during
+	// day, there are natural increases of traffic and without knowing
+	// a typical (or even current) day requests progression, this is
+	// rather a hint then a 100% evidence of bot activity.
+	TrafficReportingThreshold float64 `json:"trafficReportingThreshold"`
 }
 
 type BufferConf struct {
-	HistoryLookupItems   int                   `json:"historyLookupItems"`
+	HistoryLookupItems int `json:"historyLookupItems"`
+
+	// AnalysisIntervalSecs specifies how often klogproc analyses previous
+	// records. The interval is also important because it is a base for other
+	// configured values (typically different limits/thresholds)
 	AnalysisIntervalSecs int                   `json:"analysisIntervalSecs"`
 	ClusteringDBScan     *ClusteringDBScanConf `json:"clusteringDbScan"`
 	BotDetection         *BotDetectionConf     `json:"botDetection"`

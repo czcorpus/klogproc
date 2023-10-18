@@ -143,13 +143,15 @@ func (t *Transformer) Preprocess(
 			meanReqs += v
 		}
 		meanReqs /= float64(len(prevNumsRecs))
-		if float64(numRec)/meanReqs >= 1.3 {
-
+		trafficIncrease := float64(numRec) / meanReqs
+		var isSuspicTrafficIncrease bool
+		if trafficIncrease >= t.bufferConf.BotDetection.TrafficReportingThreshold {
+			isSuspicTrafficIncrease = true
 			log.Info().
 				Str("appType", "wag").
 				Float64("prevReqsSampleMean", meanReqs).
 				Int("currentReqs", numRec).
-				Float64("increase", float64(numRec)/meanReqs).
+				Float64("increase", trafficIncrease).
 				Msg("found suspicious increase in traffic - going to report")
 
 			go func() {
@@ -234,9 +236,18 @@ func (t *Transformer) Preprocess(
 					Close()
 			}
 
+			var trafficNote string
+			if isSuspicTrafficIncrease {
+				trafficNote = fmt.Sprintf(
+					"<strong>This report is supported with suspicious increase of traffic (%01.2f).</strong>",
+					trafficIncrease,
+				)
+			}
+
 			go func() {
 				t.emailNotifier.SendFormattedNotification(
 					"Klogproc for WaG: suspicious IP addresses detected",
+					trafficNote,
 					"suspicious records:",
 					ipTable.String(),
 					fmt.Sprintf("<p>total requesting IPs: <strong>%d</strong><br />", sortedItems.Len()),
