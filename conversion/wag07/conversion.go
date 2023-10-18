@@ -208,6 +208,7 @@ func (t *Transformer) Preprocess(
 
 			log.Info().
 				Str("appType", "wag").
+				Int("threshold", threshold).
 				Int("numOutliers", len(suspiciousRecords)).
 				Msg("found outlier IP requests - going to report")
 
@@ -251,6 +252,7 @@ func (t *Transformer) Preprocess(
 					"suspicious records:",
 					ipTable.String(),
 					fmt.Sprintf("<p>total requesting IPs: <strong>%d</strong><br />", sortedItems.Len()),
+					fmt.Sprintf("threshold: %d requests", threshold),
 					fmt.Sprintf("last check: <strong>%v</strong><br />", datetime.FormatDatetime(lastCheck)),
 					fmt.Sprintf("checking interval: <strong>%s</strong><br /></p>", ci.String()),
 				)
