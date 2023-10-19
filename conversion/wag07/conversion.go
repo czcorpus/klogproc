@@ -158,8 +158,8 @@ func (t *Transformer) Preprocess(
 				t.emailNotifier.SendFormattedNotification(
 					"Klogproc for WaG: suspicious increase in traffic",
 					fmt.Sprintf(
-						"<p>previous (sampled): <strong>%d</strong>, current: <strong>%d</strong><br />",
-						int(meanReqs), numRec),
+						"<p>previous (sampled): <strong>%d</strong>, current: <strong>%d</strong> (increase %01.2f)<br />",
+						int(meanReqs), numRec, trafficIncrease),
 					fmt.Sprintf("checking interval: <strong>%s</strong><br />", ci.String()),
 					fmt.Sprintf("last check: <strong>%v</strong></p>", datetime.FormatDatetime(lastCheck)),
 				)

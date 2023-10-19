@@ -21,7 +21,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"klogproc/botwatch"
 	"klogproc/config"
 	"klogproc/conversion"
 	"klogproc/fsop"
@@ -46,19 +45,6 @@ func applyLocation(rec conversion.InputRecord, db *geoip2.Reader, outRec convers
 	}
 }
 
-// ClientAnalyzer represents an object which is able to recognize
-// bots etc. based on IP and/or user agent.
-type ClientAnalyzer interface {
-	AgentIsMonitor(rec conversion.InputRecord) bool
-	AgentIsBot(rec conversion.InputRecord) bool
-	HasBlacklistedIP(rec conversion.InputRecord) bool
-	Add(rec conversion.InputRecord)
-	GetBotCandidates() []botwatch.IPStats
-	StoreBotCandidates()
-	ResetBotCandidates()
-	Close()
-}
-
 type ProcessOptions struct {
 	worklogReset  bool
 	dryRun        bool
@@ -77,26 +63,16 @@ type CNKLogProcessor struct {
 	numNonLoggable int
 	skipAnalysis   bool
 	logTransformer conversion.LogItemTransformer
-	clientAnalyzer ClientAnalyzer
 	logBuffer      logbuffer.AbstractStorage[conversion.InputRecord]
 }
 
 func (clp *CNKLogProcessor) recordIsLoggable(logRec conversion.InputRecord) bool {
-	isBlacklisted := false
-	if clp.clientAnalyzer.HasBlacklistedIP(logRec) {
-		isBlacklisted = true
-		log.Info().Msgf("Found blacklisted IP %s", logRec.GetClientIP().String())
-	}
-	return !clp.clientAnalyzer.AgentIsBot(logRec) && !clp.clientAnalyzer.AgentIsMonitor(logRec) &&
-		!isBlacklisted && logRec.IsProcessable()
+	return logRec.IsProcessable()
 }
 
 // ProcItem transforms input log record into an output format.
 // In case an unsupported record is encountered, nil is returned.
 func (clp *CNKLogProcessor) ProcItem(logRec conversion.InputRecord, tzShiftMin int) []conversion.OutputRecord {
-	if !clp.skipAnalysis {
-		clp.clientAnalyzer.Add(logRec)
-	}
 	if clp.recordIsLoggable(logRec) {
 		ans := make([]conversion.OutputRecord, 0, 2)
 		for _, precord := range clp.logTransformer.Preprocess(logRec, clp.logBuffer) {
@@ -151,19 +127,15 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 	}
 	defer geoDb.Close()
 
-	clientTypeDetector, err := botwatch.NewClientTypeAnalyzer(conf.BotDetection)
-	if err != nil {
-		log.Fatal().Msgf("%s", err)
-	}
-
 	finishEvent := make(chan bool)
+
 	go func() {
 		switch action {
 		case config.ActionBatch:
-			runBatchAction(conf, options, geoDb, userMap, clientTypeDetector, finishEvent)
+			runBatchAction(conf, options, geoDb, userMap, finishEvent)
 
 		case config.ActionTail:
-			runTailAction(conf, geoDb, userMap, options.dryRun, clientTypeDetector, finishEvent)
+			runTailAction(conf, geoDb, userMap, options.dryRun, finishEvent)
 		}
 	}()
 	<-finishEvent

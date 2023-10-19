@@ -17,7 +17,6 @@
 package main
 
 import (
-	"fmt"
 	"klogproc/config"
 	"klogproc/conversion"
 	"klogproc/email"
@@ -39,7 +38,6 @@ func runBatchAction(
 	options *ProcessOptions,
 	geoDB *geoip2.Reader,
 	userMap *users.UserMap,
-	analyzer ClientAnalyzer,
 	finishEvent chan<- bool,
 ) {
 	// For debugging e-mail notification, you can pass `conf.EmailNotification`
@@ -71,7 +69,6 @@ func runBatchAction(
 		appVersion:     conf.LogFiles.Version,
 		logTransformer: lt,
 		anonymousUsers: conf.AnonymousUsers,
-		clientAnalyzer: analyzer,
 		skipAnalysis:   conf.LogFiles.SkipAnalysis,
 		logBuffer:      buffStorage,
 	}
@@ -131,16 +128,5 @@ func runBatchAction(
 	proc(conf.LogFiles, worklog.GetLastRecord())
 	wg.Wait()
 	log.Info().Msgf("Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)
-	if options.analysisOnly {
-		fmt.Println("Detected bot/script activities:")
-		for _, sr := range processor.clientAnalyzer.GetBotCandidates() {
-			js, err := sr.ToJSON()
-			if err != nil {
-				log.Error().Err(err).Msg("")
-			}
-			fmt.Println(string(js))
-		}
-	}
-	//time.Sleep(3 * time.Second)
 	finishEvent <- true
 }
