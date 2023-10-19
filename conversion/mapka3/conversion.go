@@ -53,7 +53,7 @@ func (t *Transformer) Transform(
 		Type:      recType,
 		time:      logRecord.GetTime(),
 		Datetime:  logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		IPAddress: logRecord.Extra.IP,
+		IPAddress: logRecord.GetClientIP().String(),
 		UserAgent: logRecord.GetUserAgent(),
 		IsAnonymous: logRecord.Extra.UserID == "" ||
 			conversion.UserBelongsToList(logRecord.Extra.UserID, anonymousUsers),
