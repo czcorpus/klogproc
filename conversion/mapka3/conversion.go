@@ -90,8 +90,6 @@ func (t *Transformer) Preprocess(
 				t.bufferConf.ClusteringDBScan.Epsilon,
 				items,
 			)
-			prevRecs.RemoveAnalyzedRecords(clusteringID, rec.GetTime())
-			prevRecs.ConfirmRecordCheck(rec)
 			log.Debug().
 				Int("minDensity", t.bufferConf.ClusteringDBScan.MinDensity).
 				Float64("epsilon", t.bufferConf.ClusteringDBScan.Epsilon).
@@ -100,7 +98,12 @@ func (t *Transformer) Preprocess(
 				Int("numAnalyzedRecords", len(items)).
 				Int("foundClusters", len(clustered)).
 				Msgf("log clustering in mapka3")
-			return clustered
+
+			if len(clustered) > 0 {
+				prevRecs.RemoveAnalyzedRecords(clusteringID, rec.GetTime())
+				prevRecs.ConfirmRecordCheck(rec)
+				return clustered
+			}
 		}
 	}
 	return []conversion.InputRecord{rec}
