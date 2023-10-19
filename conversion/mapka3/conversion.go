@@ -84,21 +84,24 @@ func (t *Transformer) Preprocess(
 		prevRecs.ForEach(clusteringID, func(item conversion.InputRecord) {
 			items = append(items, item)
 		})
-		clustered := clustering.Analyze(
-			t.bufferConf.ClusteringDBScan.MinDensity,
-			t.bufferConf.ClusteringDBScan.Epsilon,
-			items,
-		)
-		prevRecs.RemoveAnalyzedRecords(clusteringID, rec.GetTime())
-		prevRecs.ConfirmRecordCheck(rec)
-		log.Debug().
-			Int("minDensity", t.bufferConf.ClusteringDBScan.MinDensity).
-			Float64("epsilon", t.bufferConf.ClusteringDBScan.Epsilon).
-			Time("searchStart", lastCheck).
-			Time("searchEnd", rec.GetTime()).
-			Int("foundClusters", len(clustered)).
-			Msgf("log clustering in mapka3")
-		return clustered
+		if len(items) > 0 {
+			clustered := clustering.Analyze(
+				t.bufferConf.ClusteringDBScan.MinDensity,
+				t.bufferConf.ClusteringDBScan.Epsilon,
+				items,
+			)
+			prevRecs.RemoveAnalyzedRecords(clusteringID, rec.GetTime())
+			prevRecs.ConfirmRecordCheck(rec)
+			log.Debug().
+				Int("minDensity", t.bufferConf.ClusteringDBScan.MinDensity).
+				Float64("epsilon", t.bufferConf.ClusteringDBScan.Epsilon).
+				Time("firstRecord", items[0].GetTime()).
+				Time("lastRecord", items[len(items)-1].GetTime()).
+				Int("numAnalyzedRecords", len(items)).
+				Int("foundClusters", len(clustered)).
+				Msgf("log clustering in mapka3")
+			return clustered
+		}
 	}
 	return []conversion.InputRecord{rec}
 }
