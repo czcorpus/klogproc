@@ -87,12 +87,12 @@ func (r *InputRecord) GetClientIP() net.IP {
 
 func (rec *InputRecord) ClusteringClientID() string {
 	var inp string
-	if rec.Extra.SessionSelector != "" || rec.Extra.UserID != "" || rec.Extra.IP != "" {
+	if rec.Extra.SessionSelector != "" || rec.Extra.UserID != "" || rec.GetClientIP().String() != "" {
 		inp = fmt.Sprintf(
 			"%s#%s#%s",
 			rec.Extra.SessionSelector,
 			rec.Extra.UserID,
-			rec.Extra.IP,
+			rec.GetClientIP(),
 		)
 
 	} else {
