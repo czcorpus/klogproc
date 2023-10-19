@@ -261,6 +261,9 @@ func newTailProcessor(
 				buffStorage = logbuffer.NewStorage[conversion.InputRecord](tailConf.Buffer)
 				logBuffers[tailConf.Buffer.ID] = buffStorage
 			}
+
+		} else {
+			buffStorage = logbuffer.NewStorage[conversion.InputRecord](tailConf.Buffer)
 		}
 
 	} else {
