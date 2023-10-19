@@ -78,7 +78,7 @@ func (st *Storage[T]) ConfirmRecordCheck(rec Storable) {
 
 func (st *Storage[T]) GetLastCheck(clusteringID string) time.Time {
 	st.lastChecksLock.RLock()
-	defer st.lastChecksLock.Unlock()
+	defer st.lastChecksLock.RUnlock()
 	v := st.lastChecks[clusteringID]
 	return v
 }
@@ -129,7 +129,7 @@ func (st *Storage[T]) TotalRemoveAnalyzedRecords(dt time.Time) {
 // records (identified by their `clusteringID`).
 func (st *Storage[T]) NumOfRecords(clusteringID string) int {
 	st.dataLock.RLock()
-	defer st.dataLock.Unlock()
+	defer st.dataLock.RUnlock()
 	v, ok := st.data[clusteringID]
 	if !ok {
 		return 0
@@ -141,7 +141,7 @@ func (st *Storage[T]) NumOfRecords(clusteringID string) int {
 // no matter what clustering ID they have.
 func (st *Storage[T]) TotalNumOfRecords() int {
 	st.dataLock.RLock()
-	defer st.dataLock.Unlock()
+	defer st.dataLock.RUnlock()
 	var ans int
 	for _, v := range st.data {
 		ans += v.Len()
@@ -153,7 +153,7 @@ func (st *Storage[T]) TotalNumOfRecords() int {
 // and calls the provided `fn` with each item as an argument.
 func (st *Storage[T]) ForEach(clusteringID string, fn func(item T)) {
 	st.dataLock.RLock()
-	defer st.dataLock.Unlock()
+	defer st.dataLock.RUnlock()
 	v, ok := st.data[clusteringID]
 	if !ok {
 		return
@@ -173,7 +173,7 @@ func (st *Storage[T]) ForEach(clusteringID string, fn func(item T)) {
 // through all its items.
 func (st *Storage[T]) TotalForEach(fn func(item T)) {
 	st.dataLock.RLock()
-	defer st.dataLock.Unlock()
+	defer st.dataLock.RUnlock()
 	for _, v := range st.data {
 		v.ForEach(func(i int, item T) bool {
 			fn(item)
@@ -192,7 +192,7 @@ func (st *Storage[T]) SetAuxNumber(name string, value float64) {
 // GetAuxNumber gets a previously stored auxiliary number.
 func (st *Storage[T]) GetAuxNumber(name string) (float64, bool) {
 	st.auxNumbersLock.RLock()
-	defer st.auxNumbersLock.Unlock()
+	defer st.auxNumbersLock.RUnlock()
 	v, ok := st.auxNumbers[name]
 	return v, ok
 }
@@ -217,7 +217,7 @@ func (st *Storage[T]) AddNumberSample(storageKey string, value float64) int {
 // See `AddNumberSample` for more info.
 func (st *Storage[T]) GetNumberSamples(storageKey string) []float64 {
 	st.auxNumberSamplesLock.RLock()
-	defer st.auxNumberSamplesLock.Unlock()
+	defer st.auxNumberSamplesLock.RUnlock()
 	samples, ok := st.auxNumberSamples[storageKey]
 	if !ok {
 		return []float64{}
