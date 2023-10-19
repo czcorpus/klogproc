@@ -57,10 +57,12 @@ func (t *Transformer) Transform(
 		UserAgent: logRecord.GetUserAgent(),
 		IsAnonymous: logRecord.Extra.UserID == "" ||
 			conversion.UserBelongsToList(logRecord.Extra.UserID, anonymousUsers),
-		IsQuery:     true,
 		Action:      "interaction",
 		UserID:      logRecord.Extra.UserID,
 		ClusterSize: logRecord.clusterSize,
+	}
+	if r.ClusterSize > 0 {
+		r.IsQuery = true
 	}
 	r.ID = createID(r)
 	return r, nil
