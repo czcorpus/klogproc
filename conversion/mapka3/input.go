@@ -53,6 +53,7 @@ type Extra struct {
 	UserID          string `json:"user_id"`
 	URL             string `json:"url"`
 	IP              string `json:"ip"`
+	ForwardedFor    string `json:"forwarded_for"`
 	HTTPMethod      string `json:"http_method"`
 	Server          string `json:"server"`
 	Referrer        string `json:"referrer"`
@@ -64,12 +65,24 @@ func (r *InputRecord) GetTime() time.Time {
 }
 
 // GetClientIP returns a normalized IP address info
+// It tries first "forwarded for" info and then "ip" from
+// the original record.
 func (r *InputRecord) GetClientIP() net.IP {
-	v := net.ParseIP(r.Extra.IP)
-	if v != nil {
-		return v
+	var rawIP string
+	ans := net.IPv4zero
+	if r.Extra.ForwardedFor != "" {
+		rawIP = r.Extra.ForwardedFor
+
+	} else if r.Extra.IP != "" {
+		rawIP = r.Extra.IP
 	}
-	return net.IPv4zero
+	if rawIP != "" {
+		v := net.ParseIP(rawIP)
+		if v != nil {
+			ans = v
+		}
+	}
+	return ans
 }
 
 func (rec *InputRecord) ClusteringClientID() string {

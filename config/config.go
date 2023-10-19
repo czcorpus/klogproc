@@ -19,7 +19,6 @@ import (
 	"flag"
 	"time"
 
-	"klogproc/botwatch"
 	"klogproc/common"
 	"klogproc/fsop"
 	"klogproc/load/batch"
@@ -47,20 +46,19 @@ const (
 
 // Main describes klogproc's configuration
 type Main struct {
-	LogFiles          *batch.Conf               `json:"logFiles"`
-	LogTail           *tail.Conf                `json:"logTail"`
-	CeleryStatus      celery.Conf               `json:"celeryStatus"`
-	GeoIPDbPath       string                    `json:"geoIpDbPath"`
-	AnonymousUsers    []int                     `json:"anonymousUsers"`
-	LogPath           string                    `json:"logPath"`
-	LogLevel          string                    `json:"logLevel"`
-	CustomConfDir     string                    `json:"customConfDir"`
-	RecUpdate         elastic.DocUpdConf        `json:"recordUpdate"`
-	ElasticSearch     elastic.ConnectionConf    `json:"elasticSearch"`
-	InfluxDB          influx.ConnectionConf     `json:"influxDb"`
-	EmailNotification *mail.NotificationConf    `json:"emailNotification"`
-	BotDetection      botwatch.BotDetectionConf `json:"botDetection"`
-	TimeZone          string                    `json:"timeZone"`
+	LogFiles          *batch.Conf            `json:"logFiles"`
+	LogTail           *tail.Conf             `json:"logTail"`
+	CeleryStatus      celery.Conf            `json:"celeryStatus"`
+	GeoIPDbPath       string                 `json:"geoIpDbPath"`
+	AnonymousUsers    []int                  `json:"anonymousUsers"`
+	LogPath           string                 `json:"logPath"`
+	LogLevel          string                 `json:"logLevel"`
+	CustomConfDir     string                 `json:"customConfDir"`
+	RecUpdate         elastic.DocUpdConf     `json:"recordUpdate"`
+	ElasticSearch     elastic.ConnectionConf `json:"elasticSearch"`
+	InfluxDB          influx.ConnectionConf  `json:"influxDb"`
+	EmailNotification *mail.NotificationConf `json:"emailNotification"`
+	TimeZone          string                 `json:"timeZone"`
 }
 
 // HasInfluxOut tests whether an InfluxDB
@@ -127,10 +125,9 @@ func Load(path string) *Main {
 		log.Fatal().Msgf("%s", err)
 	}
 	var conf Main
-	json.Unmarshal(rawData, &conf)
-	if conf.BotDetection.NumRequestsThreshold == 0 {
-		log.Warn().Msg("botDetection.nmRequestsThreshold not set - using default 100")
-		conf.BotDetection.NumRequestsThreshold = 100
+	err = json.Unmarshal(rawData, &conf)
+	if err != nil {
+		log.Fatal().Msgf("%s", err)
 	}
 	return &conf
 }

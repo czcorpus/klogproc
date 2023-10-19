@@ -134,7 +134,6 @@ func (tp *tailProcessor) OnEntry(
 		dataWriter.Ignored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 		return
 	}
-	tp.analysis <- parsed
 	if parsed.IsProcessable() {
 		for _, precord := range tp.logTransformer.Preprocess(parsed, tp.logBuffer) {
 			tp.logBuffer.AddRecord(precord)
@@ -214,8 +213,8 @@ func newTailProcessor(
 	conf config.Main,
 	geoDB *geoip2.Reader,
 	userMap *users.UserMap,
+	logBuffers map[string]logbuffer.AbstractStorage[conversion.InputRecord],
 	dryRun bool,
-	analysis chan<- conversion.InputRecord,
 ) *tailProcessor {
 
 	var notifier email.MailNotifier
@@ -243,7 +242,26 @@ func newTailProcessor(
 
 	var buffStorage logbuffer.AbstractStorage[conversion.InputRecord]
 	if tailConf.Buffer != nil {
-		buffStorage = logbuffer.NewStorage[conversion.InputRecord](tailConf.Buffer)
+		if tailConf.Buffer.ID != "" {
+			curr, ok := logBuffers[tailConf.Buffer.ID]
+			if ok {
+				log.Info().
+					Str("bufferId", tailConf.Buffer.ID).
+					Str("appType", tailConf.AppType).
+					Str("file", tailConf.Path).
+					Msg("reusing log processing buffer")
+				buffStorage = curr
+
+			} else {
+				log.Info().
+					Str("bufferId", tailConf.Buffer.ID).
+					Str("appType", tailConf.AppType).
+					Str("file", tailConf.Path).
+					Msg("creating reusable log processing buffer")
+				buffStorage = logbuffer.NewStorage[conversion.InputRecord](tailConf.Buffer)
+				logBuffers[tailConf.Buffer.ID] = buffStorage
+			}
+		}
 
 	} else {
 		buffStorage = logbuffer.NewDummyStorage[conversion.InputRecord]()
@@ -264,7 +282,6 @@ func newTailProcessor(
 		elasticChunkSize:  conf.ElasticSearch.PushChunkSize,
 		influxChunkSize:   conf.InfluxDB.PushChunkSize,
 		alarm:             procAlarm,
-		analysis:          analysis,
 		logBuffer:         buffStorage,
 		dryRun:            dryRun,
 	}
@@ -277,26 +294,18 @@ func runTailAction(
 	geoDB *geoip2.Reader,
 	userMap *users.UserMap,
 	dryRun bool,
-	analyzer ClientAnalyzer,
 	finishEvt chan bool,
 ) {
 	tailProcessors := make([]tail.FileTailProcessor, len(conf.LogTail.Files))
 	var wg sync.WaitGroup
 	wg.Add(len(conf.LogTail.Files))
 
+	logBuffers := make(map[string]logbuffer.AbstractStorage[conversion.InputRecord])
 	for i, f := range conf.LogTail.Files {
-		tpAnalysis := make(chan conversion.InputRecord, 50)
-		go func(items chan conversion.InputRecord) {
-			for item := range items {
-				analyzer.Add(item)
-			}
-			wg.Done()
-		}(tpAnalysis)
-		tailProcessors[i] = newTailProcessor(f, *conf, geoDB, userMap, dryRun, tpAnalysis)
+		tailProcessors[i] = newTailProcessor(f, *conf, geoDB, userMap, logBuffers, dryRun)
 	}
 	go func() {
 		wg.Wait()
-		analyzer.Close()
 	}()
-	go tail.Run(conf.LogTail, tailProcessors, analyzer, finishEvt)
+	go tail.Run(conf.LogTail, tailProcessors, finishEvt)
 }

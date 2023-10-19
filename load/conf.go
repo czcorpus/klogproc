@@ -49,6 +49,12 @@ type BotDetectionConf struct {
 }
 
 type BufferConf struct {
+
+	// ID buffers with ID can be shared between multiple log readers.
+	// This makes sense mostly for services composed of multiple
+	// homogenous processes each writing to its log file (e.g. Node.JS)
+	ID string `json:"id"`
+
 	HistoryLookupItems int `json:"historyLookupItems"`
 
 	// AnalysisIntervalSecs specifies how often klogproc analyses previous
