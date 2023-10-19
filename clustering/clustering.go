@@ -18,7 +18,6 @@ package clustering
 
 import (
 	"klogproc/conversion"
-	"math"
 	"time"
 
 	"github.com/kelindar/dbscan"
@@ -33,7 +32,7 @@ func (cr ClusterableRecord) GetTime() time.Time {
 }
 
 func (cr ClusterableRecord) DistanceTo(other dbscan.Point) float64 {
-	return math.Abs((other.(ClusterableRecord)).GetTime().Sub(cr.rec.GetTime()).Seconds())
+	return other.(ClusterableRecord).GetTime().Sub(cr.rec.GetTime()).Seconds()
 }
 
 func (cr ClusterableRecord) Name() string {
