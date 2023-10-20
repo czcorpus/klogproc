@@ -50,7 +50,7 @@ type InputRecord struct {
 }
 
 func (r *InputRecord) ShouldBeAnalyzed() bool {
-	return r.Action != "search" && r.Action != "compare" && r.Action != "translate"
+	return r.Action == "search" || r.Action == "compare" || r.Action == "translate"
 }
 
 // GetTime returns a normalized log date and time information

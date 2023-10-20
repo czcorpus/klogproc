@@ -66,7 +66,13 @@ func GetLogTransformer(
 		case "0.15", "0.16", "0.17":
 			return &konText015Transformer{t: &kontext015.Transformer{}}, nil
 		case "0.18":
-			return &konText018Transformer{t: &kontext018.Transformer{}}, nil
+			return &konText018Transformer{
+				t: kontext018.NewTransformer(
+					bufferConf,
+					realtimeClock,
+					emailNotifier,
+				),
+			}, nil
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported KonText version: %s", version)
 		}
