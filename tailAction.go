@@ -304,7 +304,14 @@ func runTailAction(
 	wg.Add(len(conf.LogTail.Files))
 
 	logBuffers := make(map[string]logbuffer.AbstractStorage[conversion.InputRecord])
-	for i, f := range conf.LogTail.Files {
+	fullFiles, err := conf.LogTail.FullFiles()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to initialize files configuration")
+		finishEvt <- true
+		return
+	}
+
+	for i, f := range fullFiles {
 		tailProcessors[i] = newTailProcessor(f, *conf, geoDB, userMap, logBuffers, dryRun)
 	}
 	go func() {
