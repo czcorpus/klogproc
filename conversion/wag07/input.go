@@ -49,6 +49,10 @@ type InputRecord struct {
 	HasPosSpecification bool `json:"hasPosSpecification"`
 }
 
+func (r *InputRecord) ShouldBeAnalyzed() bool {
+	return r.Action != "search" && r.Action != "compare" && r.Action != "translate"
+}
+
 // GetTime returns a normalized log date and time information
 func (r *InputRecord) GetTime() time.Time {
 	if r.isProcessable {
