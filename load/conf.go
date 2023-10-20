@@ -65,6 +65,15 @@ type BufferConf struct {
 	BotDetection         *BotDetectionConf     `json:"botDetection"`
 }
 
+func (bc *BufferConf) IsShared() bool {
+	return bc.ID != ""
+}
+
+func (bc *BufferConf) HasConfiguredBufferProcessing() bool {
+	return bc.HistoryLookupItems > 0 && bc.AnalysisIntervalSecs > 0 &&
+		(bc.BotDetection != nil || bc.ClusteringDBScan != nil)
+}
+
 func (bc *BufferConf) Validate() error {
 	if bc.HistoryLookupItems <= 0 {
 		return errors.New(

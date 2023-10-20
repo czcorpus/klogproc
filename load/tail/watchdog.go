@@ -74,6 +74,34 @@ type Conf struct {
 	ErrCountTimeRangeSecs int        `json:"errCountTimeRangeSecs"`
 }
 
+// FullFiles provides a slice of `FileConf` with items where
+// only Buffer.ID is filled upgraded to full config. This
+// solves situations where user wants to share
+// buffer between file processors and the buffer is configured
+// only for one of the processors (which is reasonable as
+// otherwise, there would be quite lot of rendundant conf. data)
+func (conf *Conf) FullFiles() ([]FileConf, error) {
+	buffConfs := make(map[string]*load.BufferConf)
+	for _, v := range conf.Files {
+		if v.Buffer != nil && v.Buffer.HasConfiguredBufferProcessing() && v.Buffer.IsShared() {
+			buffConfs[v.Buffer.ID] = v.Buffer
+		}
+	}
+	ans := make([]FileConf, len(conf.Files))
+	for i, v := range conf.Files {
+		ans[i] = v
+		if v.Buffer != nil && v.Buffer.IsShared() && !v.Buffer.HasConfiguredBufferProcessing() {
+			conf, ok := buffConfs[v.Buffer.ID]
+			if !ok {
+				return []FileConf{}, fmt.Errorf(
+					"invalid shared buffer ID %s - full conf. not found", v.Buffer.ID)
+			}
+			ans[i].Buffer = conf
+		}
+	}
+	return ans, nil
+}
+
 func (conf *Conf) RequiresMailConfiguration() bool {
 	return conf.NumErrorsAlarm > 0 && conf.ErrCountTimeRangeSecs > 0
 }
