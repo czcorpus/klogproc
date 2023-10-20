@@ -21,7 +21,10 @@ import (
 	"time"
 
 	"klogproc/conversion"
+	"klogproc/email"
+	"klogproc/load"
 	"klogproc/logbuffer"
+	"klogproc/logbuffer/analysis"
 )
 
 func exportArgs(data map[string]interface{}) map[string]interface{} {
@@ -35,7 +38,9 @@ func exportArgs(data map[string]interface{}) map[string]interface{} {
 }
 
 // Transformer converts a source log object into a destination one
-type Transformer struct{}
+type Transformer struct {
+	analyzer *analysis.Analyzer[*QueryInputRecord]
+}
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(logRecord *QueryInputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
@@ -69,4 +74,15 @@ func (t *Transformer) Preprocess(
 	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
 ) []conversion.InputRecord {
 	return []conversion.InputRecord{rec}
+}
+
+func NewTransformer(
+	bufferConf *load.BufferConf,
+	realtimeClock bool,
+	emailNotifier email.MailNotifier,
+) *Transformer {
+	analyzer := analysis.NewAnalyzer[*QueryInputRecord]("kontext", bufferConf, realtimeClock, emailNotifier)
+	return &Transformer{
+		analyzer: analyzer,
+	}
 }

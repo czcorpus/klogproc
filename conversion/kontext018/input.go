@@ -117,6 +117,12 @@ func (rec *QueryInputRecord) GetClientIP() net.IP {
 	return nil
 }
 
+func (rec *QueryInputRecord) ShouldBeAnalyzed() bool {
+	return rec.Action == "query_submit" || rec.Action == "create_view" ||
+		rec.Action == "create_lazy_view" || rec.Action == "wordlist/submit"
+	// TODO the list of actions is incomplete
+}
+
 func (rec *QueryInputRecord) ClusteringClientID() string {
 	return conversion.GenerateRandomClusteringID()
 }
