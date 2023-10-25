@@ -25,9 +25,9 @@ import (
 	"syscall"
 	"time"
 
-	"klogproc/conversion"
 	"klogproc/load"
 	"klogproc/save"
+	"klogproc/servicelog"
 
 	"github.com/czcorpus/cnc-gokit/fs"
 	"github.com/rs/zerolog/log"
@@ -129,8 +129,8 @@ type LineProcConfirmChan chan interface{}
 // in the previous check, both runs can independently write
 // their data.
 type LogDataWriter struct {
-	Elastic chan *conversion.BoundOutputRecord
-	Influx  chan *conversion.BoundOutputRecord
+	Elastic chan *servicelog.BoundOutputRecord
+	Influx  chan *servicelog.BoundOutputRecord
 	Ignored chan save.IgnoredItemMsg
 }
 
@@ -150,7 +150,7 @@ type FileTailProcessor interface {
 	OnCheckStart() (LineProcConfirmChan, *LogDataWriter)
 
 	// OnEntry is called on each processed line
-	OnEntry(writer *LogDataWriter, item string, logPosition conversion.LogRange)
+	OnEntry(writer *LogDataWriter, item string, logPosition servicelog.LogRange)
 
 	// OnCheckStop marks the end of the single file check
 	OnCheckStop(writer *LogDataWriter)

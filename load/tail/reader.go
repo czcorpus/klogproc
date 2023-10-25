@@ -21,8 +21,8 @@ import (
 	"io"
 	"os"
 
-	"klogproc/conversion"
 	"klogproc/fsop"
+	"klogproc/servicelog"
 
 	"github.com/rs/zerolog/log"
 )
@@ -57,13 +57,13 @@ func (ftw *FileTailReader) Processor() FileTailProcessor {
 func (ftw *FileTailReader) ApplyNewContent(
 	processor FileTailProcessor,
 	dataWriter *LogDataWriter,
-	prevPosition conversion.LogRange,
+	prevPosition servicelog.LogRange,
 ) error {
 	currInode, _, err := fsop.GetFileProps(processor.FilePath())
 	if err != nil {
 		return err
 	}
-	newPosition := conversion.LogRange{SeekEnd: -1, Inode: currInode}
+	newPosition := servicelog.LogRange{SeekEnd: -1, Inode: currInode}
 	if currInode != prevPosition.Inode {
 		ftw.internalSeek = 0
 		ftw.file.Close()
@@ -116,7 +116,7 @@ func (ftw *FileTailReader) ApplyNewContent(
 }
 
 // NewReader creates a new file reader instance
-func NewReader(processor FileTailProcessor, lastLogPosition conversion.LogRange) (*FileTailReader, error) {
+func NewReader(processor FileTailProcessor, lastLogPosition servicelog.LogRange) (*FileTailReader, error) {
 	r := &FileTailReader{
 		processor:    processor,
 		internalSeek: -1, // this triggers initial read

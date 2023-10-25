@@ -17,27 +17,27 @@ package trfactory
 import (
 	"fmt"
 
-	"klogproc/conversion"
-	"klogproc/conversion/apiguard"
-	"klogproc/conversion/kontext013"
-	"klogproc/conversion/kontext015"
-	"klogproc/conversion/kontext018"
-	"klogproc/conversion/korpusdb"
-	"klogproc/conversion/kwords"
-	"klogproc/conversion/mapka"
-	"klogproc/conversion/mapka2"
-	"klogproc/conversion/mapka3"
-	"klogproc/conversion/masm"
-	"klogproc/conversion/morfio"
-	"klogproc/conversion/shiny"
-	"klogproc/conversion/ske"
-	"klogproc/conversion/syd"
-	"klogproc/conversion/treq"
-	"klogproc/conversion/wag06"
-	"klogproc/conversion/wag07"
-	"klogproc/conversion/wsserver"
 	"klogproc/email"
 	"klogproc/load"
+	"klogproc/servicelog"
+	"klogproc/servicelog/apiguard"
+	"klogproc/servicelog/kontext013"
+	"klogproc/servicelog/kontext015"
+	"klogproc/servicelog/kontext018"
+	"klogproc/servicelog/korpusdb"
+	"klogproc/servicelog/kwords"
+	"klogproc/servicelog/mapka"
+	"klogproc/servicelog/mapka2"
+	"klogproc/servicelog/mapka3"
+	"klogproc/servicelog/masm"
+	"klogproc/servicelog/morfio"
+	"klogproc/servicelog/shiny"
+	"klogproc/servicelog/ske"
+	"klogproc/servicelog/syd"
+	"klogproc/servicelog/treq"
+	"klogproc/servicelog/wag06"
+	"klogproc/servicelog/wag07"
+	"klogproc/servicelog/wsserver"
 	"klogproc/users"
 )
 
@@ -49,17 +49,17 @@ func GetLogTransformer(
 	userMap *users.UserMap,
 	realtimeClock bool,
 	emailNotifier email.MailNotifier,
-) (conversion.LogItemTransformer, error) {
+) (servicelog.LogItemTransformer, error) {
 
 	switch appType {
-	case conversion.AppTypeAPIGuard:
+	case servicelog.AppTypeAPIGuard:
 		return &apiguardTransformer{
 			t: &apiguard.Transformer{},
 		}, nil
-	case conversion.AppTypeAkalex, conversion.AppTypeCalc, conversion.AppTypeLists,
-		conversion.AppTypeQuitaUp, conversion.AppTypeGramatikat:
+	case servicelog.AppTypeAkalex, servicelog.AppTypeCalc, servicelog.AppTypeLists,
+		servicelog.AppTypeQuitaUp, servicelog.AppTypeGramatikat:
 		return &shinyTransformer{t: shiny.NewTransformer()}, nil
-	case conversion.AppTypeKontext, conversion.AppTypeKontextAPI:
+	case servicelog.AppTypeKontext, servicelog.AppTypeKontextAPI:
 		switch version {
 		case "0.13", "0.14":
 			return &konText013Transformer{t: &kontext013.Transformer{}}, nil
@@ -76,11 +76,11 @@ func GetLogTransformer(
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported KonText version: %s", version)
 		}
-	case conversion.AppTypeKwords:
+	case servicelog.AppTypeKwords:
 		return &kwordsTransformer{t: &kwords.Transformer{}}, nil
-	case conversion.AppTypeKorpusDB:
+	case servicelog.AppTypeKorpusDB:
 		return &korpusDBTransformer{t: &korpusdb.Transformer{}}, nil
-	case conversion.AppTypeMapka:
+	case servicelog.AppTypeMapka:
 		switch version {
 		case "1":
 			return &mapkaTransformer{t: mapka.NewTransformer()}, nil
@@ -95,15 +95,15 @@ func GetLogTransformer(
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported Mapka version: %s", version)
 		}
-	case conversion.AppTypeMorfio:
+	case servicelog.AppTypeMorfio:
 		return &morfioTransformer{t: &morfio.Transformer{}}, nil
-	case conversion.AppTypeSke:
+	case servicelog.AppTypeSke:
 		return &skeTransformer{t: ske.NewTransformer(userMap)}, nil
-	case conversion.AppTypeSyd:
+	case servicelog.AppTypeSyd:
 		return &sydTransformer{t: syd.NewTransformer(version)}, nil
-	case conversion.AppTypeTreq:
+	case servicelog.AppTypeTreq:
 		return &treqTransformer{t: &treq.Transformer{}}, nil
-	case conversion.AppTypeWag:
+	case servicelog.AppTypeWag:
 		switch version {
 		case "0.6":
 			return &wag06Transformer{t: &wag06.Transformer{}}, nil
@@ -118,9 +118,9 @@ func GetLogTransformer(
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported WaG version: %s", version)
 		}
-	case conversion.AppTypeWsserver:
+	case servicelog.AppTypeWsserver:
 		return &wsserverTransformer{t: &wsserver.Transformer{}}, nil
-	case conversion.AppTypeMasm:
+	case servicelog.AppTypeMasm:
 		return &masmTransformer{t: &masm.Transformer{}}, nil
 	default:
 		return nil, fmt.Errorf("cannot find log transformer for app type %s", appType)

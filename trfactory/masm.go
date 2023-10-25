@@ -16,9 +16,9 @@ package trfactory
 
 import (
 	"fmt"
-	"klogproc/conversion"
-	"klogproc/conversion/masm"
 	"klogproc/logbuffer"
+	"klogproc/servicelog"
+	"klogproc/servicelog/masm"
 )
 
 type masmTransformer struct {
@@ -27,12 +27,12 @@ type masmTransformer struct {
 
 // Transform transforms masm app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *masmTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (s *masmTransformer) Transform(logRec servicelog.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (servicelog.OutputRecord, error) {
 	tRec, ok := logRec.(*masm.InputRecord)
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("invalid type for conversion by masm transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for servicelog.by masm transformer %T", logRec)
 }
 
 func (k *masmTransformer) HistoryLookupItems() int {
@@ -40,7 +40,7 @@ func (k *masmTransformer) HistoryLookupItems() int {
 }
 
 func (k *masmTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
-) []conversion.InputRecord {
+	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

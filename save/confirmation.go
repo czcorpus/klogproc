@@ -18,13 +18,12 @@ package save
 
 import (
 	"fmt"
-
-	"klogproc/conversion"
+	"klogproc/servicelog"
 )
 
 type ConfirmMsg struct {
 	FilePath string
-	Position conversion.LogRange
+	Position servicelog.LogRange
 	Error    error
 }
 
@@ -36,14 +35,14 @@ func (cm ConfirmMsg) String() string {
 
 type IgnoredItemMsg struct {
 	FilePath string
-	Position conversion.LogRange
+	Position servicelog.LogRange
 }
 
 func (iim IgnoredItemMsg) String() string {
 	return fmt.Sprintf("IgnoredItemMsg{FilePath: %v, Position: %v}", iim.FilePath, iim.Position)
 }
 
-func NewIgnoredItemMsg(filePath string, position conversion.LogRange) IgnoredItemMsg {
+func NewIgnoredItemMsg(filePath string, position servicelog.LogRange) IgnoredItemMsg {
 	newPos := position
 	newPos.Written = true
 	return IgnoredItemMsg{FilePath: filePath, Position: newPos}

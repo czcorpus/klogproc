@@ -23,10 +23,10 @@ import (
 	"syscall"
 	"time"
 
-	"klogproc/conversion"
-	"klogproc/conversion/celery"
 	"klogproc/save/elastic"
 	"klogproc/save/influx"
+	"klogproc/servicelog"
+	"klogproc/servicelog/celery"
 
 	"github.com/rs/zerolog/log"
 )
@@ -120,8 +120,8 @@ func Run(conf *Conf, finishEvent chan<- bool, influxConf *influx.ConnectionConf,
 		case <-ticker.C:
 			var readSync sync.WaitGroup
 			readSync.Add(len(processors))
-			saveChannelInflux := make(chan *conversion.BoundOutputRecord, influxConf.PushChunkSize)
-			saveChannelES := make(chan *conversion.BoundOutputRecord, esConf.PushChunkSize)
+			saveChannelInflux := make(chan *servicelog.BoundOutputRecord, influxConf.PushChunkSize)
+			saveChannelES := make(chan *servicelog.BoundOutputRecord, esConf.PushChunkSize)
 			var writeSync sync.WaitGroup
 			writeSync.Add(2)
 			go influx.RunWriteConsumer(influxConf, saveChannelInflux) // nil => no need to synchronize with other stuff
@@ -133,8 +133,8 @@ func Run(conf *Conf, finishEvent chan<- bool, influxConf *influx.ConnectionConf,
 					if err != nil {
 						log.Error().Err(err).Msgf("failed to process Celery status item")
 					}
-					saveChannelInflux <- &conversion.BoundOutputRecord{Rec: out}
-					saveChannelES <- &conversion.BoundOutputRecord{Rec: out}
+					saveChannelInflux <- &servicelog.BoundOutputRecord{Rec: out}
+					saveChannelES <- &servicelog.BoundOutputRecord{Rec: out}
 					readSync.Done()
 				}(proc)
 			}

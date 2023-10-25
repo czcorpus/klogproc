@@ -22,8 +22,8 @@ import (
 	"io"
 	"os"
 
-	"klogproc/conversion"
 	"klogproc/fsop"
+	"klogproc/servicelog"
 
 	"github.com/czcorpus/cnc-gokit/collections"
 
@@ -32,11 +32,11 @@ import (
 
 type updateRequest struct {
 	FilePath string
-	Value    conversion.LogRange
+	Value    servicelog.LogRange
 }
 
 // WorklogRecord provides log reading position info for all configured apps
-type WorklogRecord = map[string]conversion.LogRange
+type WorklogRecord = map[string]servicelog.LogRange
 
 // Worklog provides functions to store/retrieve information about
 // file reading operations to be able to continue in case of an
@@ -47,7 +47,7 @@ type WorklogRecord = map[string]conversion.LogRange
 type Worklog struct {
 	filePath    string
 	fr          *os.File
-	rec         *collections.ConcurrentMap[string, conversion.LogRange]
+	rec         *collections.ConcurrentMap[string, servicelog.LogRange]
 	updRequests chan updateRequest
 }
 
@@ -69,7 +69,7 @@ func (w *Worklog) Init() error {
 	}
 	if len(byteValue) > 0 {
 		var err error
-		w.rec, err = collections.NewConcurrentMapFromJSON[string, conversion.LogRange](byteValue)
+		w.rec, err = collections.NewConcurrentMapFromJSON[string, servicelog.LogRange](byteValue)
 		if err != nil {
 			return err
 		}
@@ -141,7 +141,7 @@ func (w *Worklog) save() error {
 
 // UpdateFileInfo adds individual app reading position info. Please
 // note that this does not save the worklog.
-func (w *Worklog) UpdateFileInfo(filePath string, logPosition conversion.LogRange) {
+func (w *Worklog) UpdateFileInfo(filePath string, logPosition servicelog.LogRange) {
 	w.updRequests <- updateRequest{
 		FilePath: filePath,
 		Value:    logPosition,
@@ -157,7 +157,7 @@ func (w *Worklog) ResetFile(filePath string) (int64, error) {
 	}
 	w.updRequests <- updateRequest{
 		FilePath: filePath,
-		Value: conversion.LogRange{
+		Value: servicelog.LogRange{
 			Inode:     inode,
 			SeekStart: 0,
 			SeekEnd:   0,
@@ -168,12 +168,12 @@ func (w *Worklog) ResetFile(filePath string) (int64, error) {
 }
 
 // GetData retrieves reading info for a provided app
-func (w *Worklog) GetData(filePath string) conversion.LogRange {
+func (w *Worklog) GetData(filePath string) servicelog.LogRange {
 	v, ok := w.rec.GetWithTest(filePath)
 	if ok {
 		return v
 	}
-	return conversion.LogRange{Inode: -1, SeekStart: 0, SeekEnd: 0}
+	return servicelog.LogRange{Inode: -1, SeekStart: 0, SeekEnd: 0}
 }
 
 // NewWorklog creates a new Worklog instance. Please note that
@@ -181,6 +181,6 @@ func (w *Worklog) GetData(filePath string) conversion.LogRange {
 func NewWorklog(path string) *Worklog {
 	return &Worklog{
 		filePath: path,
-		rec:      collections.NewConcurrentMap[string, conversion.LogRange](),
+		rec:      collections.NewConcurrentMap[string, servicelog.LogRange](),
 	}
 }

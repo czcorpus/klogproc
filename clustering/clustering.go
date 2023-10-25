@@ -17,14 +17,14 @@
 package clustering
 
 import (
-	"klogproc/conversion"
+	"klogproc/servicelog"
 	"time"
 
 	"github.com/kelindar/dbscan"
 )
 
 type ClusterableRecord struct {
-	rec conversion.InputRecord
+	rec servicelog.InputRecord
 }
 
 func (cr ClusterableRecord) GetTime() time.Time {
@@ -39,7 +39,7 @@ func (cr ClusterableRecord) Name() string {
 	return cr.rec.GetTime().Format(time.RFC3339)
 }
 
-func wrapInputRecords(input []conversion.InputRecord) []dbscan.Point {
+func wrapInputRecords(input []servicelog.InputRecord) []dbscan.Point {
 	ans := make([]dbscan.Point, len(input))
 	for i, v := range input {
 		ans[i] = ClusterableRecord{rec: v}
@@ -48,11 +48,11 @@ func wrapInputRecords(input []conversion.InputRecord) []dbscan.Point {
 }
 
 func Analyze(
-	minDensity int, epsilon float64, input []conversion.InputRecord,
-) []conversion.InputRecord {
+	minDensity int, epsilon float64, input []servicelog.InputRecord,
+) []servicelog.InputRecord {
 	input2 := wrapInputRecords(input)
 	clusters := dbscan.Cluster(minDensity, epsilon, input2...)
-	ans := make([]conversion.InputRecord, len(clusters))
+	ans := make([]servicelog.InputRecord, len(clusters))
 	for i, cl := range clusters {
 		rec := (cl[0].(ClusterableRecord)).rec
 		rec.SetCluster(len(cl))

@@ -16,11 +16,11 @@ package trfactory
 
 import (
 	"fmt"
-	"klogproc/conversion"
-	"klogproc/conversion/kontext013"
-	"klogproc/conversion/kontext015"
-	"klogproc/conversion/kontext018"
 	"klogproc/logbuffer"
+	"klogproc/servicelog"
+	"klogproc/servicelog/kontext013"
+	"klogproc/servicelog/kontext015"
+	"klogproc/servicelog/kontext018"
 )
 
 // konText013Transformer is a simple type-safe wrapper for kontext v 0.13.x app type log transformer
@@ -30,12 +30,12 @@ type konText013Transformer struct {
 
 // Transform transforms KonText app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (k *konText013Transformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (k *konText013Transformer) Transform(logRec servicelog.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (servicelog.OutputRecord, error) {
 	tRec, ok := logRec.(*kontext013.InputRecord)
 	if ok {
 		return k.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("invalid type for conversion by KonText transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for servicelog.by KonText transformer %T", logRec)
 }
 
 func (k *konText013Transformer) HistoryLookupItems() int {
@@ -43,8 +43,8 @@ func (k *konText013Transformer) HistoryLookupItems() int {
 }
 
 func (k *konText013Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
-) []conversion.InputRecord {
+	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
 
@@ -57,12 +57,12 @@ type konText015Transformer struct {
 
 // Transform transforms KonText app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (k *konText015Transformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (k *konText015Transformer) Transform(logRec servicelog.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (servicelog.OutputRecord, error) {
 	tRec, ok := logRec.(*kontext015.InputRecord)
 	if ok {
 		return k.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("invalid type for conversion by KonText transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for servicelog.by KonText transformer %T", logRec)
 }
 
 func (k *konText015Transformer) HistoryLookupItems() int {
@@ -70,8 +70,8 @@ func (k *konText015Transformer) HistoryLookupItems() int {
 }
 
 func (k *konText015Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
-) []conversion.InputRecord {
+	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
 
@@ -84,12 +84,12 @@ type konText018Transformer struct {
 
 // Transform transforms KonText app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (k *konText018Transformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (k *konText018Transformer) Transform(logRec servicelog.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (servicelog.OutputRecord, error) {
 	tRec, ok := logRec.(*kontext018.QueryInputRecord)
 	if ok {
 		return k.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("invalid type for conversion by KonText transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for servicelog.by KonText transformer %T", logRec)
 }
 
 func (k *konText018Transformer) HistoryLookupItems() int {
@@ -97,7 +97,7 @@ func (k *konText018Transformer) HistoryLookupItems() int {
 }
 
 func (k *konText018Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
-) []conversion.InputRecord {
+	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

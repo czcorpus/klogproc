@@ -23,17 +23,16 @@ package batch
 
 import (
 	"bufio"
+	"klogproc/servicelog"
 	"os"
 	"path/filepath"
-
-	"klogproc/conversion"
 
 	"github.com/rs/zerolog/log"
 )
 
 // newParser creates a new instance of the Parser.
 // tzShift can be used to correct an incorrectly stored datetime
-func newParser(path string, tzShift int, appType string, version string, appErrRegister conversion.AppErrorRegister) *Parser {
+func newParser(path string, tzShift int, appType string, version string, appErrRegister servicelog.AppErrorRegister) *Parser {
 	f, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -58,7 +57,7 @@ func newParser(path string, tzShift int, appType string, version string, appErrR
 // LineParser represents an object able to parse an individual
 // line from a specific application log.
 type LineParser interface {
-	ParseLine(s string, lineNum int64) (conversion.InputRecord, error)
+	ParseLine(s string, lineNum int64) (servicelog.InputRecord, error)
 }
 
 // Parser parses a single file represented by fr Scanner.
@@ -75,7 +74,7 @@ type Parser struct {
 // Parse runs the parsing process based on provided minimum accepted record
 // time, record type (which is just passed to ElasticSearch) and a
 // provided LogInterceptor).
-func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, datetimeRange DatetimeRange, outputs ...chan *conversion.BoundOutputRecord) {
+func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, datetimeRange DatetimeRange, outputs ...chan *servicelog.BoundOutputRecord) {
 	for i := int64(0); p.fr.Scan(); i++ {
 		rec, err := p.lineParser.ParseLine(p.fr.Text(), i)
 		if err == nil {
@@ -93,14 +92,14 @@ func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, datetimeRange
 				outRecs := proc.ProcItem(rec, p.tzShift)
 				for _, outRec := range outRecs {
 					for _, output := range outputs {
-						output <- &conversion.BoundOutputRecord{Rec: outRec, FilePath: p.fileName}
+						output <- &servicelog.BoundOutputRecord{Rec: outRec, FilePath: p.fileName}
 					}
 				}
 			}
 
 		} else {
 			switch tErr := err.(type) {
-			case conversion.LineParsingError:
+			case servicelog.LineParsingError:
 				log.Info().Msgf("file %s, %s", p.fileName, tErr)
 			default:
 				log.Error().Msgf("%s", tErr)

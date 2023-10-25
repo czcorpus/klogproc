@@ -18,8 +18,7 @@ package influx
 
 import (
 	"fmt"
-
-	"klogproc/conversion"
+	"klogproc/servicelog"
 
 	"github.com/rs/zerolog/log"
 
@@ -105,7 +104,7 @@ type RecordWriter struct {
 // it also stores the record to a configured database and
 // measurement. Please note that without calling Finish() at
 // the end of an operation, stale records may remain.
-func (c *RecordWriter) AddRecord(rec conversion.OutputRecord) (bool, error) {
+func (c *RecordWriter) AddRecord(rec servicelog.OutputRecord) (bool, error) {
 	tags, values := rec.ToInfluxDB()
 	point, err := client.NewPoint(c.measurement, tags, values, rec.GetTime())
 	if err != nil {

@@ -18,13 +18,13 @@ package main
 
 import (
 	"klogproc/config"
-	"klogproc/conversion"
 	"klogproc/email"
 	"klogproc/load/batch"
 	"klogproc/logbuffer"
 	"klogproc/save"
 	"klogproc/save/elastic"
 	"klogproc/save/influx"
+	"klogproc/servicelog"
 	"klogproc/trfactory"
 	"klogproc/users"
 	"sync"
@@ -54,12 +54,12 @@ func runBatchAction(
 	if err != nil {
 		log.Fatal().Msgf("%s", err)
 	}
-	var buffStorage logbuffer.AbstractStorage[conversion.InputRecord]
+	var buffStorage logbuffer.AbstractStorage[servicelog.InputRecord]
 	if conf.LogFiles.Buffer != nil {
-		buffStorage = logbuffer.NewStorage[conversion.InputRecord](conf.LogFiles.Buffer)
+		buffStorage = logbuffer.NewStorage[servicelog.InputRecord](conf.LogFiles.Buffer)
 
 	} else {
-		buffStorage = logbuffer.NewDummyStorage[conversion.InputRecord]()
+		buffStorage = logbuffer.NewDummyStorage[servicelog.InputRecord]()
 	}
 
 	processor := &CNKLogProcessor{
@@ -72,8 +72,8 @@ func runBatchAction(
 		skipAnalysis:   conf.LogFiles.SkipAnalysis,
 		logBuffer:      buffStorage,
 	}
-	channelWriteES := make(chan *conversion.BoundOutputRecord, conf.ElasticSearch.PushChunkSize*2)
-	channelWriteInflux := make(chan *conversion.BoundOutputRecord, conf.InfluxDB.PushChunkSize)
+	channelWriteES := make(chan *servicelog.BoundOutputRecord, conf.ElasticSearch.PushChunkSize*2)
+	channelWriteInflux := make(chan *servicelog.BoundOutputRecord, conf.InfluxDB.PushChunkSize)
 	worklog := batch.NewWorklog(conf.LogFiles.WorklogPath)
 	log.Info().Msgf("using worklog %s", conf.LogFiles.WorklogPath)
 	if options.worklogReset {

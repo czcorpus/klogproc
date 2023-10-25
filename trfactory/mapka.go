@@ -16,11 +16,11 @@ package trfactory
 
 import (
 	"fmt"
-	"klogproc/conversion"
-	"klogproc/conversion/mapka"
-	"klogproc/conversion/mapka2"
-	"klogproc/conversion/mapka3"
 	"klogproc/logbuffer"
+	"klogproc/servicelog"
+	"klogproc/servicelog/mapka"
+	"klogproc/servicelog/mapka2"
+	"klogproc/servicelog/mapka3"
 )
 
 // ------------------------------------
@@ -31,12 +31,12 @@ type mapkaTransformer struct {
 
 // Transform transforms Mapka app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *mapkaTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (s *mapkaTransformer) Transform(logRec servicelog.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (servicelog.OutputRecord, error) {
 	tRec, ok := logRec.(*mapka.InputRecord)
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("invalid type for conversion by Mapka transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for servicelog.by Mapka transformer %T", logRec)
 }
 
 func (k *mapkaTransformer) HistoryLookupItems() int {
@@ -44,8 +44,8 @@ func (k *mapkaTransformer) HistoryLookupItems() int {
 }
 
 func (k *mapkaTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
-) []conversion.InputRecord {
+	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
 
@@ -57,12 +57,12 @@ type mapka2Transformer struct {
 
 // Transform transforms Mapka (v2) app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *mapka2Transformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (s *mapka2Transformer) Transform(logRec servicelog.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (servicelog.OutputRecord, error) {
 	tRec, ok := logRec.(*mapka2.InputRecord)
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("invalid type for conversion by Mapka2 transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for servicelog.by Mapka2 transformer %T", logRec)
 }
 
 func (k *mapka2Transformer) HistoryLookupItems() int {
@@ -70,8 +70,8 @@ func (k *mapka2Transformer) HistoryLookupItems() int {
 }
 
 func (k *mapka2Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
-) []conversion.InputRecord {
+	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
 
@@ -83,12 +83,12 @@ type mapka3Transformer struct {
 
 // Transform transforms Mapka (v2) app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *mapka3Transformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (s *mapka3Transformer) Transform(logRec servicelog.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (servicelog.OutputRecord, error) {
 	tRec, ok := logRec.(*mapka3.InputRecord)
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("invalid type for conversion by Mapka3 transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for servicelog.by Mapka3 transformer %T", logRec)
 }
 
 func (k *mapka3Transformer) HistoryLookupItems() int {
@@ -96,7 +96,7 @@ func (k *mapka3Transformer) HistoryLookupItems() int {
 }
 
 func (k *mapka3Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
-) []conversion.InputRecord {
+	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

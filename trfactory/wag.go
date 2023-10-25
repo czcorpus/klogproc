@@ -16,10 +16,10 @@ package trfactory
 
 import (
 	"fmt"
-	"klogproc/conversion"
-	"klogproc/conversion/wag06"
-	"klogproc/conversion/wag07"
 	"klogproc/logbuffer"
+	"klogproc/servicelog"
+	"klogproc/servicelog/wag06"
+	"klogproc/servicelog/wag07"
 )
 
 type wag06Transformer struct {
@@ -28,12 +28,12 @@ type wag06Transformer struct {
 
 // Transform transforms WaG app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *wag06Transformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (s *wag06Transformer) Transform(logRec servicelog.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (servicelog.OutputRecord, error) {
 	tRec, ok := logRec.(*wag06.InputRecord)
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("invalid type for conversion by WaG 0.6 transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for servicelog.by WaG 0.6 transformer %T", logRec)
 }
 
 func (k *wag06Transformer) HistoryLookupItems() int {
@@ -41,8 +41,8 @@ func (k *wag06Transformer) HistoryLookupItems() int {
 }
 
 func (k *wag06Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
-) []conversion.InputRecord {
+	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
 
@@ -54,12 +54,12 @@ type wag07Transformer struct {
 
 // Transform transforms WaG app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *wag07Transformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (s *wag07Transformer) Transform(logRec servicelog.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (servicelog.OutputRecord, error) {
 	tRec, ok := logRec.(*wag07.InputRecord)
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("invalid type for conversion by WaG 0.7 transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for servicelog.by WaG 0.7 transformer %T", logRec)
 }
 
 func (k *wag07Transformer) HistoryLookupItems() int {
@@ -67,7 +67,7 @@ func (k *wag07Transformer) HistoryLookupItems() int {
 }
 
 func (k *wag07Transformer) Preprocess(
-	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
-) []conversion.InputRecord {
+	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

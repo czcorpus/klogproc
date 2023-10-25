@@ -31,10 +31,10 @@ import (
 	"strconv"
 	"time"
 
-	"klogproc/conversion"
 	"klogproc/fsop"
 	"klogproc/load"
 	"klogproc/load/alarm"
+	"klogproc/servicelog"
 
 	"github.com/czcorpus/cnc-gokit/fs"
 	"github.com/rs/zerolog/log"
@@ -88,7 +88,7 @@ func importTimeRangeEntry(v string) (time.Time, error) {
 		}
 		return time.Unix(int64(vc), 0), nil
 	}
-	t := conversion.ConvertDatetimeString(v)
+	t := servicelog.ConvertDatetimeString(v)
 	if t.IsZero() {
 		return t, fmt.Errorf("unrecognized time format. Must be either a numeric UNIX timestamp or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm")
 	}
@@ -188,7 +188,7 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, tzShift
 
 // LogItemProcessor is an object handling a specific log file with a specific format
 type LogItemProcessor interface {
-	ProcItem(logRec conversion.InputRecord, tzShiftMin int) []conversion.OutputRecord
+	ProcItem(logRec servicelog.InputRecord, tzShiftMin int) []servicelog.OutputRecord
 	GetAppType() string
 	GetAppVersion() string
 }
@@ -201,7 +201,7 @@ type LogFileProcFunc = func(conf *Conf, minTimestamp int64)
 func CreateLogFileProcFunc(
 	processor LogItemProcessor,
 	datetimeRange DatetimeRange,
-	destChans ...chan *conversion.BoundOutputRecord,
+	destChans ...chan *servicelog.BoundOutputRecord,
 ) LogFileProcFunc {
 	return func(conf *Conf, minTimestamp int64) {
 		var files []string
@@ -212,7 +212,7 @@ func CreateLogFileProcFunc(
 			files = []string{conf.SrcPath}
 		}
 		log.Info().Msgf("Found %d file(s) to process in %s", len(files), conf.SrcPath)
-		var procAlarm conversion.AppErrorRegister
+		var procAlarm servicelog.AppErrorRegister
 		if conf.NumErrorsAlarm > 0 {
 			procAlarm = &alarm.BatchProcAlarm{}
 

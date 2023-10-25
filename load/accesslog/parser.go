@@ -18,11 +18,10 @@ package accesslog
 
 import (
 	"fmt"
+	"klogproc/servicelog"
 	"net/url"
 	"strconv"
 	"strings"
-
-	"klogproc/conversion"
 
 	"github.com/rs/zerolog/log"
 )
@@ -138,23 +137,23 @@ type ParsedAccessLog struct {
 
 // ParseLine parses a HTTP access log format line
 // data example:
-//   0) 195.113.53.123
-//   1) -
-//   2) johndoe
-//   3) [16/Sep/2019:08:24:05 +0200]
-//   4) "GET /ske/css/images/ui-bg_highlight-hard_100_f2f5f7_1x100.png HTTP/2.0"
-//   5) 200
-//   6) 332
-//   7) "https://www.korpus.cz/ske/css/jquery-ui.min.css"
-//   8) "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/76.0.3809.100 Chrome/76.0.3809.100 Safari/537.36"
-//   9) rt=0.012
+//  0. 195.113.53.123
+//  1. -
+//  2. johndoe
+//  3. [16/Sep/2019:08:24:05 +0200]
+//  4. "GET /ske/css/images/ui-bg_highlight-hard_100_f2f5f7_1x100.png HTTP/2.0"
+//  5. 200
+//  6. 332
+//  7. "https://www.korpus.cz/ske/css/jquery-ui.min.css"
+//  8. "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/76.0.3809.100 Chrome/76.0.3809.100 Safari/537.36"
+//  9. rt=0.012
 func (lp *LineParser) ParseLine(s string, lineNum int64) (*ParsedAccessLog, error) {
 	ans := &ParsedAccessLog{}
 	var err error
 	var tokens []string
 	tokens, err = lp.tokenize(s)
 	if err != nil {
-		return nil, conversion.NewLineParsingError(lineNum, err.Error())
+		return nil, servicelog.NewLineParsingError(lineNum, err.Error())
 	}
 
 	ans.IPAddress = tokens[0]
@@ -168,14 +167,14 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*ParsedAccessLog, erro
 		ans.HTTPVersion = urlBlock[2]
 		parsedURL, err = url.Parse(urlBlock[1])
 		if err != nil {
-			return nil, conversion.NewLineParsingError(lineNum, err.Error())
+			return nil, servicelog.NewLineParsingError(lineNum, err.Error())
 		}
 	}
 	if parsedURL != nil {
 		ans.Path = parsedURL.Path
 		ans.URLArgs, err = url.ParseQuery(parsedURL.RawQuery)
 		if err != nil {
-			return nil, conversion.NewLineParsingError(lineNum, err.Error())
+			return nil, servicelog.NewLineParsingError(lineNum, err.Error())
 		}
 	}
 	ans.Referrer = tokens[7]

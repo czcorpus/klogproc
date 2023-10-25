@@ -22,16 +22,16 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"klogproc/config"
-	"klogproc/conversion"
 	"klogproc/fsop"
 	"klogproc/load/batch"
 	"klogproc/logbuffer"
+	"klogproc/servicelog"
 	"klogproc/users"
 
 	"github.com/oschwald/geoip2-golang"
 )
 
-func applyLocation(rec conversion.InputRecord, db *geoip2.Reader, outRec conversion.OutputRecord) {
+func applyLocation(rec servicelog.InputRecord, db *geoip2.Reader, outRec servicelog.OutputRecord) {
 	ip := rec.GetClientIP()
 	if len(ip) > 0 {
 		city, err := db.City(ip)
@@ -62,33 +62,33 @@ type CNKLogProcessor struct {
 	chunkSize      int
 	numNonLoggable int
 	skipAnalysis   bool
-	logTransformer conversion.LogItemTransformer
-	logBuffer      logbuffer.AbstractStorage[conversion.InputRecord]
+	logTransformer servicelog.LogItemTransformer
+	logBuffer      logbuffer.AbstractStorage[servicelog.InputRecord]
 }
 
-func (clp *CNKLogProcessor) recordIsLoggable(logRec conversion.InputRecord) bool {
+func (clp *CNKLogProcessor) recordIsLoggable(logRec servicelog.InputRecord) bool {
 	return logRec.IsProcessable()
 }
 
 // ProcItem transforms input log record into an output format.
 // In case an unsupported record is encountered, nil is returned.
-func (clp *CNKLogProcessor) ProcItem(logRec conversion.InputRecord, tzShiftMin int) []conversion.OutputRecord {
+func (clp *CNKLogProcessor) ProcItem(logRec servicelog.InputRecord, tzShiftMin int) []servicelog.OutputRecord {
 	if clp.recordIsLoggable(logRec) {
-		ans := make([]conversion.OutputRecord, 0, 2)
+		ans := make([]servicelog.OutputRecord, 0, 2)
 		for _, precord := range clp.logTransformer.Preprocess(logRec, clp.logBuffer) {
 			clp.logBuffer.AddRecord(precord)
 			rec, err := clp.logTransformer.Transform(precord, clp.appType, tzShiftMin, clp.anonymousUsers)
 			ans = append(ans, rec)
 			if err != nil {
 				log.Error().Err(err).Msgf("Failed to transform item %s", precord)
-				return []conversion.OutputRecord{}
+				return []servicelog.OutputRecord{}
 			}
 			applyLocation(precord, clp.geoIPDb, rec)
 		}
 		return ans
 	}
 	clp.numNonLoggable++
-	return []conversion.OutputRecord{}
+	return []servicelog.OutputRecord{}
 }
 
 // GetAppType returns a string idenfier unique for a concrete application we

@@ -17,8 +17,8 @@
 package influx
 
 import (
-	"klogproc/conversion"
 	"klogproc/save"
+	"klogproc/servicelog"
 
 	"github.com/rs/zerolog/log"
 )
@@ -27,7 +27,7 @@ import (
 // to a configured InfluxDB measurement. For performance reasons, the actual
 // database write is performed each time number of added items equals
 // conf.PushChunkSize and also once the incomingData channel is closed.
-func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan *conversion.BoundOutputRecord) <-chan save.ConfirmMsg {
+func RunWriteConsumer(conf *ConnectionConf, incomingData <-chan *servicelog.BoundOutputRecord) <-chan save.ConfirmMsg {
 	confirmChan := make(chan save.ConfirmMsg)
 	go func() {
 		if conf.IsConfigured() {

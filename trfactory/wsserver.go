@@ -16,9 +16,9 @@ package trfactory
 
 import (
 	"fmt"
-	"klogproc/conversion"
-	"klogproc/conversion/wsserver"
 	"klogproc/logbuffer"
+	"klogproc/servicelog"
+	"klogproc/servicelog/wsserver"
 )
 
 type wsserverTransformer struct {
@@ -27,12 +27,12 @@ type wsserverTransformer struct {
 
 // Transform transforms WaG app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *wsserverTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (s *wsserverTransformer) Transform(logRec servicelog.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (servicelog.OutputRecord, error) {
 	tRec, ok := logRec.(*wsserver.InputRecord)
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("invalid type for conversion by WSServer transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for servicelog.by WSServer transformer %T", logRec)
 }
 
 func (k *wsserverTransformer) HistoryLookupItems() int {
@@ -40,7 +40,7 @@ func (k *wsserverTransformer) HistoryLookupItems() int {
 }
 
 func (k *wsserverTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
-) []conversion.InputRecord {
+	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

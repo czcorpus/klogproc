@@ -16,9 +16,9 @@ package trfactory
 
 import (
 	"fmt"
-	"klogproc/conversion"
-	"klogproc/conversion/apiguard"
 	"klogproc/logbuffer"
+	"klogproc/servicelog"
+	"klogproc/servicelog/apiguard"
 )
 
 type apiguardTransformer struct {
@@ -27,12 +27,12 @@ type apiguardTransformer struct {
 
 // Transform transforms APIGuard app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (k *apiguardTransformer) Transform(logRec conversion.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (conversion.OutputRecord, error) {
+func (k *apiguardTransformer) Transform(logRec servicelog.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (servicelog.OutputRecord, error) {
 	tRec, ok := logRec.(*apiguard.InputRecord)
 	if ok {
 		return k.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
 	}
-	return nil, fmt.Errorf("invalid type for conversion by APIGuard transformer %T", logRec)
+	return nil, fmt.Errorf("invalid type for servicelog.by APIGuard transformer %T", logRec)
 }
 
 func (k *apiguardTransformer) HistoryLookupItems() int {
@@ -40,7 +40,7 @@ func (k *apiguardTransformer) HistoryLookupItems() int {
 }
 
 func (k *apiguardTransformer) Preprocess(
-	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
-) []conversion.InputRecord {
+	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
