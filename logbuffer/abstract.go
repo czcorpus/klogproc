@@ -46,11 +46,12 @@ type AbstractStorage[T Storable] interface {
 	// `clusteringID` up until the defined time.
 	RemoveAnalyzedRecords(clusteringID string, dt time.Time)
 
-	TotalRemoveAnalyzedRecords(dt time.Time)
-
 	NumOfRecords(clusteringID string) int
 
-	TotalNumOfRecords() int
+	// TotalNumOfRecordsSince returns number of records
+	// for each clusteringID with its time greater or equal
+	// to the `dt`.
+	TotalNumOfRecordsSince(dt time.Time) int
 
 	ForEach(clusteringID string, fn func(item T))
 

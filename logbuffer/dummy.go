@@ -44,14 +44,11 @@ func (st *DummyStorage[T]) GetTimestamp() time.Time {
 func (st *DummyStorage[T]) RemoveAnalyzedRecords(clusteringID string, dt time.Time) {
 }
 
-func (st *DummyStorage[T]) TotalRemoveAnalyzedRecords(dt time.Time) {
-}
-
 func (st *DummyStorage[T]) NumOfRecords(clusteringID string) int {
 	return 0
 }
 
-func (st *DummyStorage[T]) TotalNumOfRecords() int {
+func (st *DummyStorage[T]) TotalNumOfRecordsSince(dt time.Time) int {
 	return 0
 }
 

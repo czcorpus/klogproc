@@ -113,18 +113,6 @@ func (st *Storage[T]) RemoveAnalyzedRecords(clusteringID string, dt time.Time) {
 	})
 }
 
-// TotalRemoveAnalyzedRecords removes all the log records older than `dt`
-// no matter which clustering ID they have.
-func (st *Storage[T]) TotalRemoveAnalyzedRecords(dt time.Time) {
-	st.dataLock.Lock()
-	defer st.dataLock.Unlock()
-	for _, v := range st.data {
-		v.ShiftUntil(func(item T) bool {
-			return item.GetTime().Before(dt)
-		})
-	}
-}
-
 // NumOfRecords gets number of stored records for a specific
 // records (identified by their `clusteringID`).
 func (st *Storage[T]) NumOfRecords(clusteringID string) int {
@@ -138,13 +126,19 @@ func (st *Storage[T]) NumOfRecords(clusteringID string) int {
 }
 
 // TotalNumOfRecords returns total number of stored records
-// no matter what clustering ID they have.
-func (st *Storage[T]) TotalNumOfRecords() int {
+// no matter what clustering ID they have but with its
+// time greater or equal to `dt`
+func (st *Storage[T]) TotalNumOfRecordsSince(dt time.Time) int {
 	st.dataLock.RLock()
 	defer st.dataLock.RUnlock()
 	var ans int
 	for _, v := range st.data {
-		ans += v.Len()
+		v.ForEach(func(i int, item T) bool {
+			if item.GetTime().After(dt) || item.GetTime().Equal(dt) {
+				ans++
+			}
+			return true
+		})
 	}
 	return ans
 }
