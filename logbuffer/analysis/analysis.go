@@ -17,7 +17,7 @@
 package analysis
 
 import (
-	"klogproc/conversion"
+	"klogproc/servicelog"
 
 	"github.com/czcorpus/cnc-gokit/collections"
 	"github.com/czcorpus/cnc-gokit/maths"
@@ -42,7 +42,7 @@ type ReqCalcItem struct {
 }
 
 type AnalyzableRecord interface {
-	conversion.InputRecord
+	servicelog.InputRecord
 	ShouldBeAnalyzed() bool
 }
 

@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"klogproc/conversion"
 	"klogproc/save"
+	"klogproc/servicelog"
 
 	"github.com/rs/zerolog/log"
 )
@@ -61,16 +61,16 @@ func BulkWriteRequest(data [][]byte, appType string, esconf *ConnectionConf) err
 // RunWriteConsumer reads incoming records from incomingData channel and writes them
 // chunk by chunk. Once the channel is closed, the rest of items in buffer is writtten
 // and the consumer finishes.
-func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan *conversion.BoundOutputRecord) <-chan save.ConfirmMsg {
+func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan *servicelog.BoundOutputRecord) <-chan save.ConfirmMsg {
 	// Elasticsearch bulk writes
 	confirmChan := make(chan save.ConfirmMsg)
 	go func() {
 		if conf.IsConfigured() {
 			i := 0
 			data := make([][]byte, conf.PushChunkSize*2+1)
-			var chunkPosition *conversion.LogRange
+			var chunkPosition *servicelog.LogRange
 			var esErr error
-			var rec *conversion.BoundOutputRecord
+			var rec *servicelog.BoundOutputRecord
 			for rec = range incomingData {
 				if chunkPosition == nil {
 					chunkPosition = &rec.FilePos

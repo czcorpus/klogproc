@@ -18,10 +18,10 @@ package analysis
 
 import (
 	"fmt"
-	"klogproc/conversion"
 	"klogproc/email"
 	"klogproc/load"
 	"klogproc/logbuffer"
+	"klogproc/servicelog"
 	"net"
 	"sort"
 	"time"
@@ -33,7 +33,7 @@ import (
 )
 
 // Analyzer is used in the "preprocess" phase of
-// the conversion process. Using log records buffer,
+// the servicelog.process. Using log records buffer,
 // it searches for suspicious traffic and IP addresses.
 //
 // Basically, it looks for
@@ -53,10 +53,10 @@ func (analyzer *Analyzer[T]) isIgnoredIP(ip net.IP) bool {
 }
 
 func (analyzer *Analyzer[T]) Preprocess(
-	rec conversion.InputRecord, prevRecs logbuffer.AbstractStorage[conversion.InputRecord],
-) []conversion.InputRecord {
+	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+) []servicelog.InputRecord {
 	tRec, ok := rec.(T)
-	ans := []conversion.InputRecord{rec}
+	ans := []servicelog.InputRecord{rec}
 	if !ok {
 		log.Warn().
 			Str("appType", analyzer.appType).
@@ -116,7 +116,7 @@ func (analyzer *Analyzer[T]) Preprocess(
 		}
 
 		counter := make(map[string]ReqCalcItem)
-		prevRecs.TotalForEach(func(item conversion.InputRecord) {
+		prevRecs.TotalForEach(func(item servicelog.InputRecord) {
 			if analyzer.isIgnoredIP(item.GetClientIP()) {
 				return
 			}

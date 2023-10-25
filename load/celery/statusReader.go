@@ -21,10 +21,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"klogproc/servicelog/celery"
 	"os/exec"
 	"strings"
-
-	"klogproc/conversion/celery"
 
 	"github.com/rs/zerolog/log"
 )
