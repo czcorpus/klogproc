@@ -89,6 +89,7 @@ func (analyzer *Analyzer[T]) Preprocess(
 		log.Debug().
 			Int("numRec", numRec).
 			Int("sampleSize", sampleSize).
+			Int("sampleLimit", minPrevNumRequestsSampleSize).
 			Msg("previous requests sample not ready yet")
 		return ans
 	}
