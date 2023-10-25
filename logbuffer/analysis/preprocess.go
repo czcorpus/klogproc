@@ -96,6 +96,14 @@ func (analyzer *Analyzer[T]) Preprocess(
 	}
 	meanReqs /= float64(len(prevNumsRecs))
 	trafficIncrease := float64(numRec) / meanReqs
+	log.Debug().
+		Time("lastCheck", lastCheck).
+		Int("prevNumRecsSampleSize", len(prevNumsRecs)).
+		Float64("meanPrevReqs", meanReqs).
+		Int("numRec", numRec).
+		Float64("trafficIncrease", trafficIncrease).
+		Str("appType", analyzer.appType).
+		Msg("Checking for suspicious activity")
 	var isSuspicTrafficIncrease bool
 	if trafficIncrease >= analyzer.conf.BotDetection.TrafficReportingThreshold {
 		isSuspicTrafficIncrease = true
