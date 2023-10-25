@@ -77,11 +77,11 @@ func (analyzer *Analyzer[T]) Preprocess(
 		currTime = time.Now()
 	}
 	checkInterval := time.Duration(analyzer.conf.AnalysisIntervalSecs) * time.Second
-	defer prevRecs.SetTimestamp(currTime)
 
 	if lastCheck.IsZero() || rec.GetTime().Sub(lastCheck) < checkInterval {
 		return ans
 	}
+	defer prevRecs.SetTimestamp(currTime)
 
 	numRec := prevRecs.TotalNumOfRecordsSince(lastCheck)
 	sampleSize := prevRecs.AddNumberSample("prevNums", float64(numRec))
