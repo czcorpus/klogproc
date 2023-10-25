@@ -86,6 +86,11 @@ func (analyzer *Analyzer[T]) Preprocess(
 	numRec := prevRecs.TotalNumOfRecordsSince(lastCheck)
 	sampleSize := prevRecs.AddNumberSample("prevNums", float64(numRec))
 	if sampleSize < minPrevNumRequestsSampleSize {
+		log.Debug().
+			Int("numRec", numRec).
+			Int("sampleSize", sampleSize).
+			Int("sampleLimit", minPrevNumRequestsSampleSize).
+			Msg("previous requests sample not ready yet")
 		return ans
 	}
 
