@@ -53,6 +53,9 @@ func (fc *FileConf) Validate() error {
 	if pathExists := fs.PathExists(fc.Path); !pathExists {
 		return fmt.Errorf("failed to validate FileConf for %s - path does not exist	", fc.Path)
 	}
+	if fc.Buffer != nil {
+		return fc.Buffer.Validate()
+	}
 	return nil
 }
 
