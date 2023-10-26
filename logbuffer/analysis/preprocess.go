@@ -53,6 +53,10 @@ func (state *AnalysisState) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (state *AnalysisState) IsZero() bool {
+	return len(state.PrevNums.Data) == 0 && state.LastCheck.IsZero()
+}
+
 // Analyzer is used in the "preprocess" phase of
 // the servicelog.process. Using log records buffer,
 // it searches for suspicious traffic and IP addresses.
