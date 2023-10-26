@@ -57,7 +57,7 @@ func (analyzer *Analyzer[T]) isIgnoredIP(ip net.IP) bool {
 }
 
 func (analyzer *Analyzer[T]) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord, logbuffer.SerializableState],
 ) []servicelog.InputRecord {
 	tRec, ok := rec.(T)
 	ans := []servicelog.InputRecord{rec}

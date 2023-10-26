@@ -55,7 +55,7 @@ type tailProcessor struct {
 	influxChunkSize   int
 	alarm             servicelog.AppErrorRegister
 	analysis          chan<- servicelog.InputRecord
-	logBuffer         logbuffer.AbstractStorage[servicelog.InputRecord]
+	logBuffer         servicelog.ServiceLogBuffer
 	dryRun            bool
 }
 
@@ -213,7 +213,7 @@ func newTailProcessor(
 	conf config.Main,
 	geoDB *geoip2.Reader,
 	userMap *users.UserMap,
-	logBuffers map[string]logbuffer.AbstractStorage[servicelog.InputRecord],
+	logBuffers map[string]servicelog.ServiceLogBuffer,
 	dryRun bool,
 ) *tailProcessor {
 
@@ -240,7 +240,7 @@ func newTailProcessor(
 		"Creating tail processor for %s, app type: %s, app version: %s, tzShift: %d",
 		filepath.Clean(tailConf.Path), tailConf.AppType, tailConf.Version, tailConf.TZShift)
 
-	var buffStorage logbuffer.AbstractStorage[servicelog.InputRecord]
+	var buffStorage logbuffer.AbstractStorage[servicelog.InputRecord, logbuffer.SerializableState]
 	if tailConf.Buffer != nil {
 		if tailConf.Buffer.ID != "" {
 			curr, ok := logBuffers[tailConf.Buffer.ID]
@@ -258,16 +258,24 @@ func newTailProcessor(
 					Str("appType", tailConf.AppType).
 					Str("file", tailConf.Path).
 					Msg("creating reusable log processing buffer")
-				buffStorage = logbuffer.NewStorage[servicelog.InputRecord](tailConf.Buffer)
+				buffStorage = logbuffer.NewStorage[servicelog.InputRecord, logbuffer.SerializableState](
+					tailConf.Buffer,
+					conf.LogTail.LogBufferStateDir,
+					tailConf.Path,
+				)
 				logBuffers[tailConf.Buffer.ID] = buffStorage
 			}
 
 		} else {
-			buffStorage = logbuffer.NewStorage[servicelog.InputRecord](tailConf.Buffer)
+			buffStorage = logbuffer.NewStorage[servicelog.InputRecord, logbuffer.SerializableState](
+				tailConf.Buffer,
+				conf.LogTail.LogBufferStateDir,
+				tailConf.Path,
+			)
 		}
 
 	} else {
-		buffStorage = logbuffer.NewDummyStorage[servicelog.InputRecord]()
+		buffStorage = logbuffer.NewDummyStorage[servicelog.InputRecord, logbuffer.SerializableState]()
 	}
 
 	return &tailProcessor{
@@ -303,7 +311,7 @@ func runTailAction(
 	var wg sync.WaitGroup
 	wg.Add(len(conf.LogTail.Files))
 
-	logBuffers := make(map[string]logbuffer.AbstractStorage[servicelog.InputRecord])
+	logBuffers := make(map[string]servicelog.ServiceLogBuffer)
 	fullFiles, err := conf.LogTail.FullFiles()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to initialize files configuration")

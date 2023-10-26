@@ -69,6 +69,7 @@ type Conf struct {
 	IntervalSecs          int        `json:"intervalSecs"`
 	MaxLinesPerCheck      int        `json:"maxLinesPerCheck"`
 	WorklogPath           string     `json:"worklogPath"`
+	LogBufferStateDir     string     `json:"logBufferStateDir"`
 	Files                 []FileConf `json:"files"`
 	NumErrorsAlarm        int        `json:"numErrorsAlarm"`
 	ErrCountTimeRangeSecs int        `json:"errCountTimeRangeSecs"`

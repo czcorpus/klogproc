@@ -18,7 +18,7 @@ package logbuffer
 
 import "time"
 
-type AbstractStorage[T Storable] interface {
+type AbstractStorage[T Storable, U SerializableState] interface {
 	AddRecord(rec T)
 
 	// ConfirmRecordCheck sets a time of last check
@@ -71,4 +71,8 @@ type AbstractStorage[T Storable] interface {
 	AddNumberSample(storageKey string, value float64) int
 
 	GetNumberSamples(storageKey string) []float64
+
+	StoreStateData(stateData U) error
+
+	LoadStateData() (U, error)
 }

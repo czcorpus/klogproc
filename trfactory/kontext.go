@@ -16,7 +16,6 @@ package trfactory
 
 import (
 	"fmt"
-	"klogproc/logbuffer"
 	"klogproc/servicelog"
 	"klogproc/servicelog/kontext013"
 	"klogproc/servicelog/kontext015"
@@ -43,7 +42,7 @@ func (k *konText013Transformer) HistoryLookupItems() int {
 }
 
 func (k *konText013Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -70,7 +69,7 @@ func (k *konText015Transformer) HistoryLookupItems() int {
 }
 
 func (k *konText015Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -97,7 +96,7 @@ func (k *konText018Transformer) HistoryLookupItems() int {
 }
 
 func (k *konText018Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

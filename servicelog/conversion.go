@@ -87,6 +87,8 @@ const (
 	AppTypeMasm = "masm"
 )
 
+type ServiceLogBuffer logbuffer.AbstractStorage[InputRecord, logbuffer.SerializableState]
+
 // LineParsingError informs that we failed to parse a line as
 // an standard log record. In general, this may or may not mean
 // that the line actually contains a broken (= non parseable) string.
@@ -252,7 +254,7 @@ type LogItemTransformer interface {
 	// x < 0: illegal value
 	HistoryLookupItems() int
 
-	Preprocess(rec InputRecord, prevRecs logbuffer.AbstractStorage[InputRecord]) []InputRecord
+	Preprocess(rec InputRecord, prevRecs ServiceLogBuffer) []InputRecord
 
 	Transform(logRec InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (OutputRecord, error)
 }

@@ -18,7 +18,6 @@
 package masm
 
 import (
-	"klogproc/logbuffer"
 	"klogproc/servicelog"
 	"time"
 )
@@ -51,7 +50,7 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return []servicelog.InputRecord{rec}
 }

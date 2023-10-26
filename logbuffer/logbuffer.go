@@ -17,6 +17,7 @@
 package logbuffer
 
 import (
+	"encoding/json"
 	"klogproc/load"
 	"sync"
 	"time"
@@ -29,6 +30,10 @@ type Storable interface {
 	ClusteringClientID() string
 }
 
+type SerializableState interface {
+	json.Marshaler
+}
+
 // Storage keeps a defined number of log records in memory
 // (using a circular list) for log processors which need not
 // just the current log line/record but also some history
@@ -38,8 +43,16 @@ type Storable interface {
 // for storing and retrieving misc. values for log processors
 // to be able to evaluate recent state.
 // All the functions are safe to be used concurrently.
-type Storage[T Storable] struct {
+// The `T` type represents a log record type stored by this Storage.
+// The `U` type is a type used to store state data when dealing
+// with persistence.
+type Storage[T Storable, U SerializableState] struct {
 	initialCapacity int
+
+	storageDirPath string
+
+	// logFilePath refers to the log file that this buffer assists in processing
+	logFilePath string
 
 	data     map[string]*collections.CircularList[T]
 	dataLock sync.RWMutex
@@ -57,7 +70,7 @@ type Storage[T Storable] struct {
 	timestamp time.Time
 }
 
-func (st *Storage[T]) AddRecord(rec T) {
+func (st *Storage[T, U]) AddRecord(rec T) {
 	st.dataLock.Lock()
 	defer st.dataLock.Unlock()
 	if st.initialCapacity > 0 {
@@ -70,13 +83,13 @@ func (st *Storage[T]) AddRecord(rec T) {
 	}
 }
 
-func (st *Storage[T]) ConfirmRecordCheck(rec Storable) {
+func (st *Storage[T, U]) ConfirmRecordCheck(rec Storable) {
 	st.lastChecksLock.Lock()
 	defer st.lastChecksLock.Unlock()
 	st.lastChecks[rec.ClusteringClientID()] = rec.GetTime()
 }
 
-func (st *Storage[T]) GetLastCheck(clusteringID string) time.Time {
+func (st *Storage[T, U]) GetLastCheck(clusteringID string) time.Time {
 	st.lastChecksLock.RLock()
 	defer st.lastChecksLock.RUnlock()
 	v := st.lastChecks[clusteringID]
@@ -86,7 +99,7 @@ func (st *Storage[T]) GetLastCheck(clusteringID string) time.Time {
 // SetTimestamp sets a global (for a concrete log file processing)
 // timestamp. This is typically used to mark last log analysis
 // when detecting bots or errors.
-func (st *Storage[T]) SetTimestamp(t time.Time) time.Time {
+func (st *Storage[T, U]) SetTimestamp(t time.Time) time.Time {
 	prev := st.timestamp
 	st.timestamp = t
 	return prev
@@ -95,13 +108,13 @@ func (st *Storage[T]) SetTimestamp(t time.Time) time.Time {
 // GetTimestamp gets a global (for a concrete log file processing)
 // timestamp. This is typically used to mark last log analysis
 // when detecting bots or errors.
-func (st *Storage[T]) GetTimestamp() time.Time {
+func (st *Storage[T, U]) GetTimestamp() time.Time {
 	return st.timestamp
 }
 
 // RemoveAnalyzedRecords removes all the log records older than `dt`
 // with provided `clusteringID` (which is typically something like userID, session, IP)
-func (st *Storage[T]) RemoveAnalyzedRecords(clusteringID string, dt time.Time) {
+func (st *Storage[T, U]) RemoveAnalyzedRecords(clusteringID string, dt time.Time) {
 	st.dataLock.Lock()
 	defer st.dataLock.Unlock()
 	v, ok := st.data[clusteringID]
@@ -115,7 +128,7 @@ func (st *Storage[T]) RemoveAnalyzedRecords(clusteringID string, dt time.Time) {
 
 // NumOfRecords gets number of stored records for a specific
 // records (identified by their `clusteringID`).
-func (st *Storage[T]) NumOfRecords(clusteringID string) int {
+func (st *Storage[T, U]) NumOfRecords(clusteringID string) int {
 	st.dataLock.RLock()
 	defer st.dataLock.RUnlock()
 	v, ok := st.data[clusteringID]
@@ -128,7 +141,7 @@ func (st *Storage[T]) NumOfRecords(clusteringID string) int {
 // TotalNumOfRecords returns total number of stored records
 // no matter what clustering ID they have but with its
 // time greater or equal to `dt`
-func (st *Storage[T]) TotalNumOfRecordsSince(dt time.Time) int {
+func (st *Storage[T, U]) TotalNumOfRecordsSince(dt time.Time) int {
 	st.dataLock.RLock()
 	defer st.dataLock.RUnlock()
 	var ans int
@@ -145,7 +158,7 @@ func (st *Storage[T]) TotalNumOfRecordsSince(dt time.Time) int {
 
 // ForEach iterates over stored records with the provided `clusteringID`
 // and calls the provided `fn` with each item as an argument.
-func (st *Storage[T]) ForEach(clusteringID string, fn func(item T)) {
+func (st *Storage[T, U]) ForEach(clusteringID string, fn func(item T)) {
 	st.dataLock.RLock()
 	defer st.dataLock.RUnlock()
 	v, ok := st.data[clusteringID]
@@ -165,7 +178,7 @@ func (st *Storage[T]) ForEach(clusteringID string, fn func(item T)) {
 // iterates in two nested loops - first one goes through all the record groups
 // (= records with the same clustering ID) and the for each this group it iterates
 // through all its items.
-func (st *Storage[T]) TotalForEach(fn func(item T)) {
+func (st *Storage[T, U]) TotalForEach(fn func(item T)) {
 	st.dataLock.RLock()
 	defer st.dataLock.RUnlock()
 	for _, v := range st.data {
@@ -177,14 +190,14 @@ func (st *Storage[T]) TotalForEach(fn func(item T)) {
 }
 
 // SetAuxNumber sets an auxiliary number for later reuse.
-func (st *Storage[T]) SetAuxNumber(name string, value float64) {
+func (st *Storage[T, U]) SetAuxNumber(name string, value float64) {
 	st.auxNumbersLock.Lock()
 	defer st.auxNumbersLock.Unlock()
 	st.auxNumbers[name] = value
 }
 
 // GetAuxNumber gets a previously stored auxiliary number.
-func (st *Storage[T]) GetAuxNumber(name string) (float64, bool) {
+func (st *Storage[T, U]) GetAuxNumber(name string) (float64, bool) {
 	st.auxNumbersLock.RLock()
 	defer st.auxNumbersLock.RUnlock()
 	v, ok := st.auxNumbers[name]
@@ -196,7 +209,7 @@ func (st *Storage[T]) GetAuxNumber(name string) (float64, bool) {
 // When the list is full, items are replaced randomly by incoming values.
 //
 // This is mostly for keeping track of the current traffic intensity
-func (st *Storage[T]) AddNumberSample(storageKey string, value float64) int {
+func (st *Storage[T, U]) AddNumberSample(storageKey string, value float64) int {
 	st.auxNumberSamplesLock.Lock()
 	defer st.auxNumberSamplesLock.Unlock()
 	samples, ok := st.auxNumberSamples[storageKey]
@@ -209,7 +222,7 @@ func (st *Storage[T]) AddNumberSample(storageKey string, value float64) int {
 
 // GetNumberSamples returns a list of previously stored numbers sample.
 // See `AddNumberSample` for more info.
-func (st *Storage[T]) GetNumberSamples(storageKey string) []float64 {
+func (st *Storage[T, U]) GetNumberSamples(storageKey string) []float64 {
 	st.auxNumberSamplesLock.RLock()
 	defer st.auxNumberSamplesLock.RUnlock()
 	samples, ok := st.auxNumberSamples[storageKey]
@@ -220,12 +233,18 @@ func (st *Storage[T]) GetNumberSamples(storageKey string) []float64 {
 }
 
 // NewStorage is a recommended factory for creating `Storage`
-func NewStorage[T Storable](bufferConf *load.BufferConf) *Storage[T] {
-	return &Storage[T]{
+func NewStorage[T Storable, U SerializableState](
+	bufferConf *load.BufferConf,
+	storageDirPath string,
+	analyzedLogFilePath string,
+) *Storage[T, U] {
+	return &Storage[T, U]{
 		data:             make(map[string]*collections.CircularList[T]),
 		initialCapacity:  bufferConf.HistoryLookupItems,
 		lastChecks:       make(map[string]time.Time),
 		auxNumbers:       make(map[string]float64),
 		auxNumberSamples: make(map[string]*SampleWithReplac[float64]),
+		storageDirPath:   storageDirPath,
+		logFilePath:      analyzedLogFilePath,
 	}
 }
