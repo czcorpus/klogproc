@@ -108,6 +108,7 @@ func (bc *BufferConf) Validate() error {
 			log.Warn().
 				Int("value", DfltPrevNumReqsSampleSize).
 				Msg("botDetection.prevNumReqsSampleSize not set, using default")
+			bc.BotDetection.PrevNumReqsSampleSize = DfltPrevNumReqsSampleSize
 
 		} else if bc.BotDetection.PrevNumReqsSampleSize < 0 {
 			return errors.New("failed to validate botDetection.prevNumReqsSampleSize, must be > 0")
