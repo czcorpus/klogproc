@@ -24,23 +24,11 @@ type AbstractStorage[T Storable, U SerializableState] interface {
 	// ConfirmRecordCheck sets a time of last check
 	// for the records with the same clustering ID
 	// as `rec`.
-	// Please note that this also sets the global
-	// timestamp (the same as `SetTimestamp` does).
 	ConfirmRecordCheck(rec Storable)
 
 	// GetLastCheck returns time of the last time items
 	// with specified `clusteringID` where checked.
-	// Note: global timestamp (`SetTimestamp`, `GetTimestamp`)
-	// has no effect on this
 	GetLastCheck(clusteringID string) time.Time
-
-	// SetTimestamp stores provided time value typically to be able
-	// to determine some previous global action. The function
-	// returns previous stored timestamp
-	SetTimestamp(t time.Time) time.Time
-
-	// GetTimestamp returns stored timestamp
-	GetTimestamp() time.Time
 
 	// RemoveAnalyzedRecords removes all the records with specified
 	// `clusteringID` up until the defined time.
@@ -59,20 +47,13 @@ type AbstractStorage[T Storable, U SerializableState] interface {
 	// no matter what clusteringID they belong to
 	TotalForEach(fn func(item T))
 
-	// SetAuxNumber can be used to store custom data for later usage
-	// (e.g. summaries of previous 'Preprocess' calls)
-	SetAuxNumber(name string, value float64)
+	// SetStateData sets the current state data for later reuse
+	// It may or may not backup data to disk or database.
+	// If applicable then `GetStateData` should load the data
+	// in case nothing was set yet.
+	SetStateData(stateData U)
 
-	// GetAuxNumber returns previously stored custom float value
-	GetAuxNumber(name string) (float64, bool)
-
-	// AddNumberSample adds a new value to the "sample storage".
-	// It returns the sample size after the value was added
-	AddNumberSample(storageKey string, value float64) int
-
-	GetNumberSamples(storageKey string) []float64
-
-	StoreStateData(stateData U) error
+	GetStateData() U
 
 	LoadStateData() (U, error)
 }

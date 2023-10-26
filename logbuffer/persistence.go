@@ -30,13 +30,9 @@ func (st *Storage[T, U]) mkStorageFileName() string {
 	return fmt.Sprintf("%x.json", h.Sum32())
 }
 
-func (st *Storage[T, U]) StoreStateData(stateData U) error {
-	fullPath := filepath.Join(st.storageDirPath, st.mkStorageFileName())
-	data, err := json.Marshal(stateData)
-	if err != nil {
-		return fmt.Errorf("failed to store log buffer state data: %w", err)
-	}
-	return os.WriteFile(fullPath, data, 0644)
+func (st *Storage[T, U]) SetStateData(stateData U) {
+	st.stateData = stateData
+	st.stateWriting <- stateData
 }
 
 func (st *Storage[T, U]) LoadStateData() (U, error) {
@@ -51,4 +47,8 @@ func (st *Storage[T, U]) LoadStateData() (U, error) {
 		return ans, fmt.Errorf("failed to unmarshal log buffer state data: %w", err)
 	}
 	return ans, nil
+}
+
+func (st *Storage[T, U]) GetStateData() U {
+	return st.stateData
 }

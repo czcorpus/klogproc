@@ -17,6 +17,7 @@
 package analysis
 
 import (
+	"encoding/json"
 	"fmt"
 	"klogproc/email"
 	"klogproc/load"
@@ -35,6 +36,15 @@ import (
 const (
 	minPrevNumRequestsSampleSize = 10
 )
+
+type analysisState struct {
+	PrevNums  logbuffer.SampleWithReplac[int] `json:"prevNums"`
+	LastCheck time.Time                       `json:"timestamp"`
+}
+
+func (state *analysisState) MarshalJSON() ([]byte, error) {
+	return json.Marshal(state)
+}
 
 // Analyzer is used in the "preprocess" phase of
 // the servicelog.process. Using log records buffer,
@@ -70,26 +80,32 @@ func (analyzer *Analyzer[T]) Preprocess(
 	if analyzer.conf.BotDetection == nil || !tRec.ShouldBeAnalyzed() {
 		return ans
 	}
+	state := prevRecs.GetStateData()
+	tState, ok := state.(*analysisState)
+	if !ok {
+		log.Error().Str("appType", analyzer.appType).Msg("invalid analysis state type for")
+		return ans
+	}
+	defer prevRecs.SetStateData(tState)
 
-	lastCheck := prevRecs.GetTimestamp()
 	currTime := rec.GetTime()
 	if analyzer.realtimeClock {
 		currTime = time.Now()
 	}
 
-	if lastCheck.IsZero() {
-		prevRecs.SetTimestamp(currTime)
+	if tState.LastCheck.IsZero() {
+		tState.LastCheck = currTime
 		return ans
 	}
 
 	checkInterval := time.Duration(analyzer.conf.AnalysisIntervalSecs) * time.Second
-	if rec.GetTime().Sub(lastCheck) < checkInterval {
+	if rec.GetTime().Sub(tState.LastCheck) < checkInterval {
 		return ans
 	}
 
-	defer prevRecs.SetTimestamp(currTime)
-	numRec := prevRecs.TotalNumOfRecordsSince(lastCheck)
-	sampleSize := prevRecs.AddNumberSample("prevNums", float64(numRec))
+	defer func() { tState.LastCheck = currTime }()
+	numRec := prevRecs.TotalNumOfRecordsSince(tState.LastCheck)
+	sampleSize := tState.PrevNums.Add(numRec)
 	if sampleSize < minPrevNumRequestsSampleSize {
 		log.Debug().
 			Int("numRec", numRec).
@@ -99,16 +115,15 @@ func (analyzer *Analyzer[T]) Preprocess(
 		return ans
 	}
 
-	prevNumsRecs := prevRecs.GetNumberSamples("prevNums")
 	var meanReqs float64
-	for _, v := range prevNumsRecs {
-		meanReqs += v
+	for _, v := range tState.PrevNums.Data {
+		meanReqs += float64(v)
 	}
-	meanReqs /= float64(len(prevNumsRecs))
+	meanReqs /= float64(len(tState.PrevNums.Data))
 	trafficIncrease := float64(numRec) / meanReqs
 	log.Debug().
-		Time("lastCheck", lastCheck).
-		Int("prevNumRecsSampleSize", len(prevNumsRecs)).
+		Time("lastCheck", tState.LastCheck).
+		Int("prevNumRecsSampleSize", len(tState.PrevNums.Data)).
 		Float64("meanPrevReqs", meanReqs).
 		Int("numRec", numRec).
 		Float64("trafficIncrease", trafficIncrease).
@@ -132,14 +147,14 @@ func (analyzer *Analyzer[T]) Preprocess(
 					"<p>previous (sampled): <strong>%d</strong>, current: <strong>%d</strong> (increase %01.2f)<br />",
 					int(meanReqs), numRec, trafficIncrease),
 				fmt.Sprintf("checking interval: <strong>%s</strong><br />", checkInterval.String()),
-				fmt.Sprintf("last check: <strong>%v</strong></p>", datetime.FormatDatetime(lastCheck)),
+				fmt.Sprintf("last check: <strong>%v</strong></p>", datetime.FormatDatetime(tState.LastCheck)),
 			)
 		}()
 	}
 
 	counter := make(map[string]ReqCalcItem)
 	prevRecs.TotalForEach(func(item servicelog.InputRecord) {
-		if analyzer.isIgnoredIP(item.GetClientIP()) {
+		if analyzer.isIgnoredIP(item.GetClientIP()) || !item.GetTime().After(tState.LastCheck) {
 			return
 		}
 		curr, ok := counter[item.GetClientIP().String()]
@@ -223,7 +238,7 @@ func (analyzer *Analyzer[T]) Preprocess(
 				ipTable.String(),
 				fmt.Sprintf("<p>total requesting IPs: <strong>%d</strong><br />", sortedItems.Len()),
 				fmt.Sprintf("threshold: %d requests", threshold),
-				fmt.Sprintf("last check: <strong>%v</strong><br />", datetime.FormatDatetime(lastCheck)),
+				fmt.Sprintf("last check: <strong>%v</strong><br />", datetime.FormatDatetime(tState.LastCheck)),
 				fmt.Sprintf("checking interval: <strong>%s</strong><br /></p>", checkInterval.String()),
 			)
 		}()

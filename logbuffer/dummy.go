@@ -33,14 +33,6 @@ func (st *DummyStorage[T, U]) GetLastCheck(clusteringID string) time.Time {
 	return time.Time{}
 }
 
-func (st *DummyStorage[T, U]) SetTimestamp(t time.Time) time.Time {
-	return time.Time{}
-}
-
-func (st *DummyStorage[T, U]) GetTimestamp() time.Time {
-	return time.Time{}
-}
-
 func (st *DummyStorage[T, U]) RemoveAnalyzedRecords(clusteringID string, dt time.Time) {
 }
 
@@ -58,23 +50,12 @@ func (st *DummyStorage[T, U]) ForEach(clusteringID string, fn func(item T)) {
 func (st *DummyStorage[T, U]) TotalForEach(fn func(item T)) {
 }
 
-func (st *DummyStorage[T, U]) SetAuxNumber(name string, value float64) {
+func (st *DummyStorage[T, U]) SetStateData(stateData U) {
 }
 
-func (st *DummyStorage[T, U]) GetAuxNumber(name string) (float64, bool) {
-	return 0, false
-}
-
-func (st *DummyStorage[T, U]) AddNumberSample(storageKey string, value float64) int {
-	return 0
-}
-
-func (st *DummyStorage[T, U]) GetNumberSamples(storageKey string) []float64 {
-	return []float64{}
-}
-
-func (st *DummyStorage[T, U]) StoreStateData(stateData U) error {
-	return nil
+func (st *DummyStorage[T, U]) GetStateData() U {
+	var u U
+	return u
 }
 
 func (st *DummyStorage[T, U]) LoadStateData() (U, error) {

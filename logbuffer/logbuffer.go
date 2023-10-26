@@ -19,10 +19,13 @@ package logbuffer
 import (
 	"encoding/json"
 	"klogproc/load"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/czcorpus/cnc-gokit/collections"
+	"github.com/rs/zerolog/log"
 )
 
 type Storable interface {
@@ -60,14 +63,9 @@ type Storage[T Storable, U SerializableState] struct {
 	lastChecks     map[string]time.Time
 	lastChecksLock sync.RWMutex
 
-	// auxNumbers can be used to store some auxiliary summaries
-	auxNumbers     map[string]float64
-	auxNumbersLock sync.RWMutex
+	stateData U
 
-	auxNumberSamples     map[string]*SampleWithReplac[float64]
-	auxNumberSamplesLock sync.RWMutex
-
-	timestamp time.Time
+	stateWriting chan U
 }
 
 func (st *Storage[T, U]) AddRecord(rec T) {
@@ -94,22 +92,6 @@ func (st *Storage[T, U]) GetLastCheck(clusteringID string) time.Time {
 	defer st.lastChecksLock.RUnlock()
 	v := st.lastChecks[clusteringID]
 	return v
-}
-
-// SetTimestamp sets a global (for a concrete log file processing)
-// timestamp. This is typically used to mark last log analysis
-// when detecting bots or errors.
-func (st *Storage[T, U]) SetTimestamp(t time.Time) time.Time {
-	prev := st.timestamp
-	st.timestamp = t
-	return prev
-}
-
-// GetTimestamp gets a global (for a concrete log file processing)
-// timestamp. This is typically used to mark last log analysis
-// when detecting bots or errors.
-func (st *Storage[T, U]) GetTimestamp() time.Time {
-	return st.timestamp
 }
 
 // RemoveAnalyzedRecords removes all the log records older than `dt`
@@ -189,62 +171,31 @@ func (st *Storage[T, U]) TotalForEach(fn func(item T)) {
 	}
 }
 
-// SetAuxNumber sets an auxiliary number for later reuse.
-func (st *Storage[T, U]) SetAuxNumber(name string, value float64) {
-	st.auxNumbersLock.Lock()
-	defer st.auxNumbersLock.Unlock()
-	st.auxNumbers[name] = value
-}
-
-// GetAuxNumber gets a previously stored auxiliary number.
-func (st *Storage[T, U]) GetAuxNumber(name string) (float64, bool) {
-	st.auxNumbersLock.RLock()
-	defer st.auxNumbersLock.RUnlock()
-	v, ok := st.auxNumbers[name]
-	return v, ok
-}
-
-// AddNumberSample adds a new number to a "sample pool" which is
-// basically a list of numbers of a fixed size (= historyLookupItems).
-// When the list is full, items are replaced randomly by incoming values.
-//
-// This is mostly for keeping track of the current traffic intensity
-func (st *Storage[T, U]) AddNumberSample(storageKey string, value float64) int {
-	st.auxNumberSamplesLock.Lock()
-	defer st.auxNumberSamplesLock.Unlock()
-	samples, ok := st.auxNumberSamples[storageKey]
-	if !ok {
-		samples = NewSampleWithReplac[float64](st.initialCapacity)
-		st.auxNumberSamples[storageKey] = samples
-	}
-	return samples.Add(value)
-}
-
-// GetNumberSamples returns a list of previously stored numbers sample.
-// See `AddNumberSample` for more info.
-func (st *Storage[T, U]) GetNumberSamples(storageKey string) []float64 {
-	st.auxNumberSamplesLock.RLock()
-	defer st.auxNumberSamplesLock.RUnlock()
-	samples, ok := st.auxNumberSamples[storageKey]
-	if !ok {
-		return []float64{}
-	}
-	return samples.GetAll()
-}
-
 // NewStorage is a recommended factory for creating `Storage`
 func NewStorage[T Storable, U SerializableState](
 	bufferConf *load.BufferConf,
 	storageDirPath string,
 	analyzedLogFilePath string,
 ) *Storage[T, U] {
-	return &Storage[T, U]{
-		data:             make(map[string]*collections.CircularList[T]),
-		initialCapacity:  bufferConf.HistoryLookupItems,
-		lastChecks:       make(map[string]time.Time),
-		auxNumbers:       make(map[string]float64),
-		auxNumberSamples: make(map[string]*SampleWithReplac[float64]),
-		storageDirPath:   storageDirPath,
-		logFilePath:      analyzedLogFilePath,
+	ans := &Storage[T, U]{
+		data:            make(map[string]*collections.CircularList[T]),
+		initialCapacity: bufferConf.HistoryLookupItems,
+		lastChecks:      make(map[string]time.Time),
+		storageDirPath:  storageDirPath,
+		logFilePath:     analyzedLogFilePath,
+		stateWriting:    make(chan U),
 	}
+	go func() {
+		for stateData := range ans.stateWriting {
+			fullPath := filepath.Join(storageDirPath, ans.mkStorageFileName())
+			data, err := json.Marshal(stateData)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to marshal log buffer state data")
+			}
+			if err = os.WriteFile(fullPath, data, 0644); err != nil {
+				log.Error().Err(err).Msg("failed to store log buffer state data")
+			}
+		}
+	}()
+	return ans
 }

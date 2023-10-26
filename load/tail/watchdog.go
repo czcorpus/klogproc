@@ -114,6 +114,20 @@ func (conf *Conf) Validate() error {
 	if conf.MaxLinesPerCheck < conf.IntervalSecs*100 {
 		return errors.New("logTail.maxLinesPerCheck must be at least logTail.intervalSecs * 100")
 	}
+	isf, err := fs.IsFile(conf.WorklogPath)
+	if err != nil {
+		return fmt.Errorf("logTail.worklogPath failed to validate: %w", err)
+	}
+	if !isf {
+		return fmt.Errorf("logTail.worklogPath does not refer to a file")
+	}
+	isd, err := fs.IsDir(conf.LogBufferStateDir)
+	if err != nil {
+		return fmt.Errorf("logTail.logBufferStateDir failed to validate: %w", err)
+	}
+	if !isd {
+		return errors.New("logTail.logBufferStateDir does not seem to be a directory")
+	}
 	for _, fc := range conf.Files {
 		if err := fc.Validate(); err != nil {
 			return fmt.Errorf("logTail.files validation error: %w", err)
