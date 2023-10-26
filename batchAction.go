@@ -21,6 +21,7 @@ import (
 	"klogproc/email"
 	"klogproc/load/batch"
 	"klogproc/logbuffer"
+	"klogproc/logbuffer/analysis"
 	"klogproc/save"
 	"klogproc/save/elastic"
 	"klogproc/save/influx"
@@ -57,10 +58,20 @@ func runBatchAction(
 	var buffStorage servicelog.ServiceLogBuffer
 	if conf.LogFiles.Buffer != nil {
 		buffStorage = logbuffer.NewStorage[servicelog.InputRecord, logbuffer.SerializableState](
-			conf.LogFiles.Buffer, conf.LogFiles.LogBufferStateDir, conf.LogFiles.SrcPath)
+			conf.LogFiles.Buffer,
+			conf.LogFiles.LogBufferStateDir,
+			conf.LogFiles.SrcPath,
+			func() logbuffer.SerializableState {
+				return &analysis.AnalysisState{} // TODO
+			},
+		)
 
 	} else {
-		buffStorage = logbuffer.NewDummyStorage[servicelog.InputRecord, logbuffer.SerializableState]()
+		buffStorage = logbuffer.NewDummyStorage[servicelog.InputRecord, logbuffer.SerializableState](
+			func() logbuffer.SerializableState {
+				return &analysis.AnalysisState{} // TODO
+			},
+		)
 	}
 
 	processor := &CNKLogProcessor{

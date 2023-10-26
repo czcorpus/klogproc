@@ -21,6 +21,7 @@ import (
 )
 
 type DummyStorage[T Storable, U SerializableState] struct {
+	stateDataFactory func() U
 }
 
 func (st *DummyStorage[T, U]) AddRecord(rec T) {
@@ -58,11 +59,12 @@ func (st *DummyStorage[T, U]) GetStateData() U {
 	return u
 }
 
-func (st *DummyStorage[T, U]) LoadStateData() (U, error) {
-	var ans U
-	return ans, nil
+func (st *DummyStorage[T, U]) EmptyStateData() U {
+	return st.stateDataFactory()
 }
 
-func NewDummyStorage[T Storable, U SerializableState]() *DummyStorage[T, U] {
-	return &DummyStorage[T, U]{}
+func NewDummyStorage[T Storable, U SerializableState](stateDataFactory func() U) *DummyStorage[T, U] {
+	return &DummyStorage[T, U]{
+		stateDataFactory: stateDataFactory,
+	}
 }

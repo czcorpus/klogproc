@@ -26,6 +26,7 @@ import (
 	"klogproc/load/batch"
 	"klogproc/load/tail"
 	"klogproc/logbuffer"
+	"klogproc/logbuffer/analysis"
 	"klogproc/save"
 	"klogproc/save/elastic"
 	"klogproc/save/influx"
@@ -262,6 +263,9 @@ func newTailProcessor(
 					tailConf.Buffer,
 					conf.LogTail.LogBufferStateDir,
 					tailConf.Path,
+					func() logbuffer.SerializableState {
+						return &analysis.AnalysisState{} // TODO
+					},
 				)
 				logBuffers[tailConf.Buffer.ID] = buffStorage
 			}
@@ -271,11 +275,18 @@ func newTailProcessor(
 				tailConf.Buffer,
 				conf.LogTail.LogBufferStateDir,
 				tailConf.Path,
+				func() logbuffer.SerializableState {
+					return &analysis.AnalysisState{} // TODO
+				},
 			)
 		}
 
 	} else {
-		buffStorage = logbuffer.NewDummyStorage[servicelog.InputRecord, logbuffer.SerializableState]()
+		buffStorage = logbuffer.NewDummyStorage[servicelog.InputRecord, logbuffer.SerializableState](
+			func() logbuffer.SerializableState {
+				return &analysis.AnalysisState{} // TODO
+			},
+		)
 	}
 
 	return &tailProcessor{

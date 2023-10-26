@@ -65,6 +65,10 @@ type Storage[T Storable, U SerializableState] struct {
 
 	stateData U
 
+	hasLoadedStateData bool
+
+	stateDataFactory func() U
+
 	stateWriting chan U
 }
 
@@ -176,14 +180,16 @@ func NewStorage[T Storable, U SerializableState](
 	bufferConf *load.BufferConf,
 	storageDirPath string,
 	analyzedLogFilePath string,
+	stateDataFactory func() U,
 ) *Storage[T, U] {
 	ans := &Storage[T, U]{
-		data:            make(map[string]*collections.CircularList[T]),
-		initialCapacity: bufferConf.HistoryLookupItems,
-		lastChecks:      make(map[string]time.Time),
-		storageDirPath:  storageDirPath,
-		logFilePath:     analyzedLogFilePath,
-		stateWriting:    make(chan U),
+		data:             make(map[string]*collections.CircularList[T]),
+		initialCapacity:  bufferConf.HistoryLookupItems,
+		lastChecks:       make(map[string]time.Time),
+		storageDirPath:   storageDirPath,
+		logFilePath:      analyzedLogFilePath,
+		stateWriting:     make(chan U),
+		stateDataFactory: stateDataFactory,
 	}
 	go func() {
 		for stateData := range ans.stateWriting {

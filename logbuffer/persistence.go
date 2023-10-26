@@ -22,6 +22,9 @@ import (
 	"hash/fnv"
 	"os"
 	"path/filepath"
+
+	"github.com/czcorpus/cnc-gokit/fs"
+	"github.com/rs/zerolog/log"
 )
 
 func (st *Storage[T, U]) mkStorageFileName() string {
@@ -35,9 +38,16 @@ func (st *Storage[T, U]) SetStateData(stateData U) {
 	st.stateWriting <- stateData
 }
 
-func (st *Storage[T, U]) LoadStateData() (U, error) {
-	var ans U
+func (st *Storage[T, U]) loadStateData() (U, error) {
+	var ans U = st.EmptyStateData()
 	fullPath := filepath.Join(st.storageDirPath, st.mkStorageFileName())
+	isf, err := fs.IsFile(fullPath)
+	if err != nil {
+		return ans, fmt.Errorf("failed to determine state file properties: %w", err)
+	}
+	if !isf {
+		return ans, nil
+	}
 	data, err := os.ReadFile(fullPath)
 	if err != nil {
 		return ans, fmt.Errorf("failed to read log buffer state data: %w", err)
@@ -49,6 +59,21 @@ func (st *Storage[T, U]) LoadStateData() (U, error) {
 	return ans, nil
 }
 
+func (st *Storage[T, U]) EmptyStateData() U {
+	return st.stateDataFactory()
+}
+
 func (st *Storage[T, U]) GetStateData() U {
+	if !st.hasLoadedStateData {
+		var err error
+		st.stateData, err = st.loadStateData()
+		if err != nil {
+			log.Error().Err(err).Msg("failed to load state data, using empty")
+			st.stateData = st.EmptyStateData()
+
+		} else {
+			st.hasLoadedStateData = true
+		}
+	}
 	return st.stateData
 }
