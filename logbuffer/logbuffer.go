@@ -35,6 +35,7 @@ type Storable interface {
 
 type SerializableState interface {
 	json.Marshaler
+	IsZero() bool
 }
 
 // Storage keeps a defined number of log records in memory
