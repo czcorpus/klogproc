@@ -76,13 +76,18 @@ func (analyzer *Analyzer[T]) Preprocess(
 	if analyzer.realtimeClock {
 		currTime = time.Now()
 	}
-	checkInterval := time.Duration(analyzer.conf.AnalysisIntervalSecs) * time.Second
 
-	if lastCheck.IsZero() || rec.GetTime().Sub(lastCheck) < checkInterval {
+	if lastCheck.IsZero() {
+		prevRecs.SetTimestamp(currTime)
 		return ans
 	}
-	defer prevRecs.SetTimestamp(currTime)
 
+	checkInterval := time.Duration(analyzer.conf.AnalysisIntervalSecs) * time.Second
+	if rec.GetTime().Sub(lastCheck) < checkInterval {
+		return ans
+	}
+
+	defer prevRecs.SetTimestamp(currTime)
 	numRec := prevRecs.TotalNumOfRecordsSince(lastCheck)
 	sampleSize := prevRecs.AddNumberSample("prevNums", float64(numRec))
 	if sampleSize < minPrevNumRequestsSampleSize {
