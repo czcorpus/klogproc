@@ -21,7 +21,6 @@ import (
 
 	"klogproc/email"
 	"klogproc/load"
-	"klogproc/logbuffer"
 	"klogproc/logbuffer/analysis"
 	"klogproc/servicelog"
 	"klogproc/servicelog/wag06"
@@ -58,7 +57,7 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return t.analyzer.Preprocess(rec, prevRecs)
 }

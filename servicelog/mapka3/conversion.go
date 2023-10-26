@@ -23,7 +23,6 @@ import (
 
 	"klogproc/clustering"
 	"klogproc/load"
-	"klogproc/logbuffer"
 	"klogproc/servicelog"
 
 	"github.com/rs/zerolog/log"
@@ -74,7 +73,7 @@ func (t *Transformer) HistoryLookupItems() int {
 
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord,
-	prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	clusteringID := rec.ClusteringClientID()
 	lastCheck := prevRecs.GetLastCheck(clusteringID)

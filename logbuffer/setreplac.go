@@ -21,34 +21,34 @@ import (
 )
 
 type SampleWithReplac[T any] struct {
-	data []T
-	cap  int
+	Data []T `json:"data"`
+	Cap  int `json:"cap"`
 }
 
 // Add adds a new value to the sample.
 // It returns the sample size after the value was added
 func (sample *SampleWithReplac[T]) Add(item T) int {
-	if len(sample.data) < sample.cap {
-		sample.data = append(sample.data, item)
+	if len(sample.Data) < sample.Cap {
+		sample.Data = append(sample.Data, item)
 
 	} else {
-		idx := rand.Intn(sample.cap)
-		sample.data[idx] = item
+		idx := rand.Intn(sample.Cap)
+		sample.Data[idx] = item
 	}
-	return len(sample.data)
+	return len(sample.Data)
 }
 
 func (sample SampleWithReplac[T]) Len() int {
-	return len(sample.data)
+	return len(sample.Data)
 }
 
 func (sample SampleWithReplac[T]) GetAll() []T {
-	return sample.data
+	return sample.Data
 }
 
 func NewSampleWithReplac[T any](initialCap int) *SampleWithReplac[T] {
 	return &SampleWithReplac[T]{
-		data: make([]T, 0, initialCap),
-		cap:  initialCap,
+		Data: make([]T, 0, initialCap),
+		Cap:  initialCap,
 	}
 }

@@ -16,7 +16,6 @@ package trfactory
 
 import (
 	"fmt"
-	"klogproc/logbuffer"
 	"klogproc/servicelog"
 	"klogproc/servicelog/wag06"
 	"klogproc/servicelog/wag07"
@@ -41,7 +40,7 @@ func (k *wag06Transformer) HistoryLookupItems() int {
 }
 
 func (k *wag06Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -67,7 +66,7 @@ func (k *wag07Transformer) HistoryLookupItems() int {
 }
 
 func (k *wag07Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

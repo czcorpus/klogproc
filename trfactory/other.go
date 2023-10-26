@@ -16,7 +16,6 @@ package trfactory
 
 import (
 	"fmt"
-	"klogproc/logbuffer"
 	"klogproc/servicelog"
 	"klogproc/servicelog/korpusdb"
 	"klogproc/servicelog/kwords"
@@ -50,7 +49,7 @@ func (k *kwordsTransformer) HistoryLookupItems() int {
 }
 
 func (k *kwordsTransformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -76,7 +75,7 @@ func (k *korpusDBTransformer) HistoryLookupItems() int {
 }
 
 func (k *korpusDBTransformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -89,7 +88,12 @@ type morfioTransformer struct {
 
 // Transform transforms Morfio app log record types as general InputRecord
 // In case of type mismatch, error is returned.
-func (s *morfioTransformer) Transform(logRec servicelog.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (servicelog.OutputRecord, error) {
+func (s *morfioTransformer) Transform(
+	logRec servicelog.InputRecord,
+	recType string,
+	tzShiftMin int,
+	anonymousUsers []int,
+) (servicelog.OutputRecord, error) {
 	tRec, ok := logRec.(*morfio.InputRecord)
 	if ok {
 		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
@@ -102,7 +106,7 @@ func (k *morfioTransformer) HistoryLookupItems() int {
 }
 
 func (k *morfioTransformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -128,7 +132,7 @@ func (k *skeTransformer) HistoryLookupItems() int {
 }
 
 func (k *skeTransformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -154,7 +158,7 @@ func (k *shinyTransformer) HistoryLookupItems() int {
 }
 
 func (k *shinyTransformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -180,7 +184,7 @@ func (k *sydTransformer) HistoryLookupItems() int {
 }
 
 func (k *sydTransformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -206,7 +210,7 @@ func (k *treqTransformer) HistoryLookupItems() int {
 }
 
 func (k *treqTransformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

@@ -51,6 +51,7 @@ type Conf struct {
 	SrcPath                string           `json:"srcPath"`
 	PartiallyMatchingFiles bool             `json:"partiallyMatchingFiles"`
 	WorklogPath            string           `json:"worklogPath"`
+	LogBufferStateDir      string           `json:"logBufferStateDir"`
 	AppType                string           `json:"appType"`
 	Buffer                 *load.BufferConf `json:"buffer"`
 

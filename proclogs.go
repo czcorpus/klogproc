@@ -24,7 +24,6 @@ import (
 	"klogproc/config"
 	"klogproc/fsop"
 	"klogproc/load/batch"
-	"klogproc/logbuffer"
 	"klogproc/servicelog"
 	"klogproc/users"
 
@@ -63,7 +62,7 @@ type CNKLogProcessor struct {
 	numNonLoggable int
 	skipAnalysis   bool
 	logTransformer servicelog.LogItemTransformer
-	logBuffer      logbuffer.AbstractStorage[servicelog.InputRecord]
+	logBuffer      servicelog.ServiceLogBuffer
 }
 
 func (clp *CNKLogProcessor) recordIsLoggable(logRec servicelog.InputRecord) bool {

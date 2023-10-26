@@ -16,7 +16,6 @@ package trfactory
 
 import (
 	"fmt"
-	"klogproc/logbuffer"
 	"klogproc/servicelog"
 	"klogproc/servicelog/mapka"
 	"klogproc/servicelog/mapka2"
@@ -44,7 +43,7 @@ func (k *mapkaTransformer) HistoryLookupItems() int {
 }
 
 func (k *mapkaTransformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -70,7 +69,7 @@ func (k *mapka2Transformer) HistoryLookupItems() int {
 }
 
 func (k *mapka2Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }
@@ -96,7 +95,7 @@ func (k *mapka3Transformer) HistoryLookupItems() int {
 }
 
 func (k *mapka3Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)
 }

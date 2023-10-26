@@ -22,7 +22,6 @@ import (
 	"strconv"
 	"time"
 
-	"klogproc/logbuffer"
 	"klogproc/servicelog"
 )
 
@@ -66,7 +65,7 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord],
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return []servicelog.InputRecord{rec}
 }

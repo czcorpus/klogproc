@@ -52,14 +52,15 @@ func runBatchAction(
 		nullMailNot,
 	)
 	if err != nil {
-		log.Fatal().Msgf("%s", err)
+		log.Fatal().Err(err).Msg("failed to run batch action")
 	}
-	var buffStorage logbuffer.AbstractStorage[servicelog.InputRecord]
+	var buffStorage servicelog.ServiceLogBuffer
 	if conf.LogFiles.Buffer != nil {
-		buffStorage = logbuffer.NewStorage[servicelog.InputRecord](conf.LogFiles.Buffer)
+		buffStorage = logbuffer.NewStorage[servicelog.InputRecord, logbuffer.SerializableState](
+			conf.LogFiles.Buffer, conf.LogFiles.LogBufferStateDir, conf.LogFiles.SrcPath)
 
 	} else {
-		buffStorage = logbuffer.NewDummyStorage[servicelog.InputRecord]()
+		buffStorage = logbuffer.NewDummyStorage[servicelog.InputRecord, logbuffer.SerializableState]()
 	}
 
 	processor := &CNKLogProcessor{

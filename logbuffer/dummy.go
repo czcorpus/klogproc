@@ -20,59 +20,49 @@ import (
 	"time"
 )
 
-type DummyStorage[T Storable] struct {
+type DummyStorage[T Storable, U SerializableState] struct {
 }
 
-func (st *DummyStorage[T]) AddRecord(rec T) {
+func (st *DummyStorage[T, U]) AddRecord(rec T) {
 }
 
-func (st *DummyStorage[T]) ConfirmRecordCheck(rec Storable) {
+func (st *DummyStorage[T, U]) ConfirmRecordCheck(rec Storable) {
 }
 
-func (st *DummyStorage[T]) GetLastCheck(clusteringID string) time.Time {
+func (st *DummyStorage[T, U]) GetLastCheck(clusteringID string) time.Time {
 	return time.Time{}
 }
 
-func (st *DummyStorage[T]) SetTimestamp(t time.Time) time.Time {
-	return time.Time{}
+func (st *DummyStorage[T, U]) RemoveAnalyzedRecords(clusteringID string, dt time.Time) {
 }
 
-func (st *DummyStorage[T]) GetTimestamp() time.Time {
-	return time.Time{}
-}
-
-func (st *DummyStorage[T]) RemoveAnalyzedRecords(clusteringID string, dt time.Time) {
-}
-
-func (st *DummyStorage[T]) NumOfRecords(clusteringID string) int {
+func (st *DummyStorage[T, U]) NumOfRecords(clusteringID string) int {
 	return 0
 }
 
-func (st *DummyStorage[T]) TotalNumOfRecordsSince(dt time.Time) int {
+func (st *DummyStorage[T, U]) TotalNumOfRecordsSince(dt time.Time) int {
 	return 0
 }
 
-func (st *DummyStorage[T]) ForEach(clusteringID string, fn func(item T)) {
+func (st *DummyStorage[T, U]) ForEach(clusteringID string, fn func(item T)) {
 }
 
-func (st *DummyStorage[T]) TotalForEach(fn func(item T)) {
+func (st *DummyStorage[T, U]) TotalForEach(fn func(item T)) {
 }
 
-func (st *DummyStorage[T]) SetAuxNumber(name string, value float64) {
+func (st *DummyStorage[T, U]) SetStateData(stateData U) {
 }
 
-func (st *DummyStorage[T]) GetAuxNumber(name string) (float64, bool) {
-	return 0, false
+func (st *DummyStorage[T, U]) GetStateData() U {
+	var u U
+	return u
 }
 
-func (st *DummyStorage[T]) AddNumberSample(storageKey string, value float64) int {
-	return 0
+func (st *DummyStorage[T, U]) LoadStateData() (U, error) {
+	var ans U
+	return ans, nil
 }
 
-func (st *DummyStorage[T]) GetNumberSamples(storageKey string) []float64 {
-	return []float64{}
-}
-
-func NewDummyStorage[T Storable]() *DummyStorage[T] {
-	return &DummyStorage[T]{}
+func NewDummyStorage[T Storable, U SerializableState]() *DummyStorage[T, U] {
+	return &DummyStorage[T, U]{}
 }
