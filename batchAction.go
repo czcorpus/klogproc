@@ -62,14 +62,18 @@ func runBatchAction(
 			conf.LogFiles.LogBufferStateDir,
 			conf.LogFiles.SrcPath,
 			func() logbuffer.SerializableState {
-				return &analysis.AnalysisState{} // TODO
+				return &analysis.AnalysisState{
+					PrevNums: logbuffer.NewSampleWithReplac[int](1000), // TODO hardcoded 1000
+				}
 			},
 		)
 
 	} else {
 		buffStorage = logbuffer.NewDummyStorage[servicelog.InputRecord, logbuffer.SerializableState](
 			func() logbuffer.SerializableState {
-				return &analysis.AnalysisState{} // TODO
+				return &analysis.AnalysisState{
+					PrevNums: logbuffer.NewSampleWithReplac[int](1000), // TODO hardcoded 1000
+				}
 			},
 		)
 	}

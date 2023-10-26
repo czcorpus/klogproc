@@ -16,7 +16,15 @@
 
 package load
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/rs/zerolog/log"
+)
+
+const (
+	DfltPrevNumReqsSampleSize = 500
+)
 
 type ClusteringDBScanConf struct {
 	MinDensity int     `json:"minDensity"`
@@ -46,6 +54,8 @@ type BotDetectionConf struct {
 	// a typical (or even current) day requests progression, this is
 	// rather a hint then a 100% evidence of bot activity.
 	TrafficReportingThreshold float64 `json:"trafficReportingThreshold"`
+
+	PrevNumReqsSampleSize int `json:"prevNumReqsSampleSize"`
 }
 
 type BufferConf struct {
@@ -91,6 +101,16 @@ func (bc *BufferConf) Validate() error {
 		if bc.ClusteringDBScan.MinDensity <= 0 {
 			return errors.New(
 				"failed to validate batch file processing buffer: clusteringDbScan.minDensity must be > 0")
+		}
+	}
+	if bc.BotDetection != nil {
+		if bc.BotDetection.PrevNumReqsSampleSize == 0 {
+			log.Warn().
+				Int("value", DfltPrevNumReqsSampleSize).
+				Msg("botDetection.prevNumReqsSampleSize not set, using default")
+
+		} else if bc.BotDetection.PrevNumReqsSampleSize < 0 {
+			return errors.New("failed to validate botDetection.prevNumReqsSampleSize, must be > 0")
 		}
 	}
 	return nil
