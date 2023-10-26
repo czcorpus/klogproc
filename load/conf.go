@@ -79,6 +79,12 @@ func (bc *BufferConf) IsShared() bool {
 	return bc.ID != ""
 }
 
+func (bc *BufferConf) IsReference() bool {
+	return bc != nil && bc.ID != "" && bc.HistoryLookupItems == 0 &&
+		bc.BotDetection == nil && bc.ClusteringDBScan == nil &&
+		bc.AnalysisIntervalSecs == 0
+}
+
 func (bc *BufferConf) HasConfiguredBufferProcessing() bool {
 	return bc.HistoryLookupItems > 0 && bc.AnalysisIntervalSecs > 0 &&
 		(bc.BotDetection != nil || bc.ClusteringDBScan != nil)
