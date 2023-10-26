@@ -53,7 +53,7 @@ func (fc *FileConf) Validate() error {
 	if pathExists := fs.PathExists(fc.Path); !pathExists {
 		return fmt.Errorf("failed to validate FileConf for %s - path does not exist	", fc.Path)
 	}
-	if fc.Buffer != nil {
+	if fc.Buffer != nil && fc.Buffer.HasConfiguredBufferProcessing() {
 		return fc.Buffer.Validate()
 	}
 	return nil
