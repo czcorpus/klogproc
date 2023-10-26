@@ -38,15 +38,15 @@ const (
 )
 
 type AnalysisState struct {
-	PrevNums  logbuffer.SampleWithReplac[int] `json:"prevNums"`
-	LastCheck time.Time                       `json:"timestamp"`
+	PrevNums  *logbuffer.SampleWithReplac[int] `json:"prevNums"`
+	LastCheck time.Time                        `json:"timestamp"`
 }
 
 // while looking superfluous, we need this to fullfill a required interface
 func (state *AnalysisState) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		PrevNums  logbuffer.SampleWithReplac[int] `json:"prevNums"`
-		LastCheck time.Time                       `json:"timestamp"`
+		PrevNums  *logbuffer.SampleWithReplac[int] `json:"prevNums"`
+		LastCheck time.Time                        `json:"timestamp"`
 	}{
 		PrevNums:  state.PrevNums,
 		LastCheck: state.LastCheck,
