@@ -55,5 +55,5 @@ type AbstractStorage[T Storable, U SerializableState] interface {
 
 	GetStateData() U
 
-	LoadStateData() (U, error)
+	EmptyStateData() U
 }

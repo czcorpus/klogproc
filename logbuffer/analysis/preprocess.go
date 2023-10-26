@@ -37,12 +37,12 @@ const (
 	minPrevNumRequestsSampleSize = 10
 )
 
-type analysisState struct {
+type AnalysisState struct {
 	PrevNums  logbuffer.SampleWithReplac[int] `json:"prevNums"`
 	LastCheck time.Time                       `json:"timestamp"`
 }
 
-func (state *analysisState) MarshalJSON() ([]byte, error) {
+func (state *AnalysisState) MarshalJSON() ([]byte, error) {
 	return json.Marshal(state)
 }
 
@@ -81,7 +81,7 @@ func (analyzer *Analyzer[T]) Preprocess(
 		return ans
 	}
 	state := prevRecs.GetStateData()
-	tState, ok := state.(*analysisState)
+	tState, ok := state.(*AnalysisState)
 	if !ok {
 		log.Error().Str("appType", analyzer.appType).Msg("invalid analysis state type for")
 		return ans
