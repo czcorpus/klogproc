@@ -264,7 +264,7 @@ func newTailProcessor(
 					conf.LogTail.LogBufferStateDir,
 					tailConf.Path,
 					func() logbuffer.SerializableState {
-						return &analysis.AnalysisState{
+						return &analysis.BotAnalysisState{
 							PrevNums: logbuffer.NewSampleWithReplac[int](tailConf.Buffer.BotDetection.PrevNumReqsSampleSize),
 						}
 					},
@@ -278,7 +278,7 @@ func newTailProcessor(
 				conf.LogTail.LogBufferStateDir,
 				tailConf.Path,
 				func() logbuffer.SerializableState {
-					return &analysis.AnalysisState{
+					return &analysis.BotAnalysisState{
 						PrevNums: logbuffer.NewSampleWithReplac[int](tailConf.Buffer.BotDetection.PrevNumReqsSampleSize),
 					}
 				},
@@ -288,7 +288,7 @@ func newTailProcessor(
 	} else {
 		buffStorage = logbuffer.NewDummyStorage[servicelog.InputRecord, logbuffer.SerializableState](
 			func() logbuffer.SerializableState {
-				return &analysis.AnalysisState{
+				return &analysis.BotAnalysisState{
 					PrevNums: logbuffer.NewSampleWithReplac[int](tailConf.Buffer.BotDetection.PrevNumReqsSampleSize),
 				}
 			},

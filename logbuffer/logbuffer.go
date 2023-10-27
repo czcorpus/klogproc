@@ -34,8 +34,17 @@ type Storable interface {
 }
 
 type SerializableState interface {
-	json.Marshaler
-	IsZero() bool
+	ToJSON() ([]byte, error)
+
+	// AfterLoadNormalize should make sure loaded
+	// data matches the provided `conf`.
+	// E.g. if stored samples have length of 100
+	// and the current configuration requires 20,
+	// the method should cut the sample so it matches
+	// the configuration.
+	// It should also fix broken stored data (e.g. samples
+	// with size 0)
+	AfterLoadNormalize(conf *load.BufferConf)
 }
 
 // Storage keeps a defined number of log records in memory
@@ -51,7 +60,7 @@ type SerializableState interface {
 // The `U` type is a type used to store state data when dealing
 // with persistence.
 type Storage[T Storable, U SerializableState] struct {
-	initialCapacity int
+	conf *load.BufferConf
 
 	storageDirPath string
 
@@ -76,7 +85,7 @@ type Storage[T Storable, U SerializableState] struct {
 func (st *Storage[T, U]) AddRecord(rec T) {
 	st.dataLock.Lock()
 	defer st.dataLock.Unlock()
-	if st.initialCapacity > 0 {
+	if st.conf.HistoryLookupItems > 0 {
 		cid := rec.ClusteringClientID()
 		_, ok := st.data[cid]
 		if !ok {
@@ -123,6 +132,22 @@ func (st *Storage[T, U]) NumOfRecords(clusteringID string) int {
 		return 0
 	}
 	return v.Len()
+}
+
+func (st *Storage[T, U]) ClearOldRecords(maxAge time.Time) int {
+	st.dataLock.Lock()
+	defer st.dataLock.Unlock()
+	var totalRm int
+	for _, records := range st.data {
+		records.ShiftUntil(func(item T) bool {
+			ans := maxAge.After(item.GetTime())
+			if ans {
+				totalRm++
+			}
+			return ans
+		})
+	}
+	return totalRm
 }
 
 // TotalNumOfRecords returns total number of stored records
@@ -185,7 +210,7 @@ func NewStorage[T Storable, U SerializableState](
 ) *Storage[T, U] {
 	ans := &Storage[T, U]{
 		data:             make(map[string]*collections.CircularList[T]),
-		initialCapacity:  bufferConf.HistoryLookupItems,
+		conf:             bufferConf,
 		lastChecks:       make(map[string]time.Time),
 		storageDirPath:   storageDirPath,
 		logFilePath:      analyzedLogFilePath,

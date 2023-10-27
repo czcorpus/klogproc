@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	DfltPrevNumReqsSampleSize = 500
+	DfltPrevNumReqsSampleSize = 10
 )
 
 type ClusteringDBScanConf struct {

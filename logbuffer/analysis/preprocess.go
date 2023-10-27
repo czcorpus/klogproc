@@ -23,6 +23,7 @@ import (
 	"klogproc/load"
 	"klogproc/logbuffer"
 	"klogproc/servicelog"
+	"math/rand"
 	"net"
 	"sort"
 	"time"
@@ -35,26 +36,32 @@ import (
 
 const (
 	minPrevNumRequestsSampleSize = 10
+	bufferCleanupProbability     = 0.1
+	bufferCleanupMaxAge          = time.Hour * 6
 )
 
-type AnalysisState struct {
+// BotAnalysisState contains values helpful to determine
+// suspicious traffic in a log.
+type BotAnalysisState struct {
 	PrevNums  *logbuffer.SampleWithReplac[int] `json:"prevNums"`
 	LastCheck time.Time                        `json:"timestamp"`
 }
 
 // while looking superfluous, we need this to fullfill a required interface
-func (state *AnalysisState) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		PrevNums  *logbuffer.SampleWithReplac[int] `json:"prevNums"`
-		LastCheck time.Time                        `json:"timestamp"`
-	}{
-		PrevNums:  state.PrevNums,
-		LastCheck: state.LastCheck,
-	})
+func (state *BotAnalysisState) ToJSON() ([]byte, error) {
+	return json.Marshal(state)
 }
 
-func (state *AnalysisState) IsZero() bool {
-	return len(state.PrevNums.Data) == 0 && state.LastCheck.IsZero()
+func (state *BotAnalysisState) AfterLoadNormalize(conf *load.BufferConf) {
+	if state.LastCheck.IsZero() && state.PrevNums.Len() > 0 {
+		state.LastCheck = time.Now()
+
+	} else if state.PrevNums.Cap == 0 {
+		state.PrevNums = logbuffer.NewSampleWithReplac[int](state.PrevNums.Cap)
+	}
+	if state.PrevNums.Cap != conf.BotDetection.PrevNumReqsSampleSize {
+		state.PrevNums.Resize(conf.BotDetection.PrevNumReqsSampleSize)
+	}
 }
 
 // Analyzer is used in the "preprocess" phase of
@@ -92,7 +99,7 @@ func (analyzer *Analyzer[T]) Preprocess(
 		return ans
 	}
 	state := prevRecs.GetStateData()
-	tState, ok := state.(*AnalysisState)
+	tState, ok := state.(*BotAnalysisState)
 	if !ok {
 		log.Error().Str("appType", analyzer.appType).Msg("invalid analysis state type for")
 		return ans
@@ -254,6 +261,16 @@ func (analyzer *Analyzer[T]) Preprocess(
 			)
 		}()
 	}
+
+	if rand.Float64() < bufferCleanupProbability {
+		limitDt := time.Now().Add(-bufferCleanupMaxAge)
+		numRm := prevRecs.ClearOldRecords(limitDt)
+		log.Info().
+			Int("numRemoved", numRm).
+			Int("lenghtAfter", prevRecs.TotalNumOfRecordsSince(limitDt)).
+			Msg("performed buffer records cleanup")
+	}
+
 	return ans
 }
 
