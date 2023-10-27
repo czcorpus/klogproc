@@ -67,15 +67,14 @@ func (st *Storage[T, U]) GetStateData() U {
 	if !st.hasLoadedStateData {
 		var err error
 		st.stateData, err = st.loadStateData()
+
 		if err != nil {
 			log.Error().Err(err).Msg("failed to load state data, using empty")
 			st.stateData = st.EmptyStateData()
 
-		} else if st.stateData.IsZero() {
-			st.stateData = st.EmptyStateData()
-
 		} else {
 			st.hasLoadedStateData = true
+			st.stateData.AfterLoadNormalize(st.conf)
 		}
 	}
 	return st.stateData

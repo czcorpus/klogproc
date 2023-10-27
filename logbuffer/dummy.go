@@ -41,6 +41,10 @@ func (st *DummyStorage[T, U]) NumOfRecords(clusteringID string) int {
 	return 0
 }
 
+func (st *DummyStorage[T, U]) ClearOldRecords(maxAge time.Time) int {
+	return 0
+}
+
 func (st *DummyStorage[T, U]) TotalNumOfRecordsSince(dt time.Time) int {
 	return 0
 }

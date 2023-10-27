@@ -38,11 +38,21 @@ func (sample *SampleWithReplac[T]) Add(item T) int {
 	return len(sample.Data)
 }
 
-func (sample SampleWithReplac[T]) Len() int {
+func (sample *SampleWithReplac[T]) Resize(newSize int) {
+	if newSize > sample.Cap {
+		sample.Cap = newSize
+
+	} else if newSize < sample.Cap {
+		sample.Cap = newSize
+		sample.Data = sample.Data[:newSize]
+	}
+}
+
+func (sample *SampleWithReplac[T]) Len() int {
 	return len(sample.Data)
 }
 
-func (sample SampleWithReplac[T]) GetAll() []T {
+func (sample *SampleWithReplac[T]) GetAll() []T {
 	return sample.Data
 }
 

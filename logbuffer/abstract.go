@@ -36,6 +36,13 @@ type AbstractStorage[T Storable, U SerializableState] interface {
 
 	NumOfRecords(clusteringID string) int
 
+	// ClearOldRecords is a maintenance function called
+	// randomly by a respective log processor to keep
+	// the number of records in RAM at a reasonable level.
+	// The method should return number of removed items
+	// (it is mostly for better overview, i.e. not essential)
+	ClearOldRecords(maxAge time.Time) int
+
 	// TotalNumOfRecordsSince returns number of records
 	// for each clusteringID with its time greater or equal
 	// to the `dt`.
