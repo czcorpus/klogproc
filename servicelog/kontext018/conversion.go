@@ -38,7 +38,7 @@ func exportArgs(data map[string]interface{}) map[string]interface{} {
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	analyzer *analysis.Analyzer[*QueryInputRecord]
+	analyzer *analysis.BotAnalyzer[*QueryInputRecord]
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
@@ -80,7 +80,7 @@ func NewTransformer(
 	realtimeClock bool,
 	emailNotifier email.MailNotifier,
 ) *Transformer {
-	analyzer := analysis.NewAnalyzer[*QueryInputRecord]("kontext", bufferConf, realtimeClock, emailNotifier)
+	analyzer := analysis.NewBotAnalyzer[*QueryInputRecord]("kontext", bufferConf, realtimeClock, emailNotifier)
 	return &Transformer{
 		analyzer: analyzer,
 	}

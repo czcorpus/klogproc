@@ -21,16 +21,18 @@ import (
 	"encoding/hex"
 	"time"
 
-	"klogproc/clustering"
 	"klogproc/load"
+	"klogproc/logbuffer/analysis"
 	"klogproc/servicelog"
-
-	"github.com/rs/zerolog/log"
 )
 
 // createID creates an idempotent ID of rec based on its properties.
-func createID(rec *OutputRecord) string {
-	str := rec.Type + rec.Path + rec.Datetime + rec.IPAddress + rec.UserID
+func createID(rec *OutputRecord, tzShiftMin int) string {
+	str := rec.Type +
+		rec.Path +
+		rec.GetTime().Add(time.Minute*time.Duration(tzShiftMin)).Format(time.RFC3339Nano) +
+		rec.IPAddress +
+		rec.UserID
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }
@@ -38,6 +40,7 @@ func createID(rec *OutputRecord) string {
 // Transformer converts a source log object into a destination one
 type Transformer struct {
 	bufferConf *load.BufferConf
+	analyzer   servicelog.Preprocessor
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
@@ -63,7 +66,7 @@ func (t *Transformer) Transform(
 	if r.ClusterSize > 0 {
 		r.IsQuery = true
 	}
-	r.ID = createID(r)
+	r.ID = createID(r, tzShiftMin)
 	return r, nil
 }
 
@@ -75,43 +78,14 @@ func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord,
 	prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
-	clusteringID := rec.ClusteringClientID()
-	lastCheck := prevRecs.GetLastCheck(clusteringID)
-	ci := time.Duration(t.bufferConf.AnalysisIntervalSecs) * time.Second
-	if rec.GetTime().Sub(lastCheck) > ci {
-		items := make([]servicelog.InputRecord, 0, prevRecs.NumOfRecords(clusteringID))
-		prevRecs.ForEach(clusteringID, func(item servicelog.InputRecord) {
-			items = append(items, item)
-		})
-		if len(items) > 0 {
-			clustered := clustering.Analyze(
-				t.bufferConf.ClusteringDBScan.MinDensity,
-				t.bufferConf.ClusteringDBScan.Epsilon,
-				items,
-			)
-			log.Debug().
-				Int("minDensity", t.bufferConf.ClusteringDBScan.MinDensity).
-				Float64("epsilon", t.bufferConf.ClusteringDBScan.Epsilon).
-				Time("firstRecord", items[0].GetTime()).
-				Time("lastRecord", items[len(items)-1].GetTime()).
-				Int("numAnalyzedRecords", len(items)).
-				Int("foundClusters", len(clustered)).
-				Msgf("log clustering in mapka3")
-
-			if len(clustered) > 0 {
-				prevRecs.RemoveAnalyzedRecords(clusteringID, rec.GetTime())
-				prevRecs.ConfirmRecordCheck(rec)
-				return clustered
-			}
-		}
-	}
-	return []servicelog.InputRecord{rec}
+	return t.analyzer.Preprocess(rec, prevRecs)
 }
 
 // NewTransformer is a default constructor for the Transformer.
 // It also loads user ID map from a configured file (if exists).
-func NewTransformer(bufferConf *load.BufferConf) *Transformer {
+func NewTransformer(bufferConf *load.BufferConf, realtimeClock bool) *Transformer {
 	return &Transformer{
 		bufferConf: bufferConf,
+		analyzer:   analysis.NewClusteringAnalyzer[*InputRecord]("mapka", bufferConf, realtimeClock),
 	}
 }

@@ -67,6 +67,10 @@ func (st *DummyStorage[T, U]) EmptyStateData() U {
 	return st.stateDataFactory()
 }
 
+func (st *DummyStorage[T, U]) Report() map[string]any {
+	return map[string]any{}
+}
+
 func NewDummyStorage[T Storable, U SerializableState](stateDataFactory func() U) *DummyStorage[T, U] {
 	return &DummyStorage[T, U]{
 		stateDataFactory: stateDataFactory,
