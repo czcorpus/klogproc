@@ -244,7 +244,7 @@ func newTailProcessor(
 	var buffStorage logbuffer.AbstractStorage[servicelog.InputRecord, logbuffer.SerializableState]
 	if tailConf.Buffer != nil {
 		var stateFactory func() logbuffer.SerializableState
-		if conf.LogFiles.Buffer.BotDetection != nil {
+		if tailConf.Buffer.BotDetection != nil {
 			stateFactory = func() logbuffer.SerializableState {
 				return &analysis.BotAnalysisState{
 					PrevNums: logbuffer.NewSampleWithReplac[int](tailConf.Buffer.BotDetection.PrevNumReqsSampleSize),
