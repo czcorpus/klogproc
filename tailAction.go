@@ -243,6 +243,20 @@ func newTailProcessor(
 
 	var buffStorage logbuffer.AbstractStorage[servicelog.InputRecord, logbuffer.SerializableState]
 	if tailConf.Buffer != nil {
+		var stateFactory func() logbuffer.SerializableState
+		if conf.LogFiles.Buffer.BotDetection != nil {
+			stateFactory = func() logbuffer.SerializableState {
+				return &analysis.BotAnalysisState{
+					PrevNums: logbuffer.NewSampleWithReplac[int](tailConf.Buffer.BotDetection.PrevNumReqsSampleSize),
+				}
+			}
+
+		} else {
+			stateFactory = func() logbuffer.SerializableState {
+				return &analysis.SimpleAnalysisState{}
+			}
+		}
+
 		if tailConf.Buffer.ID != "" {
 			curr, ok := logBuffers[tailConf.Buffer.ID]
 			if ok {
@@ -263,11 +277,7 @@ func newTailProcessor(
 					tailConf.Buffer,
 					conf.LogTail.LogBufferStateDir,
 					tailConf.Path,
-					func() logbuffer.SerializableState {
-						return &analysis.BotAnalysisState{
-							PrevNums: logbuffer.NewSampleWithReplac[int](tailConf.Buffer.BotDetection.PrevNumReqsSampleSize),
-						}
-					},
+					stateFactory,
 				)
 				logBuffers[tailConf.Buffer.ID] = buffStorage
 			}
