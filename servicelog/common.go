@@ -298,3 +298,20 @@ func UserBelongsToList[T int | string](userID T, anonymousUsers []int) bool {
 	}
 	return false
 }
+
+// Preprocessor is any type able to handle the "preprocess" phase
+// of a record processing. It has the following special privileges:
+// 1) take an input record (arg `rec`) and return one or more (possibly different) records.
+// 2) access to a (config defined) number of previous records
+//
+// In case it is just a reporting-oriented implementation, the returned
+// slice will typically contain just a single item - the original processed
+// record. In some cases (see mapka3), where a clustering is required, it
+// may take the current record and some of the previous records and define
+// whole new items to return.
+type Preprocessor interface {
+	Preprocess(
+		rec InputRecord,
+		prevRecs logbuffer.AbstractStorage[InputRecord, logbuffer.SerializableState],
+	) []InputRecord
+}

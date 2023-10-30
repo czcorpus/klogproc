@@ -45,6 +45,11 @@ type SerializableState interface {
 	// It should also fix broken stored data (e.g. samples
 	// with size 0)
 	AfterLoadNormalize(conf *load.BufferConf)
+
+	// Report is mainly for debugging and overview
+	// pursposes. It should show relevant values of the
+	// state object.
+	Report() map[string]any
 }
 
 // Storage keeps a defined number of log records in memory

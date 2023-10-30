@@ -90,6 +90,7 @@ func GetLogTransformer(
 			return &mapka3Transformer{
 				t: mapka3.NewTransformer(
 					bufferConf,
+					realtimeClock,
 				),
 			}, nil
 		default:

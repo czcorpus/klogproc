@@ -43,11 +43,11 @@ const (
 // BotAnalysisState contains values helpful to determine
 // suspicious traffic in a log.
 type BotAnalysisState struct {
-	PrevNums  *logbuffer.SampleWithReplac[int] `json:"prevNums"`
-	LastCheck time.Time                        `json:"timestamp"`
+	PrevNums       *logbuffer.SampleWithReplac[int] `json:"prevNums"`
+	LastCheck      time.Time                        `json:"timestamp"`
+	TotalProcessed int                              `json:"totalProcessed"`
 }
 
-// while looking superfluous, we need this to fullfill a required interface
 func (state *BotAnalysisState) ToJSON() ([]byte, error) {
 	return json.Marshal(state)
 }
@@ -64,7 +64,20 @@ func (state *BotAnalysisState) AfterLoadNormalize(conf *load.BufferConf) {
 	}
 }
 
-// Analyzer is used in the "preprocess" phase of
+func (state *BotAnalysisState) Report() map[string]any {
+	ans := make(map[string]any)
+	var pnm float64
+	for _, v := range state.PrevNums.GetAll() {
+		pnm += float64(v)
+	}
+	ans["prevNumsMean"] = pnm / float64(state.PrevNums.Len())
+	ans["prevNumsLen"] = state.PrevNums.Len()
+	ans["lastCheck"] = state.LastCheck
+	ans["totalProcessed"] = state.TotalProcessed
+	return ans
+}
+
+// BotAnalyzer is used in the "preprocess" phase of
 // the servicelog.process. Using log records buffer,
 // it searches for suspicious traffic and IP addresses.
 //
@@ -73,19 +86,20 @@ func (state *BotAnalysisState) AfterLoadNormalize(conf *load.BufferConf) {
 // 2) outlier IPs with too high ratio on the recent traffic
 //
 // Both are reported via e-mail.
-type Analyzer[T AnalyzableRecord] struct {
+type BotAnalyzer[T AnalyzableRecord] struct {
 	appType       string
 	conf          *load.BufferConf
 	realtimeClock bool
 	emailNotifier email.MailNotifier
 }
 
-func (analyzer *Analyzer[T]) isIgnoredIP(ip net.IP) bool {
+func (analyzer *BotAnalyzer[T]) isIgnoredIP(ip net.IP) bool {
 	return ip == nil || ip.IsLoopback() || ip.IsUnspecified()
 }
 
-func (analyzer *Analyzer[T]) Preprocess(
-	rec servicelog.InputRecord, prevRecs logbuffer.AbstractStorage[servicelog.InputRecord, logbuffer.SerializableState],
+func (analyzer *BotAnalyzer[T]) Preprocess(
+	rec servicelog.InputRecord,
+	prevRecs logbuffer.AbstractStorage[servicelog.InputRecord, logbuffer.SerializableState],
 ) []servicelog.InputRecord {
 	tRec, ok := rec.(T)
 	ans := []servicelog.InputRecord{rec}
@@ -105,6 +119,7 @@ func (analyzer *Analyzer[T]) Preprocess(
 		return ans
 	}
 	defer prevRecs.SetStateData(tState)
+	tState.TotalProcessed++
 
 	currTime := rec.GetTime()
 	if analyzer.realtimeClock {
@@ -274,13 +289,13 @@ func (analyzer *Analyzer[T]) Preprocess(
 	return ans
 }
 
-func NewAnalyzer[T AnalyzableRecord](
+func NewBotAnalyzer[T AnalyzableRecord](
 	appType string,
 	conf *load.BufferConf,
 	realtimeClock bool,
 	emailNotifier email.MailNotifier,
-) *Analyzer[T] {
-	return &Analyzer[T]{
+) *BotAnalyzer[T] {
+	return &BotAnalyzer[T]{
 		appType:       appType,
 		conf:          conf,
 		realtimeClock: realtimeClock,

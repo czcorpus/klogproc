@@ -127,3 +127,7 @@ func (r *InputRecord) GetUserAgent() string {
 func (r *InputRecord) IsProcessable() bool {
 	return true
 }
+
+func (r *InputRecord) ShouldBeAnalyzed() bool {
+	return true
+}

@@ -36,7 +36,7 @@ func (cr ClusterableRecord) DistanceTo(other dbscan.Point) float64 {
 }
 
 func (cr ClusterableRecord) Name() string {
-	return cr.rec.GetTime().Format(time.RFC3339)
+	return cr.rec.GetTime().Format(time.RFC3339Nano)
 }
 
 func wrapInputRecords(input []servicelog.InputRecord) []dbscan.Point {

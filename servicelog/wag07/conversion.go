@@ -28,7 +28,7 @@ import (
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	analyzer *analysis.Analyzer[*InputRecord]
+	analyzer servicelog.Preprocessor
 }
 
 func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*wag06.OutputRecord, error) {
@@ -67,7 +67,13 @@ func NewTransformer(
 	realtimeClock bool,
 	emailNotifier email.MailNotifier,
 ) *Transformer {
-	analyzer := analysis.NewAnalyzer[*InputRecord]("wag", bufferConf, realtimeClock, emailNotifier)
+	var analyzer servicelog.Preprocessor
+	if bufferConf.BotDetection != nil {
+		analyzer = analysis.NewBotAnalyzer[*InputRecord]("wag", bufferConf, realtimeClock, emailNotifier)
+
+	} else {
+		analyzer = analysis.NewNullAnalyzer[*InputRecord]("wag")
+	}
 	return &Transformer{
 		analyzer: analyzer,
 	}

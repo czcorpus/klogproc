@@ -56,23 +56,33 @@ func runBatchAction(
 		log.Fatal().Err(err).Msg("failed to run batch action")
 	}
 	var buffStorage servicelog.ServiceLogBuffer
+	var stateFactory func() logbuffer.SerializableState
+	if conf.LogFiles.Buffer.BotDetection != nil {
+		stateFactory = func() logbuffer.SerializableState {
+			return &analysis.BotAnalysisState{
+				PrevNums: logbuffer.NewSampleWithReplac[int](20), // TODO hardcoded 20
+			}
+		}
+
+	} else {
+		stateFactory = func() logbuffer.SerializableState {
+			return &analysis.SimpleAnalysisState{}
+		}
+	}
+
 	if conf.LogFiles.Buffer != nil {
 		buffStorage = logbuffer.NewStorage[servicelog.InputRecord, logbuffer.SerializableState](
 			conf.LogFiles.Buffer,
 			conf.LogFiles.LogBufferStateDir,
 			conf.LogFiles.SrcPath,
-			func() logbuffer.SerializableState {
-				return &analysis.BotAnalysisState{
-					PrevNums: logbuffer.NewSampleWithReplac[int](1000), // TODO hardcoded 1000
-				}
-			},
+			stateFactory,
 		)
 
 	} else {
 		buffStorage = logbuffer.NewDummyStorage[servicelog.InputRecord, logbuffer.SerializableState](
 			func() logbuffer.SerializableState {
 				return &analysis.BotAnalysisState{
-					PrevNums: logbuffer.NewSampleWithReplac[int](1000), // TODO hardcoded 1000
+					PrevNums: logbuffer.NewSampleWithReplac[int](20), // TODO hardcoded 20
 				}
 			},
 		)
@@ -144,5 +154,6 @@ func runBatchAction(
 	proc(conf.LogFiles, worklog.GetLastRecord())
 	wg.Wait()
 	log.Info().Msgf("Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)
+	log.Debug().Any("report", buffStorage.GetStateData().Report()).Msg("state report")
 	finishEvent <- true
 }
