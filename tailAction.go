@@ -287,11 +287,7 @@ func newTailProcessor(
 				tailConf.Buffer,
 				conf.LogTail.LogBufferStateDir,
 				tailConf.Path,
-				func() logbuffer.SerializableState {
-					return &analysis.BotAnalysisState{
-						PrevNums: logbuffer.NewSampleWithReplac[int](tailConf.Buffer.BotDetection.PrevNumReqsSampleSize),
-					}
-				},
+				stateFactory,
 			)
 		}
 
