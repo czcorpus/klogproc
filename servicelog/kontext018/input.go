@@ -191,3 +191,7 @@ func (rec *QueryInputRecord) GetAlignedCorpora() []string {
 	}
 	return []string{}
 }
+
+func (rec *QueryInputRecord) IsSuspicious() bool {
+	return false
+}

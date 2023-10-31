@@ -67,3 +67,7 @@ func (r *InputRecord) GetUserAgent() string {
 func (r *InputRecord) IsProcessable() bool {
 	return true
 }
+
+func (rec *InputRecord) IsSuspicious() bool {
+	return false
+}

@@ -36,9 +36,10 @@ func (w *sitemsWrapper) Len() int {
 }
 
 type ReqCalcItem struct {
-	IP    string
-	Count int
-	Known bool
+	IP              string
+	Count           int
+	Known           bool
+	CountSuspicious int
 }
 
 type AnalyzableRecord interface {

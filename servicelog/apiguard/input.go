@@ -79,3 +79,7 @@ func (rec *InputRecord) IsProcessable() bool {
 	return rec.AccessLog ||
 		(rec.GetTime().Before(chngLimit) && rec.Service != "" && rec.Level == "info")
 }
+
+func (rec *InputRecord) IsSuspicious() bool {
+	return false
+}

@@ -131,3 +131,7 @@ func (r *InputRecord) IsProcessable() bool {
 func (r *InputRecord) ShouldBeAnalyzed() bool {
 	return true
 }
+
+func (rec *InputRecord) IsSuspicious() bool {
+	return false
+}

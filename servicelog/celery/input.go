@@ -92,3 +92,7 @@ func (r InputRecord) String() string {
 	return fmt.Sprintf("InputRecord{Broker: %v, Clock: %v, PID: %d, Pool: %v, PrefetchCount: %d, Rusage: %v, Total: %v}",
 		r.Broker, r.Clock, r.PID, r.Pool, r.PrefetchCount, r.Rusage, r.Total)
 }
+
+func (r InputRecord) IsSuspicious() bool {
+	return false
+}
