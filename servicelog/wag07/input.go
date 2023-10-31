@@ -44,6 +44,7 @@ type InputRecord struct {
 	Timestamp           string  `json:"timestamp"`
 	isProcessable       bool
 	IsMobileClient      bool `json:"isMobileClient"`
+	hasMatch            bool `json:"hasMatch"`
 	IsQuery             bool `json:"isQuery"`
 	HasPosSpecification bool `json:"hasPosSpecification"`
 }
@@ -87,4 +88,8 @@ func (r *InputRecord) GetUserAgent() string {
 // IsProcessable returns true if there was no error in reading the record
 func (r *InputRecord) IsProcessable() bool {
 	return r.isProcessable
+}
+
+func (rec *InputRecord) IsSuspicious() bool {
+	return rec.IsQuery && !rec.hasMatch
 }

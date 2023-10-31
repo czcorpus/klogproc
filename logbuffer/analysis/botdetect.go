@@ -26,6 +26,7 @@ import (
 	"math/rand"
 	"net"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/czcorpus/cnc-gokit/collections"
@@ -38,6 +39,8 @@ const (
 	minPrevNumRequestsSampleSize = 10
 	bufferCleanupProbability     = 0.1
 	bufferCleanupMaxAge          = time.Hour * 6
+	suspiciousRecordsThreshold   = 0.9
+	suspiciousRecordsMinRequests = 20
 )
 
 // BotAnalysisState contains values helpful to determine
@@ -197,11 +200,32 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 			}
 		}
 		curr.Count++
+		if item.IsSuspicious() {
+			curr.CountSuspicious++
+		}
 		counter[item.GetClientIP().String()] = curr
 	})
 	sortedItems := collections.BinTree[ReqCalcItem]{}
+	suspicRequestsIP := collections.Set[string]{}
 	for _, v := range counter {
 		sortedItems.Add(v)
+		if float64(v.CountSuspicious)/float64(v.Count) >= suspiciousRecordsThreshold &&
+			v.CountSuspicious >= suspiciousRecordsMinRequests {
+			suspicRequestsIP.Add(v.IP)
+		}
+	}
+
+	if suspicRequestsIP.Size() > 0 {
+		go func() {
+			analyzer.emailNotifier.SendFormattedNotification(
+				fmt.Sprintf("Klogproc for %s: suspicious IP addresses detected", analyzer.appType),
+				"records with high ratio of suspicious requests:",
+				strings.Join(suspicRequestsIP.ToSlice(), ", "),
+				fmt.Sprintf("<p>total requesting IPs: <strong>%d</strong><br />", sortedItems.Len()),
+				fmt.Sprintf("last check: <strong>%v</strong><br />", datetime.FormatDatetime(tState.LastCheck)),
+				fmt.Sprintf("checking interval: <strong>%s</strong><br /></p>", checkInterval.String()),
+			)
+		}()
 	}
 
 	qrt, err := maths.GetQuartiles[maths.FreqInfo](&sitemsWrapper{sortedItems})
@@ -212,27 +236,27 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 		analyzer.conf.BotDetection.IPOutlierMinFreq,
 		int(float64(qrt.Q3)+analyzer.conf.BotDetection.IPOutlierCoeff*float64(qrt.IQR())),
 	)
-	suspiciousRecords := make([]ReqCalcItem, 0, sortedItems.Len()/2)
+	outlierRecords := make([]ReqCalcItem, 0, sortedItems.Len()/2)
 	sortedItems.ForEach(func(i int, v ReqCalcItem) bool {
 		if v.Count > threshold {
 			if collections.SliceContains[string](analyzer.conf.BotDetection.BlocklistIP, v.IP) {
 				v.Known = true
 			}
-			suspiciousRecords = append(suspiciousRecords, v)
+			outlierRecords = append(outlierRecords, v)
 		}
 		return true
 	})
 
-	if len(suspiciousRecords) > 0 {
+	if len(outlierRecords) > 0 {
 
 		log.Info().
 			Str("appType", analyzer.appType).
 			Int("threshold", threshold).
-			Int("numOutliers", len(suspiciousRecords)).
+			Int("numOutliers", len(outlierRecords)).
 			Msg("found outlier IP requests - going to report")
 
-		sort.SliceStable(suspiciousRecords, func(i, j int) bool {
-			return suspiciousRecords[i].Count > suspiciousRecords[j].Count
+		sort.SliceStable(outlierRecords, func(i, j int) bool {
+			return outlierRecords[i].Count > outlierRecords[j].Count
 		})
 
 		numCellStyle := "text-align: right; border: 1px solid #777777; padding: 0.2em 0.4em"
@@ -247,7 +271,7 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 			AddTH("IP", thStyle).
 			AddTH("req. count", thStyle).
 			AddTH("known", thStyle).Close()
-		for _, susp := range suspiciousRecords {
+		for _, susp := range outlierRecords {
 			tbody.AddTR().
 				AddTD(susp.IP, cellStyle).
 				AddTD(fmt.Sprintf("%d", susp.Count), numCellStyle).

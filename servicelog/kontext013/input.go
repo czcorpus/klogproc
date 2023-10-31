@@ -177,3 +177,7 @@ func (rec *InputRecord) GetAlignedCorpora() []string {
 	}
 	return ans
 }
+
+func (rec *InputRecord) IsSuspicious() bool {
+	return false
+}

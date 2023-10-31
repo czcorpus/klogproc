@@ -160,6 +160,10 @@ type InputRecord interface {
 	ClusterSize() int
 	SetCluster(size int)
 	IsProcessable() bool
+
+	// IsSuspicious is just a hint for further analysis. It should not be a direct
+	// signal to ban the requesting side
+	IsSuspicious() bool
 }
 
 // GeoDataRecord represents a full client geographical
