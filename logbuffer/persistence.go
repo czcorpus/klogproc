@@ -22,6 +22,7 @@ import (
 	"hash/fnv"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/czcorpus/cnc-gokit/fs"
 	"github.com/rs/zerolog/log"
@@ -63,7 +64,7 @@ func (st *Storage[T, U]) EmptyStateData() U {
 	return st.stateDataFactory()
 }
 
-func (st *Storage[T, U]) GetStateData() U {
+func (st *Storage[T, U]) GetStateData(dtNow time.Time) U {
 	if !st.hasLoadedStateData {
 		var err error
 		st.stateData, err = st.loadStateData()
@@ -74,7 +75,7 @@ func (st *Storage[T, U]) GetStateData() U {
 
 		} else {
 			st.hasLoadedStateData = true
-			st.stateData.AfterLoadNormalize(st.conf)
+			st.stateData.AfterLoadNormalize(st.conf, dtNow)
 		}
 	}
 	return st.stateData

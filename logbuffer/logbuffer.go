@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/czcorpus/cnc-gokit/collections"
+	"github.com/czcorpus/cnc-gokit/fs"
 	"github.com/rs/zerolog/log"
 )
 
@@ -44,7 +45,7 @@ type SerializableState interface {
 	// the configuration.
 	// It should also fix broken stored data (e.g. samples
 	// with size 0)
-	AfterLoadNormalize(conf *load.BufferConf)
+	AfterLoadNormalize(conf *load.BufferConf, dt time.Time)
 
 	// Report is mainly for debugging and overview
 	// pursposes. It should show relevant values of the
@@ -209,10 +210,14 @@ func (st *Storage[T, U]) TotalForEach(fn func(item T)) {
 // NewStorage is a recommended factory for creating `Storage`
 func NewStorage[T Storable, U SerializableState](
 	bufferConf *load.BufferConf,
+	worklogReset bool,
 	storageDirPath string,
 	analyzedLogFilePath string,
 	stateDataFactory func() U,
 ) *Storage[T, U] {
+	if storageDirPath == "" {
+		panic("no path specified for buffer state storage")
+	}
 	ans := &Storage[T, U]{
 		data:             make(map[string]*collections.CircularList[T]),
 		conf:             bufferConf,
@@ -222,9 +227,20 @@ func NewStorage[T Storable, U SerializableState](
 		stateWriting:     make(chan U),
 		stateDataFactory: stateDataFactory,
 	}
+	fullPath := filepath.Join(storageDirPath, ans.mkStorageFileName())
+	isF, _ := fs.IsFile(fullPath)
+	if worklogReset && isF {
+		err := os.Remove(fullPath)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to remove buffer status file")
+
+		} else {
+			log.Info().Str("file", fullPath).Msg("removed buffer status file")
+		}
+	}
+
 	go func() {
 		for stateData := range ans.stateWriting {
-			fullPath := filepath.Join(storageDirPath, ans.mkStorageFileName())
 			data, err := json.Marshal(stateData)
 			if err != nil {
 				log.Error().Err(err).Msg("failed to marshal log buffer state data")

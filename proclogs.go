@@ -134,7 +134,7 @@ func processLogs(conf *config.Main, action string, options *ProcessOptions) {
 			runBatchAction(conf, options, geoDb, userMap, finishEvent)
 
 		case config.ActionTail:
-			runTailAction(conf, geoDb, userMap, options.dryRun, finishEvent)
+			runTailAction(conf, options, geoDb, userMap, finishEvent)
 		}
 	}()
 	<-finishEvent

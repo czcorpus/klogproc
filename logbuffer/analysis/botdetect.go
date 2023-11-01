@@ -39,31 +39,46 @@ const (
 	minPrevNumRequestsSampleSize = 10
 	bufferCleanupProbability     = 0.1
 	bufferCleanupMaxAge          = time.Hour * 6
-	suspiciousRecordsThreshold   = 0.9
+	suspiciousRecordsThreshold   = 0.6
 	suspiciousRecordsMinRequests = 20
+	fullBufferMaxAge             = time.Hour * 5
 )
+
+type SuspiciousReqCounter struct {
+	NumAny    int
+	NumSuspic int
+	LastUpd   time.Time
+}
+
+func (src SuspiciousReqCounter) SuspicRatio() float64 {
+	return float64(src.NumSuspic) / float64(src.NumAny)
+}
 
 // BotAnalysisState contains values helpful to determine
 // suspicious traffic in a log.
 type BotAnalysisState struct {
-	PrevNums       *logbuffer.SampleWithReplac[int] `json:"prevNums"`
-	LastCheck      time.Time                        `json:"timestamp"`
-	TotalProcessed int                              `json:"totalProcessed"`
+	PrevNums          *logbuffer.SampleWithReplac[int]                         `json:"prevNums"`
+	LastCheck         time.Time                                                `json:"timestamp"`
+	TotalProcessed    int                                                      `json:"totalProcessed"`
+	FullBufferIPProps *collections.ConcurrentMap[string, SuspiciousReqCounter] `json:"fullBufferIPProps"`
 }
 
 func (state *BotAnalysisState) ToJSON() ([]byte, error) {
 	return json.Marshal(state)
 }
 
-func (state *BotAnalysisState) AfterLoadNormalize(conf *load.BufferConf) {
+func (state *BotAnalysisState) AfterLoadNormalize(conf *load.BufferConf, dt time.Time) {
 	if state.LastCheck.IsZero() && state.PrevNums.Len() > 0 {
-		state.LastCheck = time.Now()
+		state.LastCheck = dt
 
 	} else if state.PrevNums.Cap == 0 {
 		state.PrevNums = logbuffer.NewSampleWithReplac[int](state.PrevNums.Cap)
 	}
 	if state.PrevNums.Cap != conf.BotDetection.PrevNumReqsSampleSize {
 		state.PrevNums.Resize(conf.BotDetection.PrevNumReqsSampleSize)
+	}
+	if state.FullBufferIPProps == nil {
+		state.FullBufferIPProps = collections.NewConcurrentMap[string, SuspiciousReqCounter]()
 	}
 }
 
@@ -104,6 +119,12 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 	rec servicelog.InputRecord,
 	prevRecs logbuffer.AbstractStorage[servicelog.InputRecord, logbuffer.SerializableState],
 ) []servicelog.InputRecord {
+
+	currTime := rec.GetTime()
+	if analyzer.realtimeClock {
+		currTime = time.Now()
+	}
+
 	tRec, ok := rec.(T)
 	ans := []servicelog.InputRecord{rec}
 	if !ok {
@@ -115,7 +136,7 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 	if analyzer.conf.BotDetection == nil || !tRec.ShouldBeAnalyzed() {
 		return ans
 	}
-	state := prevRecs.GetStateData()
+	state := prevRecs.GetStateData(currTime)
 	tState, ok := state.(*BotAnalysisState)
 	if !ok {
 		log.Error().Str("appType", analyzer.appType).Msg("invalid analysis state type for")
@@ -124,21 +145,14 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 	defer prevRecs.SetStateData(tState)
 	tState.TotalProcessed++
 
-	currTime := rec.GetTime()
-	if analyzer.realtimeClock {
-		currTime = time.Now()
-	}
-
 	if tState.LastCheck.IsZero() {
 		tState.LastCheck = currTime
 		return ans
 	}
-
 	checkInterval := time.Duration(analyzer.conf.AnalysisIntervalSecs) * time.Second
 	if rec.GetTime().Sub(tState.LastCheck) < checkInterval {
 		return ans
 	}
-
 	defer func() { tState.LastCheck = currTime }()
 	numRec := prevRecs.TotalNumOfRecordsSince(tState.LastCheck)
 	sampleSize := tState.PrevNums.Add(numRec)
@@ -188,39 +202,60 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 		}()
 	}
 
-	counter := make(map[string]ReqCalcItem)
+	lastPeriodCounter := make(map[string]*ReqCalcItem)
+	var avgRequests float64
 	prevRecs.TotalForEach(func(item servicelog.InputRecord) {
 		if analyzer.isIgnoredIP(item.GetClientIP()) || !item.GetTime().After(tState.LastCheck) {
 			return
 		}
-		curr, ok := counter[item.GetClientIP().String()]
+		curr, ok := lastPeriodCounter[item.GetClientIP().String()]
 		if !ok {
-			curr = ReqCalcItem{
+			curr = &ReqCalcItem{
 				IP: item.GetClientIP().String(),
 			}
 		}
 		curr.Count++
+		avgRequests += 1
+		suspicCnt := tState.FullBufferIPProps.Get(item.GetClientIP().String())
+		suspicCnt.NumAny++
+		suspicCnt.LastUpd = currTime
 		if item.IsSuspicious() {
-			curr.CountSuspicious++
+			suspicCnt.NumSuspic++
 		}
-		counter[item.GetClientIP().String()] = curr
+		tState.FullBufferIPProps.Set(item.GetClientIP().String(), suspicCnt)
+		lastPeriodCounter[item.GetClientIP().String()] = curr
 	})
-	sortedItems := collections.BinTree[ReqCalcItem]{}
+	avgRequests /= float64(len(lastPeriodCounter))
+	fmt.Println("total req: ", prevRecs.TotalNumOfRecordsSince(tState.LastCheck),
+		", total ips: ", len(lastPeriodCounter), ", avgRequests = ", avgRequests)
+	sortedItems := collections.BinTree[*ReqCalcItem]{}
 	suspicRequestsIP := collections.Set[string]{}
-	for _, v := range counter {
+	for _, v := range lastPeriodCounter {
 		sortedItems.Add(v)
-		if float64(v.CountSuspicious)/float64(v.Count) >= suspiciousRecordsThreshold &&
-			v.CountSuspicious >= suspiciousRecordsMinRequests {
+		fullBufferInfo := tState.FullBufferIPProps.Get(v.IP)
+		if fullBufferInfo.SuspicRatio() >= suspiciousRecordsThreshold &&
+			v.Count >= int(avgRequests) {
 			suspicRequestsIP.Add(v.IP)
 		}
 	}
+
+	var numCleaned int
+	fmt.Println("============== about to clean")
+	tState.FullBufferIPProps.ForEach(func(k string, v SuspiciousReqCounter) {
+		// TODO - problems here - use upgraded cnc-tskit and Filter() here
+		if v.LastUpd.Before(currTime.Add(-fullBufferMaxAge)) {
+			tState.FullBufferIPProps.Delete(k)
+			numCleaned++
+		}
+	})
+	log.Debug().Int("numCleaned", numCleaned).Msg("cleaned old records in full buffer info")
 
 	if suspicRequestsIP.Size() > 0 {
 		go func() {
 			analyzer.emailNotifier.SendFormattedNotification(
 				fmt.Sprintf("Klogproc for %s: suspicious IP addresses detected", analyzer.appType),
-				"records with high ratio of suspicious requests:",
-				strings.Join(suspicRequestsIP.ToSlice(), ", "),
+				fmt.Sprintf("<p>records with high ratio of suspicious requests:<br />%s</p>",
+					strings.Join(suspicRequestsIP.ToSlice(), ",<br />")),
 				fmt.Sprintf("<p>total requesting IPs: <strong>%d</strong><br />", sortedItems.Len()),
 				fmt.Sprintf("last check: <strong>%v</strong><br />", datetime.FormatDatetime(tState.LastCheck)),
 				fmt.Sprintf("checking interval: <strong>%s</strong><br /></p>", checkInterval.String()),
@@ -236,8 +271,8 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 		analyzer.conf.BotDetection.IPOutlierMinFreq,
 		int(float64(qrt.Q3)+analyzer.conf.BotDetection.IPOutlierCoeff*float64(qrt.IQR())),
 	)
-	outlierRecords := make([]ReqCalcItem, 0, sortedItems.Len()/2)
-	sortedItems.ForEach(func(i int, v ReqCalcItem) bool {
+	outlierRecords := make([]*ReqCalcItem, 0, sortedItems.Len()/2)
+	sortedItems.ForEach(func(i int, v *ReqCalcItem) bool {
 		if v.Count > threshold {
 			if collections.SliceContains[string](analyzer.conf.BotDetection.BlocklistIP, v.IP) {
 				v.Known = true

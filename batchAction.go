@@ -29,6 +29,7 @@ import (
 	"klogproc/trfactory"
 	"klogproc/users"
 	"sync"
+	"time"
 
 	"github.com/oschwald/geoip2-golang"
 	"github.com/rs/zerolog/log"
@@ -73,6 +74,7 @@ func runBatchAction(
 	if conf.LogFiles.Buffer != nil {
 		buffStorage = logbuffer.NewStorage[servicelog.InputRecord, logbuffer.SerializableState](
 			conf.LogFiles.Buffer,
+			options.worklogReset,
 			conf.LogFiles.LogBufferStateDir,
 			conf.LogFiles.SrcPath,
 			stateFactory,
@@ -154,6 +156,6 @@ func runBatchAction(
 	proc(conf.LogFiles, worklog.GetLastRecord())
 	wg.Wait()
 	log.Info().Msgf("Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)
-	log.Debug().Any("report", buffStorage.GetStateData().Report()).Msg("state report")
+	log.Debug().Any("report", buffStorage.GetStateData(time.Now()).Report()).Msg("state report")
 	finishEvent <- true
 }

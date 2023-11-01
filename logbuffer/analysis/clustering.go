@@ -39,9 +39,9 @@ func (state *SimpleAnalysisState) ToJSON() ([]byte, error) {
 	return json.Marshal(state)
 }
 
-func (state *SimpleAnalysisState) AfterLoadNormalize(conf *load.BufferConf) {
+func (state *SimpleAnalysisState) AfterLoadNormalize(conf *load.BufferConf, dt time.Time) {
 	if state.LastCheck.IsZero() && state.TotalProcessed > 0 {
-		state.LastCheck = time.Now()
+		state.LastCheck = dt
 	}
 }
 
@@ -63,10 +63,16 @@ func (analyzer *ClusteringAnalyzer[T]) Preprocess(
 	rec servicelog.InputRecord,
 	prevRecs logbuffer.AbstractStorage[servicelog.InputRecord, logbuffer.SerializableState],
 ) []servicelog.InputRecord {
-	stateData := prevRecs.GetStateData()
+
+	currTime := rec.GetTime()
+	if analyzer.realtimeClock {
+		currTime = time.Now()
+	}
+
+	stateData := prevRecs.GetStateData(currTime)
 	tState, knownState := stateData.(*SimpleAnalysisState) // other types are ok here but no action will be done
 	if knownState {
-		tState.LastCheck = time.Now()
+		tState.LastCheck = currTime
 		tState.TotalProcessed++
 	}
 	clusteringID := rec.ClusteringClientID()
