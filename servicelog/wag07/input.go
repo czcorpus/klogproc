@@ -44,7 +44,7 @@ type InputRecord struct {
 	Timestamp           string  `json:"timestamp"`
 	isProcessable       bool
 	IsMobileClient      bool `json:"isMobileClient"`
-	hasMatch            bool `json:"hasMatch"`
+	HasMatch            bool `json:"hasMatch"`
 	IsQuery             bool `json:"isQuery"`
 	HasPosSpecification bool `json:"hasPosSpecification"`
 }
@@ -91,5 +91,5 @@ func (r *InputRecord) IsProcessable() bool {
 }
 
 func (rec *InputRecord) IsSuspicious() bool {
-	return rec.IsQuery && !rec.hasMatch
+	return rec.IsQuery && !rec.HasMatch
 }

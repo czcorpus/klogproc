@@ -60,7 +60,7 @@ type AbstractStorage[T Storable, U SerializableState] interface {
 	// in case nothing was set yet.
 	SetStateData(stateData U)
 
-	GetStateData() U
+	GetStateData(dtNow time.Time) U
 
 	EmptyStateData() U
 }

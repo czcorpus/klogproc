@@ -58,7 +58,7 @@ func (st *DummyStorage[T, U]) TotalForEach(fn func(item T)) {
 func (st *DummyStorage[T, U]) SetStateData(stateData U) {
 }
 
-func (st *DummyStorage[T, U]) GetStateData() U {
+func (st *DummyStorage[T, U]) GetStateData(dtNow time.Time) U {
 	var u U
 	return u
 }

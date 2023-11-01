@@ -215,7 +215,7 @@ func newTailProcessor(
 	geoDB *geoip2.Reader,
 	userMap *users.UserMap,
 	logBuffers map[string]servicelog.ServiceLogBuffer,
-	dryRun bool,
+	options *ProcessOptions,
 ) *tailProcessor {
 
 	var notifier email.MailNotifier
@@ -275,6 +275,7 @@ func newTailProcessor(
 					Msg("creating reusable log processing buffer")
 				buffStorage = logbuffer.NewStorage[servicelog.InputRecord, logbuffer.SerializableState](
 					tailConf.Buffer,
+					options.worklogReset,
 					conf.LogTail.LogBufferStateDir,
 					tailConf.Path,
 					stateFactory,
@@ -285,6 +286,7 @@ func newTailProcessor(
 		} else {
 			buffStorage = logbuffer.NewStorage[servicelog.InputRecord, logbuffer.SerializableState](
 				tailConf.Buffer,
+				options.worklogReset,
 				conf.LogTail.LogBufferStateDir,
 				tailConf.Path,
 				stateFactory,
@@ -317,7 +319,7 @@ func newTailProcessor(
 		influxChunkSize:   conf.InfluxDB.PushChunkSize,
 		alarm:             procAlarm,
 		logBuffer:         buffStorage,
-		dryRun:            dryRun,
+		dryRun:            options.dryRun,
 	}
 }
 
@@ -325,9 +327,9 @@ func newTailProcessor(
 
 func runTailAction(
 	conf *config.Main,
+	options *ProcessOptions,
 	geoDB *geoip2.Reader,
 	userMap *users.UserMap,
-	dryRun bool,
 	finishEvt chan bool,
 ) {
 	tailProcessors := make([]tail.FileTailProcessor, len(conf.LogTail.Files))
@@ -343,7 +345,7 @@ func runTailAction(
 	}
 
 	for i, f := range fullFiles {
-		tailProcessors[i] = newTailProcessor(f, *conf, geoDB, userMap, logBuffers, dryRun)
+		tailProcessors[i] = newTailProcessor(f, *conf, geoDB, userMap, logBuffers, options)
 	}
 	go func() {
 		wg.Wait()

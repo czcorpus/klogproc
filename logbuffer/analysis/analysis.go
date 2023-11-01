@@ -24,7 +24,7 @@ import (
 )
 
 type sitemsWrapper struct {
-	data collections.BinTree[ReqCalcItem]
+	data collections.BinTree[*ReqCalcItem]
 }
 
 func (w *sitemsWrapper) Get(idx int) maths.FreqInfo {
@@ -36,10 +36,15 @@ func (w *sitemsWrapper) Len() int {
 }
 
 type ReqCalcItem struct {
-	IP              string
-	Count           int
-	Known           bool
-	CountSuspicious int
+	IP                   string
+	Count                int
+	Known                bool
+	CountWholeBuffer     int
+	NumSuspicWholeBuffer int
+}
+
+func (rci *ReqCalcItem) SuspicRatio() float64 {
+	return float64(rci.NumSuspicWholeBuffer) / float64(rci.CountWholeBuffer)
 }
 
 type AnalyzableRecord interface {
@@ -48,15 +53,15 @@ type AnalyzableRecord interface {
 }
 
 // Freq is implemented to satisfy cnc-gokit utils
-func (rc ReqCalcItem) Freq() int {
+func (rc *ReqCalcItem) Freq() int {
 	return rc.Count
 }
 
-func (rc ReqCalcItem) Compare(other collections.Comparable) int {
-	if rc.Count > other.(ReqCalcItem).Count {
+func (rc *ReqCalcItem) Compare(other collections.Comparable) int {
+	if rc.Count > other.(*ReqCalcItem).Count {
 		return 1
 
-	} else if rc.Count == other.(ReqCalcItem).Count {
+	} else if rc.Count == other.(*ReqCalcItem).Count {
 		return 0
 	}
 	return -1
