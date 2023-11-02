@@ -219,7 +219,7 @@ func newTailProcessor(
 ) *tailProcessor {
 
 	var notifier email.MailNotifier
-	notifier, err := email.NewEmailNotifier(conf.EmailNotification, conf.TimezoneLocation())
+	notifier, err := email.NewEmailNotifier(conf.EmailNotification, conf.ConomiNotification, conf.TimezoneLocation())
 	if err != nil {
 		log.Fatal().Msgf("Failed to initialize e-mail notifier: %s", err)
 	}

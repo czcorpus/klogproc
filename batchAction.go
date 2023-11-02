@@ -44,7 +44,7 @@ func runBatchAction(
 ) {
 	// For debugging e-mail notification, you can pass `conf.EmailNotification`
 	// as the first argument and use the "batch" mode to tune log processing.
-	nullMailNot, _ := email.NewEmailNotifier(nil, conf.TimezoneLocation())
+	nullMailNot, _ := email.NewEmailNotifier(nil, conf.ConomiNotification, conf.TimezoneLocation())
 	lt, err := trfactory.GetLogTransformer(
 		conf.LogFiles.AppType,
 		conf.LogFiles.Version,

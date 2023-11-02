@@ -71,6 +71,8 @@ func (tpa *TailProcAlarm) OnError(message string) {
 // Evaluate looks for oldest and newest errors and if all
 // the internal slots are full and the interval is smaller
 // or equal of a defined value, an alarm e-mail is sent.
+//
+// TODO this function produces HTML message which won't be interpreted by Conomi properly
 func (tpa *TailProcAlarm) Evaluate() {
 	tpa.mutex.Lock()
 	oldest, newest := findRange(tpa.lastErrors)
@@ -99,7 +101,7 @@ func (tpa *TailProcAlarm) Evaluate() {
 		subj := fmt.Sprintf("Klogproc ERROR alarm for file %s (type %s)", tpa.fileInfo.GetPath(),
 			tpa.fileInfo.GetAppType())
 		log.Info().Msgf("sending alarm notification for %s", tpa.fileInfo.GetPath())
-		err := tpa.notifier.SendNotification(subj, msg.String())
+		err := tpa.notifier.SendNotification(subj, map[string]any{}, msg.String())
 		if err != nil {
 			log.Error().Err(err).Msg("")
 		}

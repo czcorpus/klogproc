@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/czcorpus/cnc-gokit/conomi"
 	"github.com/czcorpus/cnc-gokit/mail"
 	"github.com/rs/zerolog/log"
 )
@@ -37,8 +38,7 @@ const (
 // MailNotifier is a general type allowing sending messages to
 // a predefined list of recipients
 type MailNotifier interface {
-	SendNotification(subject string, message ...string) error
-	SendFormattedNotification(subject string, divContents ...string) error
+	SendNotification(subject string, metadata map[string]any, paragraphs ...string) error
 }
 
 // nullEmailNotifier is a regular mail sender replacement
@@ -46,18 +46,10 @@ type MailNotifier interface {
 type nullEmailNotifier struct {
 }
 
-func (den *nullEmailNotifier) SendNotification(subject string, message ...string) error {
+func (den *nullEmailNotifier) SendNotification(subject string, metadata map[string]any, paragraphs ...string) error {
 	log.Warn().
 		Str("subject", subject).
-		Strs("body", message).
-		Msg("not sending e-mail notification - not configured")
-	return nil
-}
-
-func (den *nullEmailNotifier) SendFormattedNotification(subject string, divContents ...string) error {
-	log.Warn().
-		Str("subject", subject).
-		Strs("body", divContents).
+		Strs("body", paragraphs).
 		Msg("not sending e-mail notification - not configured")
 	return nil
 }
@@ -70,22 +62,25 @@ type defaultEmailNotifier struct {
 	loc  *time.Location
 }
 
-// SendNotification sends a general e-mail notification based on
-// a respective monitoring configuration. The 'alarmToken' argument
-// can be nil - in such case the 'turn of the alarm' text won't be
-// part of the message.
-func (den *defaultEmailNotifier) SendNotification(subject string, message ...string) error {
-	return mail.SendNotification(den.conf, den.loc, mail.Notification{
-		Subject:    subject,
-		Paragraphs: message,
-	})
-}
-
-func (den *defaultEmailNotifier) SendFormattedNotification(subject string, divContents ...string) error {
+func (den *defaultEmailNotifier) SendNotification(subject string, metadata map[string]any, divContents ...string) error {
 	return mail.SendNotification(den.conf, den.loc, mail.FormattedNotification{
 		Subject: subject,
 		Divs:    divContents,
 	})
+}
+
+type conomiNotifier struct {
+	conf   *conomi.ConomiClientConf
+	client *conomi.ConomiClient
+}
+
+func (cn *conomiNotifier) SendNotification(subject string, metadata map[string]any, divContents ...string) error {
+	return cn.client.SendReport(
+		"critical",
+		subject,
+		strings.Join(divContents, "\n\n"),
+		metadata,
+	)
 }
 
 // NewEmailNotifier is a factory function for email notification
@@ -93,21 +88,30 @@ func (den *defaultEmailNotifier) SendFormattedNotification(subject string, divCo
 // Missing sender is replaced by a default value.
 func NewEmailNotifier(
 	conf *mail.NotificationConf,
+	conf2 *conomi.ConomiClientConf,
 	loc *time.Location,
 ) (MailNotifier, error) {
-	if conf == nil {
-		return &nullEmailNotifier{}, nil
+	if conf != nil && conf2 != nil {
+		panic("either Conomi or e-mail notifier can be configured")
 	}
-	if conf.Sender == "" {
-		log.Warn().Msgf("e-mail sender not set - using default %s", defaultSender)
-		conf.Sender = defaultSender
-	}
-	validated := append([]string{conf.Sender}, conf.Recipients...)
-	for _, addr := range validated {
-		if _, err := goMail.ParseAddress(addr); err != nil {
-			return nil, fmt.Errorf("incorrect e-mail address %s: %s", addr, err)
+	if conf2 != nil {
+		cclient := conomi.NewConomiClient(*conf2)
+		return &conomiNotifier{conf: conf2, client: &cclient}, nil
+
+	} else if conf != nil {
+		if conf.Sender == "" {
+			log.Warn().Msgf("e-mail sender not set - using default %s", defaultSender)
+			conf.Sender = defaultSender
 		}
+		validated := append([]string{conf.Sender}, conf.Recipients...)
+		for _, addr := range validated {
+			if _, err := goMail.ParseAddress(addr); err != nil {
+				return nil, fmt.Errorf("incorrect e-mail address %s: %s", addr, err)
+			}
+		}
+		log.Info().Msgf("creating e-mail sender with recipient(s) %s", strings.Join(conf.Recipients, ", "))
+		return &defaultEmailNotifier{conf: conf, loc: loc}, nil
 	}
-	log.Info().Msgf("creating e-mail sender with recipient(s) %s", strings.Join(conf.Recipients, ", "))
-	return &defaultEmailNotifier{conf: conf, loc: loc}, nil
+	return &nullEmailNotifier{}, nil
+
 }

@@ -27,6 +27,7 @@ import (
 	"klogproc/save/elastic"
 	"klogproc/save/influx"
 
+	"github.com/czcorpus/cnc-gokit/conomi"
 	"github.com/czcorpus/cnc-gokit/mail"
 	"github.com/rs/zerolog/log"
 )
@@ -46,19 +47,20 @@ const (
 
 // Main describes klogproc's configuration
 type Main struct {
-	LogFiles          *batch.Conf            `json:"logFiles"`
-	LogTail           *tail.Conf             `json:"logTail"`
-	CeleryStatus      celery.Conf            `json:"celeryStatus"`
-	GeoIPDbPath       string                 `json:"geoIpDbPath"`
-	AnonymousUsers    []int                  `json:"anonymousUsers"`
-	LogPath           string                 `json:"logPath"`
-	LogLevel          string                 `json:"logLevel"`
-	CustomConfDir     string                 `json:"customConfDir"`
-	RecUpdate         elastic.DocUpdConf     `json:"recordUpdate"`
-	ElasticSearch     elastic.ConnectionConf `json:"elasticSearch"`
-	InfluxDB          influx.ConnectionConf  `json:"influxDb"`
-	EmailNotification *mail.NotificationConf `json:"emailNotification"`
-	TimeZone          string                 `json:"timeZone"`
+	LogFiles           *batch.Conf              `json:"logFiles"`
+	LogTail            *tail.Conf               `json:"logTail"`
+	CeleryStatus       celery.Conf              `json:"celeryStatus"`
+	GeoIPDbPath        string                   `json:"geoIpDbPath"`
+	AnonymousUsers     []int                    `json:"anonymousUsers"`
+	LogPath            string                   `json:"logPath"`
+	LogLevel           string                   `json:"logLevel"`
+	CustomConfDir      string                   `json:"customConfDir"`
+	RecUpdate          elastic.DocUpdConf       `json:"recordUpdate"`
+	ElasticSearch      elastic.ConnectionConf   `json:"elasticSearch"`
+	InfluxDB           influx.ConnectionConf    `json:"influxDb"`
+	EmailNotification  *mail.NotificationConf   `json:"emailNotification"`
+	ConomiNotification *conomi.ConomiClientConf `json:"conomiNotification"`
+	TimeZone           string                   `json:"timeZone"`
 }
 
 // HasInfluxOut tests whether an InfluxDB
