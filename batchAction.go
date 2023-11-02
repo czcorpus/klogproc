@@ -31,6 +31,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/czcorpus/cnc-gokit/collections"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/rs/zerolog/log"
 )
@@ -61,7 +62,8 @@ func runBatchAction(
 	if conf.LogFiles.Buffer.BotDetection != nil {
 		stateFactory = func() logbuffer.SerializableState {
 			return &analysis.BotAnalysisState{
-				PrevNums: logbuffer.NewSampleWithReplac[int](20), // TODO hardcoded 20
+				PrevNums:          logbuffer.NewSampleWithReplac[int](20), // TODO hardcoded 20
+				FullBufferIPProps: collections.NewConcurrentMap[string, analysis.SuspiciousReqCounter](),
 			}
 		}
 
@@ -84,7 +86,8 @@ func runBatchAction(
 		buffStorage = logbuffer.NewDummyStorage[servicelog.InputRecord, logbuffer.SerializableState](
 			func() logbuffer.SerializableState {
 				return &analysis.BotAnalysisState{
-					PrevNums: logbuffer.NewSampleWithReplac[int](20), // TODO hardcoded 20
+					PrevNums:          logbuffer.NewSampleWithReplac[int](20), // TODO hardcoded 20
+					FullBufferIPProps: collections.NewConcurrentMap[string, analysis.SuspiciousReqCounter](),
 				}
 			},
 		)
