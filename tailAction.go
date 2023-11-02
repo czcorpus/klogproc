@@ -34,6 +34,7 @@ import (
 	"klogproc/trfactory"
 	"klogproc/users"
 
+	"github.com/czcorpus/cnc-gokit/collections"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/rs/zerolog/log"
 )
@@ -247,7 +248,8 @@ func newTailProcessor(
 		if tailConf.Buffer.BotDetection != nil {
 			stateFactory = func() logbuffer.SerializableState {
 				return &analysis.BotAnalysisState{
-					PrevNums: logbuffer.NewSampleWithReplac[int](tailConf.Buffer.BotDetection.PrevNumReqsSampleSize),
+					PrevNums:          logbuffer.NewSampleWithReplac[int](tailConf.Buffer.BotDetection.PrevNumReqsSampleSize),
+					FullBufferIPProps: collections.NewConcurrentMap[string, analysis.SuspiciousReqCounter](),
 				}
 			}
 
@@ -297,7 +299,8 @@ func newTailProcessor(
 		buffStorage = logbuffer.NewDummyStorage[servicelog.InputRecord, logbuffer.SerializableState](
 			func() logbuffer.SerializableState {
 				return &analysis.BotAnalysisState{
-					PrevNums: logbuffer.NewSampleWithReplac[int](tailConf.Buffer.BotDetection.PrevNumReqsSampleSize),
+					PrevNums:          logbuffer.NewSampleWithReplac[int](tailConf.Buffer.BotDetection.PrevNumReqsSampleSize),
+					FullBufferIPProps: collections.NewConcurrentMap[string, analysis.SuspiciousReqCounter](),
 				}
 			},
 		)
