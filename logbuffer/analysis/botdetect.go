@@ -226,8 +226,6 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 		lastPeriodCounter[item.GetClientIP().String()] = curr
 	})
 	avgRequests /= float64(len(lastPeriodCounter))
-	fmt.Println("total req: ", prevRecs.TotalNumOfRecordsSince(tState.LastCheck),
-		", total ips: ", len(lastPeriodCounter), ", avgRequests = ", avgRequests)
 	sortedItems := collections.BinTree[*ReqCalcItem]{}
 	suspicRequestsIP := collections.Set[string]{}
 	for _, v := range lastPeriodCounter {
@@ -240,15 +238,17 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 	}
 
 	var numCleaned int
-	fmt.Println("============== about to clean")
-	tState.FullBufferIPProps.ForEach(func(k string, v SuspiciousReqCounter) {
+	tState.FullBufferIPProps.Filter(func(k string, v SuspiciousReqCounter) bool {
 		// TODO - problems here - use upgraded cnc-tskit and Filter() here
 		if v.LastUpd.Before(currTime.Add(-fullBufferMaxAge)) {
-			tState.FullBufferIPProps.Delete(k)
 			numCleaned++
+			return false
 		}
+		return true
 	})
-	log.Debug().Int("numCleaned", numCleaned).Msg("cleaned old records in full buffer info")
+	if numCleaned > 0 {
+		log.Info().Int("numCleaned", numCleaned).Msg("cleaned old records in full buffer IP props table")
+	}
 
 	if suspicRequestsIP.Size() > 0 {
 		go func() {
