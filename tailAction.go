@@ -242,7 +242,7 @@ func newTailProcessor(
 		"Creating tail processor for %s, app type: %s, app version: %s, tzShift: %d",
 		filepath.Clean(tailConf.Path), tailConf.AppType, tailConf.Version, tailConf.TZShift)
 
-	var buffStorage logbuffer.AbstractStorage[servicelog.InputRecord, logbuffer.SerializableState]
+	var buffStorage logbuffer.AbstractRecentRecords[servicelog.InputRecord, logbuffer.SerializableState]
 	if tailConf.Buffer != nil {
 		var stateFactory func() logbuffer.SerializableState
 		if tailConf.Buffer.BotDetection != nil {

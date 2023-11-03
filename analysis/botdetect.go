@@ -122,7 +122,7 @@ func (analyzer *BotAnalyzer[T]) isIgnoredIP(ip net.IP) bool {
 
 func (analyzer *BotAnalyzer[T]) Preprocess(
 	rec servicelog.InputRecord,
-	prevRecs logbuffer.AbstractStorage[servicelog.InputRecord, logbuffer.SerializableState],
+	prevRecs logbuffer.AbstractRecentRecords[servicelog.InputRecord, logbuffer.SerializableState],
 ) []servicelog.InputRecord {
 
 	currTime := rec.GetTime()

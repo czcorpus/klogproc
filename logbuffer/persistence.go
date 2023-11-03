@@ -28,18 +28,18 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (st *Storage[T, U]) mkStorageFileName() string {
+func (st *PrevRecords[T, U]) mkStorageFileName() string {
 	h := fnv.New32a()
 	h.Write([]byte(st.logFilePath))
 	return fmt.Sprintf("%x.json", h.Sum32())
 }
 
-func (st *Storage[T, U]) SetStateData(stateData U) {
+func (st *PrevRecords[T, U]) SetStateData(stateData U) {
 	st.stateData = stateData
 	st.stateWriting <- stateData
 }
 
-func (st *Storage[T, U]) loadStateData() (U, error) {
+func (st *PrevRecords[T, U]) loadStateData() (U, error) {
 	var ans U = st.EmptyStateData()
 	fullPath := filepath.Join(st.storageDirPath, st.mkStorageFileName())
 	isf, err := fs.IsFile(fullPath)
@@ -60,11 +60,11 @@ func (st *Storage[T, U]) loadStateData() (U, error) {
 	return ans, nil
 }
 
-func (st *Storage[T, U]) EmptyStateData() U {
+func (st *PrevRecords[T, U]) EmptyStateData() U {
 	return st.stateDataFactory()
 }
 
-func (st *Storage[T, U]) GetStateData(dtNow time.Time) U {
+func (st *PrevRecords[T, U]) GetStateData(dtNow time.Time) U {
 	if !st.hasLoadedStateData {
 		var err error
 		st.stateData, err = st.loadStateData()

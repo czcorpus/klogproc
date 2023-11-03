@@ -27,7 +27,7 @@ type NullAnalyzer[T AnalyzableRecord] struct {
 
 func (analyzer *NullAnalyzer[T]) Preprocess(
 	rec servicelog.InputRecord,
-	prevRecs logbuffer.AbstractStorage[servicelog.InputRecord, logbuffer.SerializableState],
+	prevRecs logbuffer.AbstractRecentRecords[servicelog.InputRecord, logbuffer.SerializableState],
 ) []servicelog.InputRecord {
 	return []servicelog.InputRecord{rec}
 }

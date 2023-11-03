@@ -14,10 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package analysis
+package clustering
 
 import (
 	"encoding/json"
+	"klogproc/analysis"
 	"klogproc/clustering"
 	"klogproc/load"
 	"klogproc/logbuffer"
@@ -53,7 +54,7 @@ func (state *SimpleAnalysisState) Report() map[string]any {
 	return ans
 }
 
-type ClusteringAnalyzer[T AnalyzableRecord] struct {
+type ClusteringAnalyzer[T analysis.AnalyzableRecord] struct {
 	appType       string
 	realtimeClock bool
 	conf          *load.BufferConf
@@ -108,7 +109,7 @@ func (analyzer *ClusteringAnalyzer[T]) Preprocess(
 	return []servicelog.InputRecord{rec}
 }
 
-func NewAnalyzer[T AnalyzableRecord](
+func NewAnalyzer[T analysis.AnalyzableRecord](
 	appType string,
 	conf *load.BufferConf,
 	realtimeClock bool,

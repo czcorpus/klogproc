@@ -20,59 +20,59 @@ import (
 	"time"
 )
 
-type DummyStorage[T Storable, U SerializableState] struct {
+type DummyRecentRecords[T Storable, U SerializableState] struct {
 	stateDataFactory func() U
 }
 
-func (st *DummyStorage[T, U]) AddRecord(rec T) {
+func (st *DummyRecentRecords[T, U]) AddRecord(rec T) {
 }
 
-func (st *DummyStorage[T, U]) ConfirmRecordCheck(rec Storable) {
+func (st *DummyRecentRecords[T, U]) ConfirmRecordCheck(rec Storable) {
 }
 
-func (st *DummyStorage[T, U]) GetLastCheck(clusteringID string) time.Time {
+func (st *DummyRecentRecords[T, U]) GetLastCheck(clusteringID string) time.Time {
 	return time.Time{}
 }
 
-func (st *DummyStorage[T, U]) RemoveAnalyzedRecords(clusteringID string, dt time.Time) {
+func (st *DummyRecentRecords[T, U]) RemoveAnalyzedRecords(clusteringID string, dt time.Time) {
 }
 
-func (st *DummyStorage[T, U]) NumOfRecords(clusteringID string) int {
+func (st *DummyRecentRecords[T, U]) NumOfRecords(clusteringID string) int {
 	return 0
 }
 
-func (st *DummyStorage[T, U]) ClearOldRecords(maxAge time.Time) int {
+func (st *DummyRecentRecords[T, U]) ClearOldRecords(maxAge time.Time) int {
 	return 0
 }
 
-func (st *DummyStorage[T, U]) TotalNumOfRecordsSince(dt time.Time) int {
+func (st *DummyRecentRecords[T, U]) TotalNumOfRecordsSince(dt time.Time) int {
 	return 0
 }
 
-func (st *DummyStorage[T, U]) ForEach(clusteringID string, fn func(item T)) {
+func (st *DummyRecentRecords[T, U]) ForEach(clusteringID string, fn func(item T)) {
 }
 
-func (st *DummyStorage[T, U]) TotalForEach(fn func(item T)) {
+func (st *DummyRecentRecords[T, U]) TotalForEach(fn func(item T)) {
 }
 
-func (st *DummyStorage[T, U]) SetStateData(stateData U) {
+func (st *DummyRecentRecords[T, U]) SetStateData(stateData U) {
 }
 
-func (st *DummyStorage[T, U]) GetStateData(dtNow time.Time) U {
+func (st *DummyRecentRecords[T, U]) GetStateData(dtNow time.Time) U {
 	var u U
 	return u
 }
 
-func (st *DummyStorage[T, U]) EmptyStateData() U {
+func (st *DummyRecentRecords[T, U]) EmptyStateData() U {
 	return st.stateDataFactory()
 }
 
-func (st *DummyStorage[T, U]) Report() map[string]any {
+func (st *DummyRecentRecords[T, U]) Report() map[string]any {
 	return map[string]any{}
 }
 
-func NewDummyStorage[T Storable, U SerializableState](stateDataFactory func() U) *DummyStorage[T, U] {
-	return &DummyStorage[T, U]{
+func NewDummyStorage[T Storable, U SerializableState](stateDataFactory func() U) *DummyRecentRecords[T, U] {
+	return &DummyRecentRecords[T, U]{
 		stateDataFactory: stateDataFactory,
 	}
 }
