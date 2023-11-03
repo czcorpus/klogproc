@@ -19,9 +19,9 @@ package analysis
 import (
 	"encoding/json"
 	"fmt"
-	"klogproc/email"
 	"klogproc/load"
 	"klogproc/logbuffer"
+	"klogproc/notifications"
 	"klogproc/servicelog"
 	"math/rand"
 	"net"
@@ -52,6 +52,11 @@ type SuspiciousReqCounter struct {
 
 func (src SuspiciousReqCounter) SuspicRatio() float64 {
 	return float64(src.NumSuspic) / float64(src.NumAny)
+}
+
+type IPReport struct {
+	IP   string `json:"ip"`
+	Freq int    `json:"freq"`
 }
 
 // BotAnalysisState contains values helpful to determine
@@ -108,7 +113,7 @@ type BotAnalyzer[T AnalyzableRecord] struct {
 	appType       string
 	conf          *load.BufferConf
 	realtimeClock bool
-	emailNotifier email.MailNotifier
+	notifier      notifications.Notifier
 }
 
 func (analyzer *BotAnalyzer[T]) isIgnoredIP(ip net.IP) bool {
@@ -117,7 +122,7 @@ func (analyzer *BotAnalyzer[T]) isIgnoredIP(ip net.IP) bool {
 
 func (analyzer *BotAnalyzer[T]) Preprocess(
 	rec servicelog.InputRecord,
-	prevRecs logbuffer.AbstractStorage[servicelog.InputRecord, logbuffer.SerializableState],
+	prevRecs logbuffer.AbstractRecentRecords[servicelog.InputRecord, logbuffer.SerializableState],
 ) []servicelog.InputRecord {
 
 	currTime := rec.GetTime()
@@ -190,15 +195,19 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 			Msg("found suspicious increase in traffic - going to report")
 
 		go func() {
-			analyzer.emailNotifier.SendFormattedNotification(
+			err := analyzer.notifier.SendNotification(
 				fmt.Sprintf(
 					"Klogproc for %s: suspicious increase in traffic", analyzer.appType),
+				map[string]any{},
 				fmt.Sprintf(
-					"<p>previous (sampled): <strong>%d</strong>, current: <strong>%d</strong> (increase %01.2f)<br />",
+					"previous (sampled): **%d**, current: **%d** (increase %01.2f)  ",
 					int(meanReqs), numRec, trafficIncrease),
-				fmt.Sprintf("checking interval: <strong>%s</strong><br />", checkInterval.String()),
-				fmt.Sprintf("last check: <strong>%v</strong></p>", datetime.FormatDatetime(tState.LastCheck)),
+				fmt.Sprintf("checking interval: **%s**  ", checkInterval.String()),
+				fmt.Sprintf("last check: **%v**", datetime.FormatDatetime(tState.LastCheck)),
 			)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to send notification")
+			}
 		}()
 	}
 
@@ -239,7 +248,6 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 
 	var numCleaned int
 	tState.FullBufferIPProps.Filter(func(k string, v SuspiciousReqCounter) bool {
-		// TODO - problems here - use upgraded cnc-tskit and Filter() here
 		if v.LastUpd.Before(currTime.Add(-fullBufferMaxAge)) {
 			numCleaned++
 			return false
@@ -252,14 +260,18 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 
 	if suspicRequestsIP.Size() > 0 {
 		go func() {
-			analyzer.emailNotifier.SendFormattedNotification(
+			err := analyzer.notifier.SendNotification(
 				fmt.Sprintf("Klogproc for %s: suspicious IP addresses detected", analyzer.appType),
-				fmt.Sprintf("<p>records with high ratio of suspicious requests:<br />%s</p>",
-					strings.Join(suspicRequestsIP.ToSlice(), ",<br />")),
-				fmt.Sprintf("<p>total requesting IPs: <strong>%d</strong><br />", sortedItems.Len()),
-				fmt.Sprintf("last check: <strong>%v</strong><br />", datetime.FormatDatetime(tState.LastCheck)),
-				fmt.Sprintf("checking interval: <strong>%s</strong><br /></p>", checkInterval.String()),
+				map[string]any{},
+				"records with high ratio of suspicious requests:",
+				strings.Join(suspicRequestsIP.ToSlice(), "  \n"),
+				fmt.Sprintf("total requesting IPs: **%d**  ", sortedItems.Len()),
+				fmt.Sprintf("last check: **%v**  ", datetime.FormatDatetime(tState.LastCheck)),
+				fmt.Sprintf("checking interval: **%s**  ", checkInterval.String()),
 			)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to send notification")
+			}
 		}()
 	}
 
@@ -294,45 +306,36 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 			return outlierRecords[i].Count > outlierRecords[j].Count
 		})
 
-		numCellStyle := "text-align: right; border: 1px solid #777777; padding: 0.2em 0.4em"
-		cellStyle := "border: 1px solid #777777; padding: 0.2em 0.4em"
-		thStyle := "text-align: left; padding: 0.2em 0.4em"
-
-		ipTable := new(email.Table)
-		tbody := ipTable.
-			Init("border-collapse: collapse").
-			AddBody().
-			AddTR().
-			AddTH("IP", thStyle).
-			AddTH("req. count", thStyle).
-			AddTH("known", thStyle).Close()
-		for _, susp := range outlierRecords {
-			tbody.AddTR().
-				AddTD(susp.IP, cellStyle).
-				AddTD(fmt.Sprintf("%d", susp.Count), numCellStyle).
-				AddTD(fmt.Sprintf("%t", susp.Known), numCellStyle).
-				Close()
+		ipReportMetadata := make([]IPReport, len(outlierRecords))
+		var ipListing strings.Builder
+		for i, susp := range outlierRecords {
+			ipListing.WriteString(fmt.Sprintf("%s (%dx)\n", susp.IP, susp.Count))
+			ipReportMetadata[i] = IPReport{IP: susp.IP, Freq: susp.Count}
 		}
 
 		var trafficNote string
 		if isSuspicTrafficIncrease {
 			trafficNote = fmt.Sprintf(
-				"<strong>This report is supported with suspicious increase of traffic (%01.2f).</strong>",
+				"**This report is supported with suspicious increase of traffic (%01.2f).**",
 				trafficIncrease,
 			)
 		}
 
 		go func() {
-			analyzer.emailNotifier.SendFormattedNotification(
+			err := analyzer.notifier.SendNotification(
 				fmt.Sprintf("Klogproc for %s: suspicious IP addresses detected", analyzer.appType),
+				map[string]any{"ipList": ipReportMetadata},
 				trafficNote,
 				"suspicious records:",
-				ipTable.String(),
-				fmt.Sprintf("<p>total requesting IPs: <strong>%d</strong><br />", sortedItems.Len()),
-				fmt.Sprintf("threshold: %d requests", threshold),
-				fmt.Sprintf("last check: <strong>%v</strong><br />", datetime.FormatDatetime(tState.LastCheck)),
-				fmt.Sprintf("checking interval: <strong>%s</strong><br /></p>", checkInterval.String()),
+				ipListing.String(),
+				fmt.Sprintf("total requesting IPs: **%d**  ", sortedItems.Len()),
+				fmt.Sprintf("threshold: %d requests  ", threshold),
+				fmt.Sprintf("last check: **%v**  ", datetime.FormatDatetime(tState.LastCheck)),
+				fmt.Sprintf("checking interval: **%s**  ", checkInterval.String()),
 			)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to send notification")
+			}
 		}()
 	}
 
@@ -352,12 +355,12 @@ func NewBotAnalyzer[T AnalyzableRecord](
 	appType string,
 	conf *load.BufferConf,
 	realtimeClock bool,
-	emailNotifier email.MailNotifier,
+	emailNotifier notifications.Notifier,
 ) *BotAnalyzer[T] {
 	return &BotAnalyzer[T]{
 		appType:       appType,
 		conf:          conf,
 		realtimeClock: realtimeClock,
-		emailNotifier: emailNotifier,
+		notifier:      emailNotifier,
 	}
 }

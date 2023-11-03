@@ -20,13 +20,13 @@ import (
 	"path/filepath"
 	"sync"
 
+	"klogproc/analysis"
 	"klogproc/config"
-	"klogproc/email"
 	"klogproc/load/alarm"
 	"klogproc/load/batch"
 	"klogproc/load/tail"
 	"klogproc/logbuffer"
-	"klogproc/logbuffer/analysis"
+	"klogproc/notifications"
 	"klogproc/save"
 	"klogproc/save/elastic"
 	"klogproc/save/influx"
@@ -196,7 +196,7 @@ func (tp *tailProcessor) MaxLinesPerCheck() int {
 func newProcAlarm(
 	tailConf *tail.FileConf,
 	conf *tail.Conf,
-	notifier email.MailNotifier,
+	notifier notifications.Notifier,
 ) (servicelog.AppErrorRegister, error) {
 	if conf.NumErrorsAlarm > 0 && conf.ErrCountTimeRangeSecs > 0 && notifier != nil {
 		return alarm.NewTailProcAlarm(
@@ -219,8 +219,9 @@ func newTailProcessor(
 	options *ProcessOptions,
 ) *tailProcessor {
 
-	var notifier email.MailNotifier
-	notifier, err := email.NewEmailNotifier(conf.EmailNotification, conf.TimezoneLocation())
+	var notifier notifications.Notifier
+	notifier, err := notifications.NewNotifier(
+		conf.EmailNotification, conf.ConomiNotification, conf.TimezoneLocation())
 	if err != nil {
 		log.Fatal().Msgf("Failed to initialize e-mail notifier: %s", err)
 	}
@@ -242,7 +243,7 @@ func newTailProcessor(
 		"Creating tail processor for %s, app type: %s, app version: %s, tzShift: %d",
 		filepath.Clean(tailConf.Path), tailConf.AppType, tailConf.Version, tailConf.TZShift)
 
-	var buffStorage logbuffer.AbstractStorage[servicelog.InputRecord, logbuffer.SerializableState]
+	var buffStorage logbuffer.AbstractRecentRecords[servicelog.InputRecord, logbuffer.SerializableState]
 	if tailConf.Buffer != nil {
 		var stateFactory func() logbuffer.SerializableState
 		if tailConf.Buffer.BotDetection != nil {

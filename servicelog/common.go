@@ -86,7 +86,7 @@ const (
 	AppTypeMasm = "masm"
 )
 
-type ServiceLogBuffer logbuffer.AbstractStorage[InputRecord, logbuffer.SerializableState]
+type ServiceLogBuffer logbuffer.AbstractRecentRecords[InputRecord, logbuffer.SerializableState]
 
 // LineParsingError informs that we failed to parse a line as
 // an standard log record. In general, this may or may not mean
@@ -316,6 +316,6 @@ func UserBelongsToList[T int | string](userID T, anonymousUsers []int) bool {
 type Preprocessor interface {
 	Preprocess(
 		rec InputRecord,
-		prevRecs logbuffer.AbstractStorage[InputRecord, logbuffer.SerializableState],
+		prevRecs logbuffer.AbstractRecentRecords[InputRecord, logbuffer.SerializableState],
 	) []InputRecord
 }

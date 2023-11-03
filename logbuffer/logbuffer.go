@@ -53,19 +53,16 @@ type SerializableState interface {
 	Report() map[string]any
 }
 
-// Storage keeps a defined number of log records in memory
-// (using a circular list) for log processors which need not
-// just the current log line/record but also some history
-// lookup (e.g. for record clustering in `mapka` or for
-// bot detection)
-// Besides stored records, it provides a simple interface
-// for storing and retrieving misc. values for log processors
-// to be able to evaluate recent state.
+// PrevRecords keeps:
+// 1. a defined number of log records in memory (using a circular list for each "clustering ID")
+// 2. custom state object (used typically to store stats in bot detection)
+// 3. last check (both global and for individual "clustering IDs" (which is session + IP))
+//
 // All the functions are safe to be used concurrently.
-// The `T` type represents a log record type stored by this Storage.
+// The `T` type represents a log record type stored by this PrevRecords.
 // The `U` type is a type used to store state data when dealing
 // with persistence.
-type Storage[T Storable, U SerializableState] struct {
+type PrevRecords[T Storable, U SerializableState] struct {
 	conf *load.BufferConf
 
 	storageDirPath string
@@ -88,7 +85,7 @@ type Storage[T Storable, U SerializableState] struct {
 	stateWriting chan U
 }
 
-func (st *Storage[T, U]) AddRecord(rec T) {
+func (st *PrevRecords[T, U]) AddRecord(rec T) {
 	st.dataLock.Lock()
 	defer st.dataLock.Unlock()
 	if st.conf.HistoryLookupItems > 0 {
@@ -101,13 +98,13 @@ func (st *Storage[T, U]) AddRecord(rec T) {
 	}
 }
 
-func (st *Storage[T, U]) ConfirmRecordCheck(rec Storable) {
+func (st *PrevRecords[T, U]) ConfirmRecordCheck(rec Storable) {
 	st.lastChecksLock.Lock()
 	defer st.lastChecksLock.Unlock()
 	st.lastChecks[rec.ClusteringClientID()] = rec.GetTime()
 }
 
-func (st *Storage[T, U]) GetLastCheck(clusteringID string) time.Time {
+func (st *PrevRecords[T, U]) GetLastCheck(clusteringID string) time.Time {
 	st.lastChecksLock.RLock()
 	defer st.lastChecksLock.RUnlock()
 	v := st.lastChecks[clusteringID]
@@ -116,7 +113,7 @@ func (st *Storage[T, U]) GetLastCheck(clusteringID string) time.Time {
 
 // RemoveAnalyzedRecords removes all the log records older than `dt`
 // with provided `clusteringID` (which is typically something like userID, session, IP)
-func (st *Storage[T, U]) RemoveAnalyzedRecords(clusteringID string, dt time.Time) {
+func (st *PrevRecords[T, U]) RemoveAnalyzedRecords(clusteringID string, dt time.Time) {
 	st.dataLock.Lock()
 	defer st.dataLock.Unlock()
 	v, ok := st.data[clusteringID]
@@ -130,7 +127,7 @@ func (st *Storage[T, U]) RemoveAnalyzedRecords(clusteringID string, dt time.Time
 
 // NumOfRecords gets number of stored records for a specific
 // records (identified by their `clusteringID`).
-func (st *Storage[T, U]) NumOfRecords(clusteringID string) int {
+func (st *PrevRecords[T, U]) NumOfRecords(clusteringID string) int {
 	st.dataLock.RLock()
 	defer st.dataLock.RUnlock()
 	v, ok := st.data[clusteringID]
@@ -140,7 +137,7 @@ func (st *Storage[T, U]) NumOfRecords(clusteringID string) int {
 	return v.Len()
 }
 
-func (st *Storage[T, U]) ClearOldRecords(maxAge time.Time) int {
+func (st *PrevRecords[T, U]) ClearOldRecords(maxAge time.Time) int {
 	st.dataLock.Lock()
 	defer st.dataLock.Unlock()
 	var totalRm int
@@ -159,7 +156,7 @@ func (st *Storage[T, U]) ClearOldRecords(maxAge time.Time) int {
 // TotalNumOfRecords returns total number of stored records
 // no matter what clustering ID they have but with its
 // time greater or equal to `dt`
-func (st *Storage[T, U]) TotalNumOfRecordsSince(dt time.Time) int {
+func (st *PrevRecords[T, U]) TotalNumOfRecordsSince(dt time.Time) int {
 	st.dataLock.RLock()
 	defer st.dataLock.RUnlock()
 	var ans int
@@ -176,7 +173,7 @@ func (st *Storage[T, U]) TotalNumOfRecordsSince(dt time.Time) int {
 
 // ForEach iterates over stored records with the provided `clusteringID`
 // and calls the provided `fn` with each item as an argument.
-func (st *Storage[T, U]) ForEach(clusteringID string, fn func(item T)) {
+func (st *PrevRecords[T, U]) ForEach(clusteringID string, fn func(item T)) {
 	st.dataLock.RLock()
 	defer st.dataLock.RUnlock()
 	v, ok := st.data[clusteringID]
@@ -196,7 +193,7 @@ func (st *Storage[T, U]) ForEach(clusteringID string, fn func(item T)) {
 // iterates in two nested loops - first one goes through all the record groups
 // (= records with the same clustering ID) and the for each this group it iterates
 // through all its items.
-func (st *Storage[T, U]) TotalForEach(fn func(item T)) {
+func (st *PrevRecords[T, U]) TotalForEach(fn func(item T)) {
 	st.dataLock.RLock()
 	defer st.dataLock.RUnlock()
 	for _, v := range st.data {
@@ -214,11 +211,11 @@ func NewStorage[T Storable, U SerializableState](
 	storageDirPath string,
 	analyzedLogFilePath string,
 	stateDataFactory func() U,
-) *Storage[T, U] {
+) *PrevRecords[T, U] {
 	if storageDirPath == "" {
 		panic("no path specified for buffer state storage")
 	}
-	ans := &Storage[T, U]{
+	ans := &PrevRecords[T, U]{
 		data:             make(map[string]*collections.CircularList[T]),
 		conf:             bufferConf,
 		lastChecks:       make(map[string]time.Time),

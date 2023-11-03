@@ -17,11 +17,11 @@
 package main
 
 import (
+	"klogproc/analysis"
 	"klogproc/config"
-	"klogproc/email"
 	"klogproc/load/batch"
 	"klogproc/logbuffer"
-	"klogproc/logbuffer/analysis"
+	"klogproc/notifications"
 	"klogproc/save"
 	"klogproc/save/elastic"
 	"klogproc/save/influx"
@@ -45,7 +45,7 @@ func runBatchAction(
 ) {
 	// For debugging e-mail notification, you can pass `conf.EmailNotification`
 	// as the first argument and use the "batch" mode to tune log processing.
-	nullMailNot, _ := email.NewEmailNotifier(nil, conf.TimezoneLocation())
+	nullMailNot, _ := notifications.NewNotifier(nil, conf.ConomiNotification, conf.TimezoneLocation())
 	lt, err := trfactory.GetLogTransformer(
 		conf.LogFiles.AppType,
 		conf.LogFiles.Version,

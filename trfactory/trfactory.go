@@ -17,8 +17,8 @@ package trfactory
 import (
 	"fmt"
 
-	"klogproc/email"
 	"klogproc/load"
+	"klogproc/notifications"
 	"klogproc/servicelog"
 	"klogproc/servicelog/apiguard"
 	"klogproc/servicelog/kontext013"
@@ -48,7 +48,7 @@ func GetLogTransformer(
 	bufferConf *load.BufferConf,
 	userMap *users.UserMap,
 	realtimeClock bool,
-	emailNotifier email.MailNotifier,
+	emailNotifier notifications.Notifier,
 ) (servicelog.LogItemTransformer, error) {
 
 	switch appType {

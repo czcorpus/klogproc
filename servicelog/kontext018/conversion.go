@@ -20,9 +20,9 @@ import (
 	"strconv"
 	"time"
 
-	"klogproc/email"
+	"klogproc/analysis"
 	"klogproc/load"
-	"klogproc/logbuffer/analysis"
+	"klogproc/notifications"
 	"klogproc/servicelog"
 )
 
@@ -78,7 +78,7 @@ func (t *Transformer) Preprocess(
 func NewTransformer(
 	bufferConf *load.BufferConf,
 	realtimeClock bool,
-	emailNotifier email.MailNotifier,
+	emailNotifier notifications.Notifier,
 ) *Transformer {
 	analyzer := analysis.NewBotAnalyzer[*QueryInputRecord]("kontext", bufferConf, realtimeClock, emailNotifier)
 	return &Transformer{

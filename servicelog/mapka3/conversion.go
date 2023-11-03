@@ -21,8 +21,8 @@ import (
 	"encoding/hex"
 	"time"
 
+	"klogproc/analysis/clustering"
 	"klogproc/load"
-	"klogproc/logbuffer/analysis"
 	"klogproc/servicelog"
 )
 
@@ -86,6 +86,6 @@ func (t *Transformer) Preprocess(
 func NewTransformer(bufferConf *load.BufferConf, realtimeClock bool) *Transformer {
 	return &Transformer{
 		bufferConf: bufferConf,
-		analyzer:   analysis.NewClusteringAnalyzer[*InputRecord]("mapka", bufferConf, realtimeClock),
+		analyzer:   clustering.NewAnalyzer[*InputRecord]("mapka", bufferConf, realtimeClock),
 	}
 }

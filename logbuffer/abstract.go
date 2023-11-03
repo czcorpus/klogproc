@@ -18,7 +18,7 @@ package logbuffer
 
 import "time"
 
-type AbstractStorage[T Storable, U SerializableState] interface {
+type AbstractRecentRecords[T Storable, U SerializableState] interface {
 	AddRecord(rec T)
 
 	// ConfirmRecordCheck sets a time of last check

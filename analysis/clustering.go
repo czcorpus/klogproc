@@ -61,7 +61,7 @@ type ClusteringAnalyzer[T AnalyzableRecord] struct {
 
 func (analyzer *ClusteringAnalyzer[T]) Preprocess(
 	rec servicelog.InputRecord,
-	prevRecs logbuffer.AbstractStorage[servicelog.InputRecord, logbuffer.SerializableState],
+	prevRecs logbuffer.AbstractRecentRecords[servicelog.InputRecord, logbuffer.SerializableState],
 ) []servicelog.InputRecord {
 
 	currTime := rec.GetTime()
@@ -108,7 +108,7 @@ func (analyzer *ClusteringAnalyzer[T]) Preprocess(
 	return []servicelog.InputRecord{rec}
 }
 
-func NewClusteringAnalyzer[T AnalyzableRecord](
+func NewAnalyzer[T AnalyzableRecord](
 	appType string,
 	conf *load.BufferConf,
 	realtimeClock bool,
