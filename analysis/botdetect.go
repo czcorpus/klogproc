@@ -247,13 +247,14 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 	}
 
 	var numCleaned int
-	tState.FullBufferIPProps.Filter(func(k string, v SuspiciousReqCounter) bool {
-		if v.LastUpd.Before(currTime.Add(-fullBufferMaxAge)) {
-			numCleaned++
-			return false
-		}
-		return true
-	})
+	tState.FullBufferIPProps = tState.FullBufferIPProps.Filter(
+		func(k string, v SuspiciousReqCounter) bool {
+			if v.LastUpd.Before(currTime.Add(-fullBufferMaxAge)) {
+				numCleaned++
+				return false
+			}
+			return true
+		})
 	if numCleaned > 0 {
 		log.Info().Int("numCleaned", numCleaned).Msg("cleaned old records in full buffer IP props table")
 	}
