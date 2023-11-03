@@ -20,12 +20,12 @@ import (
 	"path/filepath"
 	"sync"
 
+	"klogproc/analysis"
 	"klogproc/config"
 	"klogproc/load/alarm"
 	"klogproc/load/batch"
 	"klogproc/load/tail"
 	"klogproc/logbuffer"
-	"klogproc/logbuffer/analysis"
 	"klogproc/notifications"
 	"klogproc/save"
 	"klogproc/save/elastic"

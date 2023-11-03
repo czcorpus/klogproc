@@ -19,8 +19,8 @@ package wag07
 import (
 	"strconv"
 
+	"klogproc/analysis"
 	"klogproc/load"
-	"klogproc/logbuffer/analysis"
 	"klogproc/notifications"
 	"klogproc/servicelog"
 	"klogproc/servicelog/wag06"

@@ -17,10 +17,10 @@
 package main
 
 import (
+	"klogproc/analysis"
 	"klogproc/config"
 	"klogproc/load/batch"
 	"klogproc/logbuffer"
-	"klogproc/logbuffer/analysis"
 	"klogproc/notifications"
 	"klogproc/save"
 	"klogproc/save/elastic"

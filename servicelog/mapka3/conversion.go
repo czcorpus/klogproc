@@ -21,8 +21,8 @@ import (
 	"encoding/hex"
 	"time"
 
+	"klogproc/analysis"
 	"klogproc/load"
-	"klogproc/logbuffer/analysis"
 	"klogproc/servicelog"
 )
 

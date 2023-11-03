@@ -20,8 +20,8 @@ import (
 	"strconv"
 	"time"
 
+	"klogproc/analysis"
 	"klogproc/load"
-	"klogproc/logbuffer/analysis"
 	"klogproc/notifications"
 	"klogproc/servicelog"
 )
