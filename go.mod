@@ -4,11 +4,12 @@ go 1.19
 
 require (
 	github.com/czcorpus/cnc-gokit v0.6.0
+	github.com/czcorpus/conomi v0.0.1
 	github.com/google/uuid v1.3.0
 	github.com/influxdata/influxdb1-client v0.0.0-20220302092344-a9ab5670611c
 	github.com/kelindar/dbscan v0.0.1
 	github.com/oschwald/geoip2-golang v1.8.0
-	github.com/rs/zerolog v1.29.1
+	github.com/rs/zerolog v1.31.0
 	github.com/stretchr/testify v1.8.4
 )
 
@@ -19,6 +20,6 @@ require (
 	github.com/oschwald/maxminddb-golang v1.10.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/sys v0.12.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

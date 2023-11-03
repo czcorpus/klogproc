@@ -19,9 +19,9 @@ package wag07
 import (
 	"strconv"
 
-	"klogproc/email"
 	"klogproc/load"
 	"klogproc/logbuffer/analysis"
+	"klogproc/notifications"
 	"klogproc/servicelog"
 	"klogproc/servicelog/wag06"
 )
@@ -65,7 +65,7 @@ func (t *Transformer) Preprocess(
 func NewTransformer(
 	bufferConf *load.BufferConf,
 	realtimeClock bool,
-	emailNotifier email.MailNotifier,
+	emailNotifier notifications.Notifier,
 ) *Transformer {
 	var analyzer servicelog.Preprocessor
 	if bufferConf.BotDetection != nil {

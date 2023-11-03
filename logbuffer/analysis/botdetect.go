@@ -19,9 +19,9 @@ package analysis
 import (
 	"encoding/json"
 	"fmt"
-	"klogproc/email"
 	"klogproc/load"
 	"klogproc/logbuffer"
+	"klogproc/notifications"
 	"klogproc/servicelog"
 	"math/rand"
 	"net"
@@ -113,7 +113,7 @@ type BotAnalyzer[T AnalyzableRecord] struct {
 	appType       string
 	conf          *load.BufferConf
 	realtimeClock bool
-	emailNotifier email.MailNotifier
+	notifier      notifications.Notifier
 }
 
 func (analyzer *BotAnalyzer[T]) isIgnoredIP(ip net.IP) bool {
@@ -195,7 +195,7 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 			Msg("found suspicious increase in traffic - going to report")
 
 		go func() {
-			err := analyzer.emailNotifier.SendNotification(
+			err := analyzer.notifier.SendNotification(
 				fmt.Sprintf(
 					"Klogproc for %s: suspicious increase in traffic", analyzer.appType),
 				map[string]any{},
@@ -260,7 +260,7 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 
 	if suspicRequestsIP.Size() > 0 {
 		go func() {
-			err := analyzer.emailNotifier.SendNotification(
+			err := analyzer.notifier.SendNotification(
 				fmt.Sprintf("Klogproc for %s: suspicious IP addresses detected", analyzer.appType),
 				map[string]any{},
 				"records with high ratio of suspicious requests:",
@@ -309,7 +309,7 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 		ipReportMetadata := make([]IPReport, len(outlierRecords))
 		var ipListing strings.Builder
 		for i, susp := range outlierRecords {
-			ipListing.WriteString(fmt.Sprintf("%s (%dx)\\n", susp.IP, susp.Count))
+			ipListing.WriteString(fmt.Sprintf("%s (%dx)\n", susp.IP, susp.Count))
 			ipReportMetadata[i] = IPReport{IP: susp.IP, Freq: susp.Count}
 		}
 
@@ -322,7 +322,7 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 		}
 
 		go func() {
-			err := analyzer.emailNotifier.SendNotification(
+			err := analyzer.notifier.SendNotification(
 				fmt.Sprintf("Klogproc for %s: suspicious IP addresses detected", analyzer.appType),
 				map[string]any{"ipList": ipReportMetadata},
 				trafficNote,
@@ -355,12 +355,12 @@ func NewBotAnalyzer[T AnalyzableRecord](
 	appType string,
 	conf *load.BufferConf,
 	realtimeClock bool,
-	emailNotifier email.MailNotifier,
+	emailNotifier notifications.Notifier,
 ) *BotAnalyzer[T] {
 	return &BotAnalyzer[T]{
 		appType:       appType,
 		conf:          conf,
 		realtimeClock: realtimeClock,
-		emailNotifier: emailNotifier,
+		notifier:      emailNotifier,
 	}
 }
