@@ -34,7 +34,7 @@ const (
 // for sending warnings to administrators
 // (typically when a suspicious activity is detected from processed logs)
 type Notifier interface {
-	SendNotification(subject string, metadata map[string]any, paragraphs ...string) error
+	SendNotification(tag, subject string, metadata map[string]any, paragraphs ...string) error
 }
 
 // defaultEmailNotifier provides basic e-mail notification
@@ -45,7 +45,7 @@ type defaultEmailNotifier struct {
 	loc  *time.Location
 }
 
-func (den *defaultEmailNotifier) SendNotification(subject string, metadata map[string]any, divContents ...string) error {
+func (den *defaultEmailNotifier) SendNotification(tag, subject string, metadata map[string]any, divContents ...string) error {
 	return mail.SendNotification(den.conf, den.loc, mail.FormattedNotification{
 		Subject: subject,
 		Divs:    divContents,

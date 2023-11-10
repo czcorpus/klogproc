@@ -196,6 +196,7 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 
 		go func() {
 			err := analyzer.notifier.SendNotification(
+				analyzer.appType,
 				fmt.Sprintf(
 					"Klogproc for %s: suspicious increase in traffic", analyzer.appType),
 				map[string]any{},
@@ -262,6 +263,7 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 	if suspicRequestsIP.Size() > 0 {
 		go func() {
 			err := analyzer.notifier.SendNotification(
+				analyzer.appType,
 				fmt.Sprintf("Klogproc for %s: suspicious IP addresses detected", analyzer.appType),
 				map[string]any{},
 				"records with high ratio of suspicious requests:",
@@ -324,6 +326,7 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 
 		go func() {
 			err := analyzer.notifier.SendNotification(
+				analyzer.appType,
 				fmt.Sprintf("Klogproc for %s: suspicious IP addresses detected", analyzer.appType),
 				map[string]any{"ipList": ipReportMetadata},
 				trafficNote,

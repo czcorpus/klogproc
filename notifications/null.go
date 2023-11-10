@@ -27,7 +27,7 @@ import "github.com/rs/zerolog/log"
 type nullEmailNotifier struct {
 }
 
-func (den *nullEmailNotifier) SendNotification(subject string, metadata map[string]any, paragraphs ...string) error {
+func (den *nullEmailNotifier) SendNotification(tag, subject string, metadata map[string]any, paragraphs ...string) error {
 	log.Warn().
 		Str("subject", subject).
 		Strs("body", paragraphs).
