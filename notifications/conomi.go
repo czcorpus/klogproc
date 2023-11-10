@@ -32,11 +32,12 @@ type conomiNotifier struct {
 	client *client.ConomiClient
 }
 
-func (cn *conomiNotifier) SendNotification(subject string, metadata map[string]any, divContents ...string) error {
+func (cn *conomiNotifier) SendNotification(tag, subject string, metadata map[string]any, divContents ...string) error {
 	return cn.client.SendReport(
 		general.SeverityLevelWarning,
 		subject,
 		strings.Join(divContents, "\n\n"),
-		metadata,
+		client.WithArgs(metadata),
+		client.WithTag(tag),
 	)
 }

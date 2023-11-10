@@ -101,7 +101,7 @@ func (tpa *TailProcAlarm) Evaluate() {
 		subj := fmt.Sprintf("Klogproc ERROR alarm for file %s (type %s)", tpa.fileInfo.GetPath(),
 			tpa.fileInfo.GetAppType())
 		log.Info().Msgf("sending alarm notification for %s", tpa.fileInfo.GetPath())
-		err := tpa.notifier.SendNotification(subj, map[string]any{}, msg.String())
+		err := tpa.notifier.SendNotification(tpa.fileInfo.GetAppType(), subj, map[string]any{}, msg.String())
 		if err != nil {
 			log.Error().Err(err).Msg("")
 		}
