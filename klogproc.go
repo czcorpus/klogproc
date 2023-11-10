@@ -28,6 +28,7 @@ import (
 
 	"klogproc/config"
 	"klogproc/load/batch"
+	"klogproc/notifications"
 	"klogproc/save/elastic"
 )
 
@@ -181,6 +182,19 @@ func main() {
 		conf = setup(flag.Arg(1), action)
 		log.Print(startingServiceMsg)
 		processCeleryStatus(conf)
+	case config.ActionTestNotification:
+		conf = setup(flag.Arg(1), action)
+		notifier, err := notifications.NewNotifier(
+			conf.EmailNotification, conf.ConomiNotification, conf.TimezoneLocation())
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to initialize notifier for testing")
+		}
+		notifier.SendNotification(
+			"test",
+			"Klogproc testing notification",
+			map[string]any{"app": "klogproc", "dt": time.Now().In(conf.TimezoneLocation())},
+			"This is just a testing notification triggered by running `klogproc test-notification`",
+		)
 	case config.ActionVersion:
 		fmt.Printf("Klogproc %s\nbuild date: %s\nlast commit: %s\n", version, build, gitCommit)
 	default:

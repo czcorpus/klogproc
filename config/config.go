@@ -33,14 +33,15 @@ import (
 )
 
 const (
-	ActionBatch     = "batch"
-	ActionTail      = "tail"
-	ActionRedis     = "redis"
-	ActionCelery    = "celery"
-	ActionKeyremove = "keyremove"
-	ActionDocupdate = "docupdate"
-	ActionHelp      = "help"
-	ActionVersion   = "version"
+	ActionBatch            = "batch"
+	ActionTail             = "tail"
+	ActionRedis            = "redis"
+	ActionCelery           = "celery"
+	ActionKeyremove        = "keyremove"
+	ActionDocupdate        = "docupdate"
+	ActionHelp             = "help"
+	ActionVersion          = "version"
+	ActionTestNotification = "test-notification"
 
 	DefaultTimeZone = "Europe/Prague"
 )
