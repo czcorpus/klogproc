@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"klogproc/clustering"
 	"klogproc/load"
-	"klogproc/logbuffer"
 	"klogproc/servicelog"
 	"time"
 
@@ -61,7 +60,7 @@ type ClusteringAnalyzer[T AnalyzableRecord] struct {
 
 func (analyzer *ClusteringAnalyzer[T]) Preprocess(
 	rec servicelog.InputRecord,
-	prevRecs logbuffer.AbstractRecentRecords[servicelog.InputRecord, logbuffer.SerializableState],
+	prevRecs BufferedRecords,
 ) []servicelog.InputRecord {
 
 	currTime := rec.GetTime()
