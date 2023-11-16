@@ -178,7 +178,7 @@ func (analyzer *BotAnalyzer[T]) getOutlierRecords(
 			err := analyzer.notifier.SendNotification(
 				analyzer.appType,
 				fmt.Sprintf("Klogproc for %s: suspicious IP addresses detected", analyzer.appType),
-				map[string]any{"ipList": ipReportMetadata},
+				map[string]any{"ipList": ipReportMetadata}, // ipList entry is recognized by the Rabban tool
 				trafficNote,
 				"suspicious records:",
 				ipListing.String(),
@@ -314,7 +314,7 @@ func (analyzer *BotAnalyzer[T]) testAndReportSuspicRequestIPs(
 				for ip, count := range suspicRequestsIP {
 					reportedIPs = append(reportedIPs, IPReport{IP: ip, Freq: count})
 				}
-				msgArgs["ipList"] = reportedIPs
+				msgArgs["ipList"] = reportedIPs // ipList entry is recognized by the Rabban tool
 			}
 
 			var msgIPList strings.Builder
