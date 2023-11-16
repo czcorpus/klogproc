@@ -120,6 +120,30 @@ func (analyzer *BotAnalyzer[T]) isIgnoredIP(ip net.IP) bool {
 	return ip == nil || ip.IsLoopback() || ip.IsUnspecified()
 }
 
+func (analyzer *BotAnalyzer[T]) getOutlierRecords(
+	sortedItems collections.BinTree[*ReqCalcItem],
+) ([]*ReqCalcItem, error) {
+	qrt, err := maths.GetQuartiles[maths.FreqInfo](&sitemsWrapper{sortedItems})
+	if err != nil {
+		return []*ReqCalcItem{}, err
+	}
+	threshold := maths.Max(
+		analyzer.conf.BotDetection.IPOutlierMinFreq,
+		int(float64(qrt.Q3)+analyzer.conf.BotDetection.IPOutlierCoeff*float64(qrt.IQR())),
+	)
+	outlierRecords := make([]*ReqCalcItem, 0, sortedItems.Len()/2)
+	sortedItems.ForEach(func(i int, v *ReqCalcItem) bool {
+		if v.Count > threshold {
+			if collections.SliceContains[string](analyzer.conf.BotDetection.BlocklistIP, v.IP) {
+				v.Known = true
+			}
+			outlierRecords = append(outlierRecords, v)
+		}
+		return true
+	})
+	return outlierRecords, nil
+}
+
 func (analyzer *BotAnalyzer[T]) Preprocess(
 	rec servicelog.InputRecord,
 	prevRecs logbuffer.AbstractRecentRecords[servicelog.InputRecord, logbuffer.SerializableState],
@@ -278,27 +302,12 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 		}()
 	}
 
-	qrt, err := maths.GetQuartiles[maths.FreqInfo](&sitemsWrapper{sortedItems})
+	outlierRecords, err := analyzer.getOutlierRecords(sortedItems)
 	if err == maths.ErrTooSmallDataset {
 		return ans
 	}
-	threshold := maths.Max(
-		analyzer.conf.BotDetection.IPOutlierMinFreq,
-		int(float64(qrt.Q3)+analyzer.conf.BotDetection.IPOutlierCoeff*float64(qrt.IQR())),
-	)
-	outlierRecords := make([]*ReqCalcItem, 0, sortedItems.Len()/2)
-	sortedItems.ForEach(func(i int, v *ReqCalcItem) bool {
-		if v.Count > threshold {
-			if collections.SliceContains[string](analyzer.conf.BotDetection.BlocklistIP, v.IP) {
-				v.Known = true
-			}
-			outlierRecords = append(outlierRecords, v)
-		}
-		return true
-	})
 
 	if len(outlierRecords) > 0 {
-
 		log.Info().
 			Str("appType", analyzer.appType).
 			Int("threshold", threshold).
