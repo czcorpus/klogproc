@@ -17,7 +17,6 @@
 package analysis
 
 import (
-	"klogproc/logbuffer"
 	"klogproc/servicelog"
 )
 
@@ -27,7 +26,7 @@ type NullAnalyzer[T AnalyzableRecord] struct {
 
 func (analyzer *NullAnalyzer[T]) Preprocess(
 	rec servicelog.InputRecord,
-	prevRecs logbuffer.AbstractRecentRecords[servicelog.InputRecord, logbuffer.SerializableState],
+	prevRecs BufferedRecords,
 ) []servicelog.InputRecord {
 	return []servicelog.InputRecord{rec}
 }

@@ -120,9 +120,232 @@ func (analyzer *BotAnalyzer[T]) isIgnoredIP(ip net.IP) bool {
 	return ip == nil || ip.IsLoopback() || ip.IsUnspecified()
 }
 
+// getOutlierRecords returns quartile-based outliers along
+// with calculated threshold
+func (analyzer *BotAnalyzer[T]) getOutlierRecords(
+	state *BotAnalysisState,
+	sortedItems collections.BinTree[*ReqCalcItem],
+	checkInterval time.Duration,
+	isSuspicTrafficIncrease bool,
+	trafficIncrease float64,
+) error {
+	var threshold int
+	qrt, err := maths.GetQuartiles[maths.FreqInfo](&sitemsWrapper{sortedItems})
+	if err != nil {
+		return err
+	}
+	threshold = maths.Max(
+		analyzer.conf.BotDetection.IPOutlierMinFreq,
+		int(float64(qrt.Q3)+analyzer.conf.BotDetection.IPOutlierCoeff*float64(qrt.IQR())),
+	)
+	outlierRecords := make([]*ReqCalcItem, 0, sortedItems.Len()/2)
+	sortedItems.ForEach(func(i int, v *ReqCalcItem) bool {
+		if v.Count > threshold {
+			if collections.SliceContains[string](analyzer.conf.BotDetection.BlocklistIP, v.IP) {
+				v.Known = true
+			}
+			outlierRecords = append(outlierRecords, v)
+		}
+		return true
+	})
+	sort.SliceStable(outlierRecords, func(i, j int) bool {
+		return outlierRecords[i].Count > outlierRecords[j].Count
+	})
+
+	if len(outlierRecords) > 0 {
+		log.Info().
+			Str("appType", analyzer.appType).
+			Int("threshold", threshold).
+			Int("numOutliers", len(outlierRecords)).
+			Msg("found outlier IP requests - going to report")
+
+		ipReportMetadata := make([]IPReport, len(outlierRecords))
+		var ipListing strings.Builder
+		for i, susp := range outlierRecords {
+			ipListing.WriteString(fmt.Sprintf("%s (%dx)\n", susp.IP, susp.Count))
+			ipReportMetadata[i] = IPReport{IP: susp.IP, Freq: susp.Count}
+		}
+
+		var trafficNote string
+		if isSuspicTrafficIncrease {
+			trafficNote = fmt.Sprintf(
+				"**This report is supported with suspicious increase of traffic (%01.2f).**",
+				trafficIncrease,
+			)
+		}
+
+		go func() {
+			err := analyzer.notifier.SendNotification(
+				analyzer.appType,
+				fmt.Sprintf("Klogproc for %s: suspicious IP addresses detected", analyzer.appType),
+				map[string]any{"ipList": ipReportMetadata}, // ipList entry is recognized by the Rabban tool
+				trafficNote,
+				"suspicious records:",
+				ipListing.String(),
+				fmt.Sprintf("total requesting IPs: **%d**  ", sortedItems.Len()),
+				fmt.Sprintf("threshold: %d requests  ", threshold),
+				fmt.Sprintf("last check: **%v**  ", datetime.FormatDatetime(state.LastCheck)),
+				fmt.Sprintf("checking interval: **%s**  ", checkInterval.String()),
+			)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to send notification")
+			}
+		}()
+	}
+
+	return nil
+}
+
+func (analyzer *BotAnalyzer[T]) testAndReportSuspicTrafficIncrease(
+	state *BotAnalysisState,
+	checkInterval time.Duration,
+	numRec int,
+) (bool, float64) {
+	var isSuspicTrafficIncrease bool
+	var meanReqs float64
+	for _, v := range state.PrevNums.Data {
+		meanReqs += float64(v)
+	}
+	meanReqs /= float64(len(state.PrevNums.Data))
+	trafficIncrease := float64(numRec) / meanReqs
+	log.Debug().
+		Time("lastCheck", state.LastCheck).
+		Int("prevNumRecsSampleSize", len(state.PrevNums.Data)).
+		Float64("meanPrevReqs", meanReqs).
+		Int("numRec", numRec).
+		Float64("trafficIncrease", trafficIncrease).
+		Str("appType", analyzer.appType).
+		Msg("Checking for suspicious activity")
+
+	if trafficIncrease >= analyzer.conf.BotDetection.TrafficReportingThreshold {
+		isSuspicTrafficIncrease = true
+		log.Info().
+			Str("appType", analyzer.appType).
+			Float64("prevReqsSampleMean", meanReqs).
+			Int("currentReqs", numRec).
+			Float64("increase", trafficIncrease).
+			Msg("found suspicious increase in traffic - going to report")
+
+		go func() {
+			err := analyzer.notifier.SendNotification(
+				analyzer.appType,
+				fmt.Sprintf(
+					"Klogproc for %s: suspicious increase in traffic", analyzer.appType),
+				map[string]any{},
+				fmt.Sprintf(
+					"previous (sampled): **%d**, current: **%d** (increase %01.2f)  ",
+					int(meanReqs), numRec, trafficIncrease),
+				fmt.Sprintf("checking interval: **%s**  ", checkInterval.String()),
+				fmt.Sprintf("last check: **%v**", datetime.FormatDatetime(state.LastCheck)),
+			)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to send notification")
+			}
+		}()
+	}
+	return isSuspicTrafficIncrease, trafficIncrease
+}
+
+func (analyzer *BotAnalyzer[T]) testAndReportSuspicRequestIPs(
+	state *BotAnalysisState,
+	prevRecs BufferedRecords,
+	checkInterval time.Duration,
+	currTime time.Time,
+	isSuspicTrafficIncrease bool,
+	trafficIncrease float64,
+) collections.BinTree[*ReqCalcItem] {
+	lastPeriodCounter := make(map[string]*ReqCalcItem)
+	var avgRequests float64
+	prevRecs.TotalForEach(func(item servicelog.InputRecord) {
+		if analyzer.isIgnoredIP(item.GetClientIP()) || !item.GetTime().After(state.LastCheck) {
+			return
+		}
+		curr, ok := lastPeriodCounter[item.GetClientIP().String()]
+		if !ok {
+			curr = &ReqCalcItem{
+				IP: item.GetClientIP().String(),
+			}
+		}
+		curr.Count++
+		avgRequests += 1
+		suspicCnt := state.FullBufferIPProps.Get(item.GetClientIP().String())
+		suspicCnt.NumAny++
+		suspicCnt.LastUpd = currTime
+		if item.IsSuspicious() {
+			suspicCnt.NumSuspic++
+		}
+		state.FullBufferIPProps.Set(item.GetClientIP().String(), suspicCnt)
+		lastPeriodCounter[item.GetClientIP().String()] = curr
+	})
+	avgRequests /= float64(len(lastPeriodCounter))
+	sortedItems := collections.BinTree[*ReqCalcItem]{}
+	suspicRequestsIP := make(map[string]int)
+	for _, v := range lastPeriodCounter {
+		sortedItems.Add(v)
+		fullBufferInfo := state.FullBufferIPProps.Get(v.IP)
+		if fullBufferInfo.SuspicRatio() >= suspiciousRecordsThreshold &&
+			v.Count >= int(avgRequests) {
+			suspicRequestsIP[v.IP] = v.Count
+		}
+	}
+	var numCleaned int
+	state.FullBufferIPProps = state.FullBufferIPProps.Filter(
+		func(k string, v SuspiciousReqCounter) bool {
+			if v.LastUpd.Before(currTime.Add(-fullBufferMaxAge)) {
+				numCleaned++
+				return false
+			}
+			return true
+		})
+	if numCleaned > 0 {
+		log.Info().Int("numCleaned", numCleaned).Msg("cleaned old records in full buffer IP props table")
+	}
+
+	if len(suspicRequestsIP) > 0 {
+		go func() {
+			var trafficNote string
+			msgArgs := make(map[string]any)
+			if isSuspicTrafficIncrease {
+				reportedIPs := make([]IPReport, 0, len(suspicRequestsIP))
+				trafficNote = fmt.Sprintf(
+					"**This report is supported with suspicious increase of traffic (%01.2f).**",
+					trafficIncrease,
+				)
+				for ip, count := range suspicRequestsIP {
+					reportedIPs = append(reportedIPs, IPReport{IP: ip, Freq: count})
+				}
+				msgArgs["ipList"] = reportedIPs // ipList entry is recognized by the Rabban tool
+			}
+
+			var msgIPList strings.Builder
+			for ip, count := range suspicRequestsIP {
+				msgIPList.WriteString(fmt.Sprintf(" * %s (%dx) \n", ip, count))
+			}
+			msgIPList.WriteString("\n\n")
+
+			err := analyzer.notifier.SendNotification(
+				analyzer.appType,
+				fmt.Sprintf("Klogproc for %s: suspicious IP addresses detected", analyzer.appType),
+				msgArgs,
+				trafficNote,
+				"records with high ratio of suspicious requests:",
+				msgIPList.String(),
+				fmt.Sprintf("total requesting IPs: **%d**  ", sortedItems.Len()),
+				fmt.Sprintf("last check: **%v**  ", datetime.FormatDatetime(state.LastCheck)),
+				fmt.Sprintf("checking interval: **%s**  ", checkInterval.String()),
+			)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to send notification")
+			}
+		}()
+	}
+
+	return sortedItems
+}
+
 func (analyzer *BotAnalyzer[T]) Preprocess(
 	rec servicelog.InputRecord,
-	prevRecs logbuffer.AbstractRecentRecords[servicelog.InputRecord, logbuffer.SerializableState],
+	prevRecs BufferedRecords,
 ) []servicelog.InputRecord {
 
 	currTime := rec.GetTime()
@@ -170,177 +393,16 @@ func (analyzer *BotAnalyzer[T]) Preprocess(
 		return ans
 	}
 
-	var meanReqs float64
-	for _, v := range tState.PrevNums.Data {
-		meanReqs += float64(v)
-	}
-	meanReqs /= float64(len(tState.PrevNums.Data))
-	trafficIncrease := float64(numRec) / meanReqs
-	log.Debug().
-		Time("lastCheck", tState.LastCheck).
-		Int("prevNumRecsSampleSize", len(tState.PrevNums.Data)).
-		Float64("meanPrevReqs", meanReqs).
-		Int("numRec", numRec).
-		Float64("trafficIncrease", trafficIncrease).
-		Str("appType", analyzer.appType).
-		Msg("Checking for suspicious activity")
-	var isSuspicTrafficIncrease bool
-	if trafficIncrease >= analyzer.conf.BotDetection.TrafficReportingThreshold {
-		isSuspicTrafficIncrease = true
-		log.Info().
-			Str("appType", analyzer.appType).
-			Float64("prevReqsSampleMean", meanReqs).
-			Int("currentReqs", numRec).
-			Float64("increase", trafficIncrease).
-			Msg("found suspicious increase in traffic - going to report")
+	isSuspicTrafficIncrease, trafficIncrease := analyzer.testAndReportSuspicTrafficIncrease(
+		tState, checkInterval, numRec)
 
-		go func() {
-			err := analyzer.notifier.SendNotification(
-				analyzer.appType,
-				fmt.Sprintf(
-					"Klogproc for %s: suspicious increase in traffic", analyzer.appType),
-				map[string]any{},
-				fmt.Sprintf(
-					"previous (sampled): **%d**, current: **%d** (increase %01.2f)  ",
-					int(meanReqs), numRec, trafficIncrease),
-				fmt.Sprintf("checking interval: **%s**  ", checkInterval.String()),
-				fmt.Sprintf("last check: **%v**", datetime.FormatDatetime(tState.LastCheck)),
-			)
-			if err != nil {
-				log.Error().Err(err).Msg("failed to send notification")
-			}
-		}()
-	}
+	sortedItems := analyzer.testAndReportSuspicRequestIPs(
+		tState, prevRecs, checkInterval, currTime, isSuspicTrafficIncrease, trafficIncrease)
 
-	lastPeriodCounter := make(map[string]*ReqCalcItem)
-	var avgRequests float64
-	prevRecs.TotalForEach(func(item servicelog.InputRecord) {
-		if analyzer.isIgnoredIP(item.GetClientIP()) || !item.GetTime().After(tState.LastCheck) {
-			return
-		}
-		curr, ok := lastPeriodCounter[item.GetClientIP().String()]
-		if !ok {
-			curr = &ReqCalcItem{
-				IP: item.GetClientIP().String(),
-			}
-		}
-		curr.Count++
-		avgRequests += 1
-		suspicCnt := tState.FullBufferIPProps.Get(item.GetClientIP().String())
-		suspicCnt.NumAny++
-		suspicCnt.LastUpd = currTime
-		if item.IsSuspicious() {
-			suspicCnt.NumSuspic++
-		}
-		tState.FullBufferIPProps.Set(item.GetClientIP().String(), suspicCnt)
-		lastPeriodCounter[item.GetClientIP().String()] = curr
-	})
-	avgRequests /= float64(len(lastPeriodCounter))
-	sortedItems := collections.BinTree[*ReqCalcItem]{}
-	suspicRequestsIP := collections.Set[string]{}
-	for _, v := range lastPeriodCounter {
-		sortedItems.Add(v)
-		fullBufferInfo := tState.FullBufferIPProps.Get(v.IP)
-		if fullBufferInfo.SuspicRatio() >= suspiciousRecordsThreshold &&
-			v.Count >= int(avgRequests) {
-			suspicRequestsIP.Add(v.IP)
-		}
-	}
-
-	var numCleaned int
-	tState.FullBufferIPProps = tState.FullBufferIPProps.Filter(
-		func(k string, v SuspiciousReqCounter) bool {
-			if v.LastUpd.Before(currTime.Add(-fullBufferMaxAge)) {
-				numCleaned++
-				return false
-			}
-			return true
-		})
-	if numCleaned > 0 {
-		log.Info().Int("numCleaned", numCleaned).Msg("cleaned old records in full buffer IP props table")
-	}
-
-	if suspicRequestsIP.Size() > 0 {
-		go func() {
-			err := analyzer.notifier.SendNotification(
-				analyzer.appType,
-				fmt.Sprintf("Klogproc for %s: suspicious IP addresses detected", analyzer.appType),
-				map[string]any{},
-				"records with high ratio of suspicious requests:",
-				strings.Join(suspicRequestsIP.ToSlice(), "  \n"),
-				fmt.Sprintf("total requesting IPs: **%d**  ", sortedItems.Len()),
-				fmt.Sprintf("last check: **%v**  ", datetime.FormatDatetime(tState.LastCheck)),
-				fmt.Sprintf("checking interval: **%s**  ", checkInterval.String()),
-			)
-			if err != nil {
-				log.Error().Err(err).Msg("failed to send notification")
-			}
-		}()
-	}
-
-	qrt, err := maths.GetQuartiles[maths.FreqInfo](&sitemsWrapper{sortedItems})
+	err := analyzer.getOutlierRecords(
+		tState, sortedItems, checkInterval, isSuspicTrafficIncrease, trafficIncrease)
 	if err == maths.ErrTooSmallDataset {
 		return ans
-	}
-	threshold := maths.Max(
-		analyzer.conf.BotDetection.IPOutlierMinFreq,
-		int(float64(qrt.Q3)+analyzer.conf.BotDetection.IPOutlierCoeff*float64(qrt.IQR())),
-	)
-	outlierRecords := make([]*ReqCalcItem, 0, sortedItems.Len()/2)
-	sortedItems.ForEach(func(i int, v *ReqCalcItem) bool {
-		if v.Count > threshold {
-			if collections.SliceContains[string](analyzer.conf.BotDetection.BlocklistIP, v.IP) {
-				v.Known = true
-			}
-			outlierRecords = append(outlierRecords, v)
-		}
-		return true
-	})
-
-	if len(outlierRecords) > 0 {
-
-		log.Info().
-			Str("appType", analyzer.appType).
-			Int("threshold", threshold).
-			Int("numOutliers", len(outlierRecords)).
-			Msg("found outlier IP requests - going to report")
-
-		sort.SliceStable(outlierRecords, func(i, j int) bool {
-			return outlierRecords[i].Count > outlierRecords[j].Count
-		})
-
-		ipReportMetadata := make([]IPReport, len(outlierRecords))
-		var ipListing strings.Builder
-		for i, susp := range outlierRecords {
-			ipListing.WriteString(fmt.Sprintf("%s (%dx)\n", susp.IP, susp.Count))
-			ipReportMetadata[i] = IPReport{IP: susp.IP, Freq: susp.Count}
-		}
-
-		var trafficNote string
-		if isSuspicTrafficIncrease {
-			trafficNote = fmt.Sprintf(
-				"**This report is supported with suspicious increase of traffic (%01.2f).**",
-				trafficIncrease,
-			)
-		}
-
-		go func() {
-			err := analyzer.notifier.SendNotification(
-				analyzer.appType,
-				fmt.Sprintf("Klogproc for %s: suspicious IP addresses detected", analyzer.appType),
-				map[string]any{"ipList": ipReportMetadata},
-				trafficNote,
-				"suspicious records:",
-				ipListing.String(),
-				fmt.Sprintf("total requesting IPs: **%d**  ", sortedItems.Len()),
-				fmt.Sprintf("threshold: %d requests  ", threshold),
-				fmt.Sprintf("last check: **%v**  ", datetime.FormatDatetime(tState.LastCheck)),
-				fmt.Sprintf("checking interval: **%s**  ", checkInterval.String()),
-			)
-			if err != nil {
-				log.Error().Err(err).Msg("failed to send notification")
-			}
-		}()
 	}
 
 	if rand.Float64() < bufferCleanupProbability {

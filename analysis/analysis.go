@@ -17,11 +17,14 @@
 package analysis
 
 import (
+	"klogproc/logbuffer"
 	"klogproc/servicelog"
 
 	"github.com/czcorpus/cnc-gokit/collections"
 	"github.com/czcorpus/cnc-gokit/maths"
 )
+
+type BufferedRecords = logbuffer.AbstractRecentRecords[servicelog.InputRecord, logbuffer.SerializableState]
 
 type sitemsWrapper struct {
 	data collections.BinTree[*ReqCalcItem]
