@@ -161,7 +161,7 @@ func runBatchAction(
 	wg.Wait()
 	log.Info().Msgf("Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)
 	stateData := buffStorage.GetStateData(time.Now())
-	if !reflect.ValueOf(stateData).IsNil() {
+	if stateData != nil && !reflect.ValueOf(stateData).IsNil() {
 		log.Debug().Any("report", buffStorage.GetStateData(time.Now()).Report()).Msg("state report")
 	}
 	finishEvent <- true
