@@ -40,7 +40,7 @@ const (
 	bufferCleanupProbability     = 0.1
 	bufferCleanupMaxAge          = time.Hour * 6
 	suspiciousRecordsThreshold   = 0.6
-	suspiciousRecordsMinRequests = 20
+	suspiciousRecordsMinRequests = 10
 	fullBufferMaxAge             = time.Hour * 5
 )
 
@@ -278,13 +278,16 @@ func (analyzer *BotAnalyzer[T]) testAndReportSuspicRequestIPs(
 		lastPeriodCounter[item.GetClientIP().String()] = curr
 	})
 	avgRequests /= float64(len(lastPeriodCounter))
+	// here we want to avoid situations when avg of requests per IP is small so any
+	// IP with some suspicious requests is mostly meaningless
+	numRequestsThreshold := maths.Max(avgRequests, suspiciousRecordsMinRequests)
 	sortedItems := collections.BinTree[*ReqCalcItem]{}
 	suspicRequestsIP := make(map[string]int)
 	for _, v := range lastPeriodCounter {
 		sortedItems.Add(v)
 		fullBufferInfo := state.FullBufferIPProps.Get(v.IP)
 		if fullBufferInfo.SuspicRatio() >= suspiciousRecordsThreshold &&
-			v.Count >= int(avgRequests) {
+			v.Count >= int(numRequestsThreshold) {
 			suspicRequestsIP[v.IP] = v.Count
 		}
 	}
