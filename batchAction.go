@@ -59,7 +59,7 @@ func runBatchAction(
 	}
 	var buffStorage servicelog.ServiceLogBuffer
 	var stateFactory func() logbuffer.SerializableState
-	if conf.LogFiles.Buffer.BotDetection != nil {
+	if conf.LogFiles.Buffer != nil && conf.LogFiles.Buffer.BotDetection != nil {
 		stateFactory = func() logbuffer.SerializableState {
 			return &analysis.BotAnalysisState{
 				PrevNums:          logbuffer.NewSampleWithReplac[int](20), // TODO hardcoded 20
