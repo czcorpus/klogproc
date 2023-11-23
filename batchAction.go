@@ -28,6 +28,7 @@ import (
 	"klogproc/servicelog"
 	"klogproc/trfactory"
 	"klogproc/users"
+	"reflect"
 	"sync"
 	"time"
 
@@ -159,6 +160,9 @@ func runBatchAction(
 	proc(conf.LogFiles, worklog.GetLastRecord())
 	wg.Wait()
 	log.Info().Msgf("Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)
-	log.Debug().Any("report", buffStorage.GetStateData(time.Now()).Report()).Msg("state report")
+	stateData := buffStorage.GetStateData(time.Now())
+	if !reflect.ValueOf(stateData).IsNil() {
+		log.Debug().Any("report", buffStorage.GetStateData(time.Now()).Report()).Msg("state report")
+	}
 	finishEvent <- true
 }
