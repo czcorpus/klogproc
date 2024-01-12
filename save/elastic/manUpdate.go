@@ -31,6 +31,7 @@ type DocUpdateFilter struct {
 	ToDate    string `json:"toDate"`
 	IPAddress string `json:"ipAddress"`
 	UserAgent string `json:"userAgent"`
+	Action    string `json:"action"`
 }
 
 // DocUpdRecord is a general object providing update for an
