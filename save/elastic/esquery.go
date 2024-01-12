@@ -66,6 +66,14 @@ type appTypeMatchObj struct {
 	Match appTypeExpr `json:"match"`
 }
 
+type actionExpr struct {
+	Action string `json:"action"`
+}
+
+type actionMatchObj struct {
+	Match actionExpr `json:"match"`
+}
+
 type boolObj struct {
 	Must []interface{} `json:"must"`
 }
@@ -149,7 +157,7 @@ func NewEmptyResult() Result {
 // address and optional userAgent substring/pattern
 func CreateClientSrchQuery(filter DocUpdateFilter, chunkSize int) ([]byte, error) {
 	if chunkSize < 1 {
-		return []byte{}, fmt.Errorf("Cannot load results of size < 1 (found %d)", chunkSize)
+		return []byte{}, fmt.Errorf("cannot load results of size < 1 (found %d)", chunkSize)
 	}
 	m := boolObj{Must: make([]interface{}, 1)}
 	dateInterval := datetimeRangeExpr{From: filter.FromDate, To: filter.ToDate}
@@ -165,6 +173,10 @@ func CreateClientSrchQuery(filter DocUpdateFilter, chunkSize int) ([]byte, error
 	if filter.AppType != "" {
 		appTypeObj := appTypeMatchObj{appTypeExpr{AppType: filter.AppType}}
 		m.Must = append(m.Must, appTypeObj)
+	}
+	if filter.Action != "" {
+		actionObj := actionMatchObj{actionExpr{Action: filter.Action}}
+		m.Must = append(m.Must, actionObj)
 	}
 	q := srchQuery{Query: query{Bool: m}, From: 0, Size: chunkSize}
 	return q.ToJSONQuery()
