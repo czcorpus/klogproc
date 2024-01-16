@@ -19,6 +19,8 @@ package elastic
 import (
 	"encoding/json"
 	"fmt"
+	"math"
+	"math/rand"
 )
 
 // ESQuery represents a structured type encoding an ElasticSearch
@@ -136,6 +138,20 @@ type Hits struct {
 	Total    int         `json:"total"`
 	MaxScore float32     `json:"max_score"`
 	Hits     []ResultHit `json:"hits"`
+}
+
+func (h Hits) Sampled(prob float64) Hits {
+	ans := Hits{
+		Total:    h.Total,
+		MaxScore: h.MaxScore,
+		Hits:     make([]ResultHit, 0, int(math.Ceil(prob*float64(len(h.Hits))))),
+	}
+	for _, h := range h.Hits {
+		if rand.Float64() < prob {
+			ans.Hits = append(ans.Hits, h)
+		}
+	}
+	return ans
 }
 
 // Result represents an ElasticSearch query result object

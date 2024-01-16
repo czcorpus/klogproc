@@ -25,13 +25,14 @@ import (
 
 // DocUpdateFilter specifies parameters of docupdate operation
 type DocUpdateFilter struct {
-	AppType   string `json:"appType"`
-	Disabled  bool   `json:"disabled"`
-	FromDate  string `json:"fromDate"`
-	ToDate    string `json:"toDate"`
-	IPAddress string `json:"ipAddress"`
-	UserAgent string `json:"userAgent"`
-	Action    string `json:"action"`
+	AppType         string  `json:"appType"`
+	Disabled        bool    `json:"disabled"`
+	FromDate        string  `json:"fromDate"`
+	ToDate          string  `json:"toDate"`
+	IPAddress       string  `json:"ipAddress"`
+	UserAgent       string  `json:"userAgent"`
+	Action          string  `json:"action"`
+	WithProbability float64 `json:"_withProbability"`
 }
 
 // DocUpdRecord is a general object providing update for an
@@ -131,10 +132,19 @@ func createDocBulkMetaRecord(index string, objType string, id string) ([]byte, e
 	return json.Marshal(obj)
 }
 
-func (c *ESClient) manualBulkRecordOp(index string, filters DocUpdateFilter, rawOp []byte, scrollTTL string, srchChunkSize int) (int, error) {
+func (c *ESClient) manualBulkRecordOp(
+	index string,
+	filters DocUpdateFilter,
+	rawOp []byte,
+	scrollTTL string,
+	srchChunkSize int,
+) (int, error) {
 	totalUpdated := 0
 	if !filters.Disabled {
 		items, err := c.SearchRecords(filters, scrollTTL, srchChunkSize)
+		if filters.WithProbability > 0 {
+			items.Hits = items.Hits.Sampled(filters.WithProbability)
+		}
 		if err != nil {
 			return totalUpdated, err
 
@@ -151,6 +161,9 @@ func (c *ESClient) manualBulkRecordOp(index string, filters DocUpdateFilter, raw
 		if items.ScrollID != "" {
 			for len(items.Hits.Hits) > 0 {
 				items, err = c.FetchScroll(items.ScrollID, scrollTTL)
+				if filters.WithProbability > 0 {
+					items.Hits = items.Hits.Sampled(filters.WithProbability)
+				}
 				if err != nil {
 					return totalUpdated, err
 				}
@@ -168,7 +181,13 @@ func (c *ESClient) manualBulkRecordOp(index string, filters DocUpdateFilter, raw
 }
 
 // ManualBulkRecordUpdate updates matching records with provided object
-func (c *ESClient) ManualBulkRecordUpdate(index string, filters DocUpdateFilter, upd DocUpdRecord, scrollTTL string, srchChunkSize int) (int, error) {
+func (c *ESClient) ManualBulkRecordUpdate(
+	index string,
+	filters DocUpdateFilter,
+	upd DocUpdRecord,
+	scrollTTL string,
+	srchChunkSize int,
+) (int, error) {
 
 	jsonData, err := createLogRecUpdQuery(upd)
 	if err != nil {
