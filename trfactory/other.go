@@ -19,6 +19,7 @@ import (
 	"klogproc/servicelog"
 	"klogproc/servicelog/korpusdb"
 	"klogproc/servicelog/kwords"
+	"klogproc/servicelog/kwords2"
 	"klogproc/servicelog/morfio"
 	"klogproc/servicelog/shiny"
 	"klogproc/servicelog/ske"
@@ -49,6 +50,32 @@ func (k *kwordsTransformer) HistoryLookupItems() int {
 }
 
 func (k *kwordsTransformer) Preprocess(
+	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
+) []servicelog.InputRecord {
+	return k.t.Preprocess(rec, prevRecs)
+}
+
+// ------------------------------------
+
+type kwords2Transformer struct {
+	t *kwords2.Transformer
+}
+
+// Transform transforms KWords app log record types as general InputRecord
+// In case of type mismatch, error is returned.
+func (s *kwords2Transformer) Transform(logRec servicelog.InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (servicelog.OutputRecord, error) {
+	tRec, ok := logRec.(*kwords2.InputRecord)
+	if ok {
+		return s.t.Transform(tRec, recType, tzShiftMin, anonymousUsers)
+	}
+	return nil, fmt.Errorf("invalid type for servicelog.by KWords2 transformer %T", logRec)
+}
+
+func (k *kwords2Transformer) HistoryLookupItems() int {
+	return k.t.HistoryLookupItems()
+}
+
+func (k *kwords2Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
 	return k.t.Preprocess(rec, prevRecs)

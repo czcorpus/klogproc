@@ -26,6 +26,7 @@ import (
 	"klogproc/servicelog/kontext018"
 	"klogproc/servicelog/korpusdb"
 	"klogproc/servicelog/kwords"
+	"klogproc/servicelog/kwords2"
 	"klogproc/servicelog/mapka"
 	"klogproc/servicelog/mapka2"
 	"klogproc/servicelog/mapka3"
@@ -77,7 +78,15 @@ func GetLogTransformer(
 			return nil, fmt.Errorf("cannot create transformer, unsupported KonText version: %s", version)
 		}
 	case servicelog.AppTypeKwords:
-		return &kwordsTransformer{t: &kwords.Transformer{}}, nil
+		switch version {
+		case "1":
+			return &kwordsTransformer{t: &kwords.Transformer{}}, nil
+		case "2":
+			return &kwords2Transformer{t: &kwords2.Transformer{}}, nil
+		default:
+			return nil, fmt.Errorf("cannot create transformer, unsupported KWords version: %s", version)
+		}
+
 	case servicelog.AppTypeKorpusDB:
 		return &korpusDBTransformer{t: &korpusdb.Transformer{}}, nil
 	case servicelog.AppTypeMapka:
