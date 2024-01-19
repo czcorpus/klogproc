@@ -26,6 +26,7 @@ import (
 	"klogproc/servicelog/kontext018"
 	"klogproc/servicelog/korpusdb"
 	"klogproc/servicelog/kwords"
+	"klogproc/servicelog/kwords2"
 	"klogproc/servicelog/mapka"
 	"klogproc/servicelog/mapka2"
 	"klogproc/servicelog/mapka3"
@@ -97,6 +98,16 @@ type kwordsLineParser struct {
 }
 
 func (parser *kwordsLineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
+}
+
+// ------------------------------------
+
+type kwords2LineParser struct {
+	lp *kwords2.LineParser
+}
+
+func (parser *kwords2LineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -253,7 +264,14 @@ func NewLineParser(appType string, version string, appErrRegister servicelog.App
 			return nil, fmt.Errorf("cannot find parser - unsupported version of KonText specified: %s", version)
 		}
 	case servicelog.AppTypeKwords:
-		return &kwordsLineParser{lp: &kwords.LineParser{}}, nil
+		switch version {
+		case "1":
+			return &kwordsLineParser{lp: &kwords.LineParser{}}, nil
+		case "2":
+			return &kwords2LineParser{lp: &kwords2.LineParser{}}, nil
+		default:
+			return nil, fmt.Errorf("cannot find parser - unsupported version of KWords specified: %s", version)
+		}
 	case servicelog.AppTypeKorpusDB:
 		return &korpusDBLineParser{lp: &korpusdb.LineParser{}}, nil
 	case servicelog.AppTypeMapka:
