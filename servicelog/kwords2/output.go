@@ -56,6 +56,7 @@ type OutputRecord struct {
 	Args              *Args                    `json:"args,omitempty"`
 	UserAgent         string                   `json:"userAgent"`
 	Error             string                   `json:"error,omitempty"`
+	Version           string                   `json:"version,omitempty"`
 }
 
 // SetLocation sets all the location related properties

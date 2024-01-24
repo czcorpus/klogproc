@@ -107,6 +107,7 @@ func (t *Transformer) Transform(
 		UserID:            fmt.Sprint(logRecord.UserID),
 		Error:             logRecord.Exception,
 		Args:              args,
+		Version:           "2",
 	}
 	r.ID = createID(r)
 	return r, nil
