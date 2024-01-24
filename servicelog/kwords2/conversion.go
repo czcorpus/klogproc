@@ -17,10 +17,44 @@
 package kwords2
 
 import (
+	"fmt"
 	"klogproc/servicelog"
+	"math"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
+
+var (
+	textSplitPattern = regexp.MustCompile(`\s+`)
+)
+
+func convertMultitypeInt(v any) int {
+	switch tv := v.(type) {
+	case int:
+		return tv
+	case float64:
+		return int(math.Round(tv))
+	case string:
+		v, err := strconv.Atoi(tv)
+		if err != nil {
+			return -1
+		}
+		return v
+	}
+	return -1
+}
+
+func getNumOfWords(text string) int {
+	tmp := strings.TrimSpace(text)
+	if len(tmp) == 0 {
+		return 0
+	}
+	return len(textSplitPattern.Split(tmp, -1))
+}
+
+// --
 
 type Transformer struct{}
 
@@ -48,24 +82,31 @@ func (t *Transformer) Transform(
 	tzShiftMin int,
 	anonymousUsers []int,
 ) (*OutputRecord, error) {
-	r := &OutputRecord{
-		Type:        recType,
-		Action:      t.getActionName(logRecord),
-		Corpus:      logRecord.Body.RefCorpus,
-		Datetime:    logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		IPAddress:   logRecord.GetClientIP().String(),
-		IsAnonymous: true, // TODO !!!
-		IsQuery:     t.getActionName(logRecord) == "keywords",
-		UserAgent:   logRecord.Headers.UserAgent,
-		UserID:      "0", // TODO !!!
-		Error:       logRecord.Exception,
-		Args: Args{
+	aName := t.getActionName(logRecord)
+	var args *Args
+	if aName == "keywords" {
+		args = &Args{
 			Attrs:        logRecord.Body.Attrs,
 			Level:        logRecord.Body.Level,
 			EffectMetric: logRecord.Body.EffectMetric,
-			MinFreq:      logRecord.Body.MinFreq,
-			Percent:      logRecord.Body.Percent,
-		},
+			MinFreq:      convertMultitypeInt(logRecord.Body.MinFreq),
+			Percent:      convertMultitypeInt(logRecord.Body.Percent),
+		}
+	}
+	r := &OutputRecord{
+		Type:              recType,
+		Action:            t.getActionName(logRecord),
+		Corpus:            logRecord.Body.RefCorpus,
+		NumInputTextWords: getNumOfWords(logRecord.Body.Text),
+		TextLang:          logRecord.Body.Lang,
+		Datetime:          logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		IPAddress:         logRecord.GetClientIP().String(),
+		IsAnonymous:       true, // TODO !!!
+		IsQuery:           t.getActionName(logRecord) == "keywords",
+		UserAgent:         logRecord.Headers.UserAgent,
+		UserID:            fmt.Sprint(logRecord.UserID),
+		Error:             logRecord.Exception,
+		Args:              args,
 	}
 	r.ID = createID(r)
 	return r, nil

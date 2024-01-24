@@ -66,8 +66,19 @@ type Body struct {
 	Attrs        []string `json:"attrs"`
 	Level        float64  `json:"level"`
 	EffectMetric string   `json:"effectMetric"`
-	MinFreq      int      `json:"minFreq"`
-	Percent      int      `json:"percent"`
+
+	// MinFreq
+	// note to any type: there are either strings or ints in logs
+	MinFreq any `json:"minFreq"`
+
+	// Percent
+	// note to any type: there are either strings or ints in logs
+	Percent any `json:"percent"`
+
+	// the following two items are used in case of text import
+
+	Text string `json:"text"`
+	Lang string `json:"lang"`
 }
 
 type Headers struct {
@@ -76,20 +87,25 @@ type Headers struct {
 
 // InputRecord is a Kwords parsed log record
 type InputRecord struct {
-	Time      string    `json:"time"`
-	Client    [2]string `json:"client"`
-	Headers   Headers   `json:"headers"`
-	Path      string    `json:"path"`
-	Body      Body      `json:"body"`
-	Exception string    `json:"exception,omitempty"`
+	Time      string  `json:"time"`
+	Client    [2]any  `json:"client"`
+	Headers   Headers `json:"headers"`
+	Path      string  `json:"path"`
+	Body      Body    `json:"body"`
+	UserID    int     `json:"userId"`
+	Exception string  `json:"exception,omitempty"`
 }
 
 func (rec *InputRecord) GetTime() time.Time {
-	return servicelog.ConvertDatetimeString(rec.Time)
+	return servicelog.ConvertDatetimeStringWithMillisNoTZ(rec.Time)
 }
 
 func (rec *InputRecord) GetClientIP() net.IP {
-	return net.ParseIP(rec.Client[0])
+	v, ok := rec.Client[0].(string)
+	if !ok {
+		return net.IP{}
+	}
+	return net.ParseIP(v)
 }
 
 func (rec *InputRecord) ClusteringClientID() string {
