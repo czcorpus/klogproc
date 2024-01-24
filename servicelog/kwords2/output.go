@@ -45,7 +45,7 @@ type OutputRecord struct {
 	time              time.Time
 	Datetime          string                   `json:"datetime"`
 	IPAddress         string                   `json:"ipAddress"`
-	UserID            string                   `json:"userId"`
+	UserID            string                   `json:"userId,omitempty"`
 	IsAnonymous       bool                     `json:"isAnonymous"`
 	Action            string                   `json:"action,omitempty"`
 	IsQuery           bool                     `json:"isQuery"`
