@@ -40,20 +40,22 @@ type Args struct {
 
 // OutputRecord represents polished, export ready record from Kwords log
 type OutputRecord struct {
-	ID          string `json:"-"`
-	Type        string `json:"type"`
-	time        time.Time
-	Datetime    string                   `json:"datetime"`
-	IPAddress   string                   `json:"ipAddress"`
-	UserID      string                   `json:"userId"`
-	IsAnonymous bool                     `json:"isAnonymous"`
-	Action      string                   `json:"action,omitempty"`
-	IsQuery     bool                     `json:"isQuery"`
-	Corpus      string                   `json:"string"`
-	GeoIP       servicelog.GeoDataRecord `json:"geoip,omitempty"`
-	Args        Args                     `json:"args"`
-	UserAgent   string                   `json:"userAgent"`
-	Error       string                   `json:"error,omitempty"`
+	ID                string `json:"-"`
+	Type              string `json:"type"`
+	time              time.Time
+	Datetime          string                   `json:"datetime"`
+	IPAddress         string                   `json:"ipAddress"`
+	UserID            string                   `json:"userId"`
+	IsAnonymous       bool                     `json:"isAnonymous"`
+	Action            string                   `json:"action,omitempty"`
+	IsQuery           bool                     `json:"isQuery"`
+	Corpus            string                   `json:"corpus"`
+	NumInputTextWords int                      `json:"numInputTextWords,omitempty"`
+	TextLang          string                   `json:"textLang,omitempty"`
+	GeoIP             servicelog.GeoDataRecord `json:"geoip,omitempty"`
+	Args              *Args                    `json:"args,omitempty"`
+	UserAgent         string                   `json:"userAgent"`
+	Error             string                   `json:"error,omitempty"`
 }
 
 // SetLocation sets all the location related properties
