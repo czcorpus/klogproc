@@ -63,13 +63,32 @@ func updateRecords(conf *config.Main, options *ProcessOptions) {
 	}
 }
 
+func removeRecords(conf *config.Main, options *ProcessOptions) {
+	client := elastic.NewClient(&conf.ElasticSearch)
+	for _, remConf := range conf.RecRemove.Filters {
+		totalRemoved, err := client.ManualBulkRecordRemove(conf.ElasticSearch.Index, remConf,
+			conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize, options.dryRun)
+		if err == nil {
+			if options.dryRun {
+				log.Info().Msgf("%d items would be removed", totalRemoved)
+
+			} else {
+				log.Info().Msgf("Removed %d items", totalRemoved)
+			}
+
+		} else {
+			log.Fatal().Err(err).Msg("Failed to remove records")
+		}
+	}
+}
+
 func removeKeyFromRecords(conf *config.Main, options *ProcessOptions) {
 	client := elastic.NewClient(&conf.ElasticSearch)
 	for _, updConf := range conf.RecUpdate.Filters {
 		totalUpdated, err := client.ManualBulkRecordKeyRemove(conf.ElasticSearch.Index, updConf,
 			conf.RecUpdate.RemoveKey, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize)
 		if err == nil {
-			log.Info().Msgf("Removed key %s from %d items\n", conf.RecUpdate.RemoveKey, totalUpdated)
+			log.Info().Msgf("Removed key %s from %d items", conf.RecUpdate.RemoveKey, totalUpdated)
 
 		} else {
 			log.Fatal().Err(err).Msgf("Failed to update records")
@@ -171,6 +190,9 @@ func main() {
 	case config.ActionDocupdate:
 		conf = setup(flag.Arg(1), action)
 		updateRecords(conf, procOpts)
+	case config.ActionDocremove:
+		conf = setup(flag.Arg(1), action)
+		removeRecords(conf, procOpts)
 	case config.ActionKeyremove:
 		conf = setup(flag.Arg(1), action)
 		removeKeyFromRecords(conf, procOpts)

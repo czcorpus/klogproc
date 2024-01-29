@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -175,7 +175,7 @@ func (c *ESClient) Do(method string, path string, query []byte) ([]byte, error) 
 	if err != nil {
 		return []byte{}, err
 	}
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -236,11 +236,23 @@ func (c *ESClient) FetchScroll(scrollID string, ttl string) (Result, error) {
 	return srchResult, nil
 }
 
+// DocFilter specifies parameters of filtering operation
+type DocFilter struct {
+	AppType         string  `json:"appType"`
+	Disabled        bool    `json:"disabled"`
+	FromDate        string  `json:"fromDate"`
+	ToDate          string  `json:"toDate"`
+	IPAddress       string  `json:"ipAddress"`
+	UserAgent       string  `json:"userAgent"`
+	Action          string  `json:"action"`
+	WithProbability float64 `json:"_withProbability"`
+}
+
 // SearchRecords searches records matching provided filter.
 // Result fetching uses ElasticSearch scroll mechanism which requires
 // providing TTL value to specify how long the result scroll should be
 // available.
-func (c *ESClient) SearchRecords(filter DocUpdateFilter, ttl string, chunkSize int) (Result, error) {
+func (c *ESClient) SearchRecords(filter DocFilter, ttl string, chunkSize int) (Result, error) {
 	encQuery, err := CreateClientSrchQuery(filter, chunkSize)
 	if err == nil {
 		return c.search(encQuery, ttl)
