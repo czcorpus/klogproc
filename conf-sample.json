@@ -31,7 +31,7 @@
         "searchChunkSize": 10,
         "filters": [
             {
-                "disabled": "false",
+                "disabled": false,
                 "fromDate": "2017-01-01T10:00:00",
                 "toDate": "2017-02-07T10:00:00",
                 "ipAddress": "141.20.212.106",
@@ -43,5 +43,18 @@
             "notice": "Power outage"
         },
         "removeKey": "foo"
+    },
+    "recordRemove": {
+        "searchChunkSize": 10,
+        "filters": [
+            {
+                "disabled": false,
+                "fromDate": "2017-01-01T10:00:00",
+                "toDate": "2017-02-07T10:00:00",
+                "ipAddress": "141.20.212.106",
+                "userAgent": "Mozilla"
+
+            }
+        ]
     }
 }

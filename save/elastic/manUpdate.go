@@ -23,18 +23,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// DocUpdateFilter specifies parameters of docupdate operation
-type DocUpdateFilter struct {
-	AppType         string  `json:"appType"`
-	Disabled        bool    `json:"disabled"`
-	FromDate        string  `json:"fromDate"`
-	ToDate          string  `json:"toDate"`
-	IPAddress       string  `json:"ipAddress"`
-	UserAgent       string  `json:"userAgent"`
-	Action          string  `json:"action"`
-	WithProbability float64 `json:"_withProbability"`
-}
-
 // DocUpdRecord is a general object providing update for an
 // ElasticSearch record.
 type DocUpdRecord map[string]interface{}
@@ -47,7 +35,7 @@ type DocUpdConf struct {
 	// Filters specifies which items should we look for.
 	// Items in the list are taken as logical conjunction
 	// (i.e. rule[0] && rule[1] && ... && rule[N])
-	Filters []DocUpdateFilter `json:"filters"`
+	Filters []DocFilter `json:"filters"`
 
 	// Update is a (sub)record we will use to write into
 	// matching records.
@@ -107,7 +95,7 @@ func (c *ESClient) bulkUpdateUpdRecordScroll(index string, hits Hits, rawOp []by
 	jsonLines := make([][]byte, len(hits.Hits)*2+1) // one for final 'new line'
 	stopIdx := 0
 	for _, item := range hits.Hits {
-		jsonMeta, err := createDocBulkMetaRecord(index, item.Type, item.ID)
+		jsonMeta, err := createDocBulkUpdateMetaRecord(index, item.Type, item.ID)
 		if err != nil {
 			log.Panic().Msgf("Failed to generate bulk update JSON (meta): %v", err)
 		}
@@ -126,7 +114,7 @@ func (c *ESClient) bulkUpdateUpdRecordScroll(index string, hits Hits, rawOp []by
 	return ((stopIdx - 1) / 2), nil
 }
 
-func createDocBulkMetaRecord(index string, objType string, id string) ([]byte, error) {
+func createDocBulkUpdateMetaRecord(index string, objType string, id string) ([]byte, error) {
 	d := docBulkMetaRecord{Index: index, Type: objType, ID: id}
 	obj := docBulkUpdateMetaObj{Update: d}
 	return json.Marshal(obj)
@@ -134,7 +122,7 @@ func createDocBulkMetaRecord(index string, objType string, id string) ([]byte, e
 
 func (c *ESClient) manualBulkRecordOp(
 	index string,
-	filters DocUpdateFilter,
+	filters DocFilter,
 	rawOp []byte,
 	scrollTTL string,
 	srchChunkSize int,
@@ -183,7 +171,7 @@ func (c *ESClient) manualBulkRecordOp(
 // ManualBulkRecordUpdate updates matching records with provided object
 func (c *ESClient) ManualBulkRecordUpdate(
 	index string,
-	filters DocUpdateFilter,
+	filters DocFilter,
 	upd DocUpdRecord,
 	scrollTTL string,
 	srchChunkSize int,
@@ -197,7 +185,7 @@ func (c *ESClient) ManualBulkRecordUpdate(
 }
 
 // ManualBulkRecordKeyRemove removes a specified key from matching records.
-func (c *ESClient) ManualBulkRecordKeyRemove(index string, filters DocUpdateFilter, key string, scrollTTL string, srchChunkSize int) (int, error) {
+func (c *ESClient) ManualBulkRecordKeyRemove(index string, filters DocFilter, key string, scrollTTL string, srchChunkSize int) (int, error) {
 
 	jsonData, err := createLogRecKeyRemoveQuery(key)
 	if err != nil {

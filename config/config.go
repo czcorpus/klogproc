@@ -39,6 +39,7 @@ const (
 	ActionCelery           = "celery"
 	ActionKeyremove        = "keyremove"
 	ActionDocupdate        = "docupdate"
+	ActionDocremove        = "docremove"
 	ActionHelp             = "help"
 	ActionVersion          = "version"
 	ActionTestNotification = "test-notification"
@@ -57,6 +58,7 @@ type Main struct {
 	LogLevel           string                         `json:"logLevel"`
 	CustomConfDir      string                         `json:"customConfDir"`
 	RecUpdate          elastic.DocUpdConf             `json:"recordUpdate"`
+	RecRemove          elastic.DocRemConf             `json:"recordRemove"`
 	ElasticSearch      elastic.ConnectionConf         `json:"elasticSearch"`
 	InfluxDB           influx.ConnectionConf          `json:"influxDb"`
 	EmailNotification  *mail.NotificationConf         `json:"emailNotification"`

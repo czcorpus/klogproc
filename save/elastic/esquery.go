@@ -171,7 +171,7 @@ func NewEmptyResult() Result {
 // CreateClientSrchQuery generates a JSON-encoded query for ElastiSearch to
 // find documents matching specified datetime range, optional IP
 // address and optional userAgent substring/pattern
-func CreateClientSrchQuery(filter DocUpdateFilter, chunkSize int) ([]byte, error) {
+func CreateClientSrchQuery(filter DocFilter, chunkSize int) ([]byte, error) {
 	if chunkSize < 1 {
 		return []byte{}, fmt.Errorf("cannot load results of size < 1 (found %d)", chunkSize)
 	}
