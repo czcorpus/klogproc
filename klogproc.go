@@ -67,7 +67,7 @@ func removeRecords(conf *config.Main, options *ProcessOptions) {
 	client := elastic.NewClient(&conf.ElasticSearch)
 	for _, remConf := range conf.RecRemove.Filters {
 		totalRemoved, err := client.ManualBulkRecordRemove(conf.ElasticSearch.Index, remConf,
-			conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize, options.dryRun)
+			conf.ElasticSearch.ScrollTTL, conf.RecRemove.SearchChunkSize, options.dryRun)
 		if err == nil {
 			if options.dryRun {
 				log.Info().Msgf("%d items would be removed", totalRemoved)
