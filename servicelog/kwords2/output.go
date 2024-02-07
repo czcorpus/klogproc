@@ -25,7 +25,11 @@ import (
 )
 
 func createID(rec *OutputRecord) string {
-	str := rec.Type + rec.Datetime + rec.Action + rec.IPAddress + *rec.UserID + rec.Corpus
+	var uid string
+	if rec.UserID != nil {
+		uid = *rec.UserID
+	}
+	str := rec.Type + rec.Datetime + rec.Action + rec.IPAddress + uid + rec.Corpus
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }
