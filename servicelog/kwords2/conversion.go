@@ -20,7 +20,6 @@ import (
 	"klogproc/servicelog"
 	"math"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/czcorpus/cnc-gokit/collections"
@@ -47,14 +46,6 @@ func convertMultitypeInt(v any) int {
 
 type Transformer struct{}
 
-func (t *Transformer) getActionName(rec *InputRecord) string {
-	items := strings.Split(rec.Path, "/")
-	if len(items) > 0 {
-		return items[len(items)-1]
-	}
-	return ""
-}
-
 func (t *Transformer) HistoryLookupItems() int {
 	return 0
 }
@@ -71,9 +62,8 @@ func (t *Transformer) Transform(
 	tzShiftMin int,
 	anonymousUsers []int,
 ) (*OutputRecord, error) {
-	aName := t.getActionName(logRecord)
 	var args *Args
-	if aName == "keywords" {
+	if logRecord.Action == "keywords/POST" {
 		args = &Args{
 			Attrs:        logRecord.Body.Attrs,
 			Level:        logRecord.Body.Level,
@@ -100,7 +90,7 @@ func (t *Transformer) Transform(
 	}
 	r := &OutputRecord{
 		Type:          recType,
-		Action:        t.getActionName(logRecord),
+		Action:        logRecord.Action,
 		Corpus:        logRecord.Body.RefCorpus,
 		TextCharCount: logRecord.Body.TextCharCount,
 		TextWordCount: logRecord.Body.TextWordCount,
