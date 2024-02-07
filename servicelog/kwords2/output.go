@@ -25,7 +25,7 @@ import (
 )
 
 func createID(rec *OutputRecord) string {
-	str := rec.Type + rec.Datetime + rec.IPAddress + rec.UserID + rec.Corpus
+	str := rec.Type + rec.Datetime + rec.Action + rec.IPAddress + *rec.UserID + rec.Corpus
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }
@@ -40,23 +40,24 @@ type Args struct {
 
 // OutputRecord represents polished, export ready record from Kwords log
 type OutputRecord struct {
-	ID                string `json:"-"`
-	Type              string `json:"type"`
-	time              time.Time
-	Datetime          string                   `json:"datetime"`
-	IPAddress         string                   `json:"ipAddress"`
-	UserID            string                   `json:"userId"`
-	IsAnonymous       bool                     `json:"isAnonymous"`
-	Action            string                   `json:"action,omitempty"`
-	IsQuery           bool                     `json:"isQuery"`
-	Corpus            string                   `json:"corpus"`
-	NumInputTextWords int                      `json:"numInputTextWords,omitempty"`
-	TextLang          string                   `json:"textLang,omitempty"`
-	GeoIP             servicelog.GeoDataRecord `json:"geoip,omitempty"`
-	Args              *Args                    `json:"args,omitempty"`
-	UserAgent         string                   `json:"userAgent"`
-	Error             string                   `json:"error,omitempty"`
-	Version           string                   `json:"version,omitempty"`
+	ID            string `json:"-"`
+	Type          string `json:"type"`
+	time          time.Time
+	Datetime      string                   `json:"datetime"`
+	IPAddress     string                   `json:"ipAddress"`
+	UserID        *string                  `json:"userId"`
+	IsAnonymous   bool                     `json:"isAnonymous"`
+	Action        string                   `json:"action,omitempty"`
+	IsQuery       bool                     `json:"isQuery"`
+	Corpus        string                   `json:"corpus"`
+	TextCharCount int                      `json:"textCharCount,omitempty"`
+	TextWordCount int                      `json:"textWordCount,omitempty"`
+	TextLang      string                   `json:"textLang,omitempty"`
+	GeoIP         servicelog.GeoDataRecord `json:"geoip,omitempty"`
+	Args          *Args                    `json:"args,omitempty"`
+	UserAgent     string                   `json:"userAgent"`
+	Error         string                   `json:"error,omitempty"`
+	Version       string                   `json:"version,omitempty"`
 }
 
 // SetLocation sets all the location related properties

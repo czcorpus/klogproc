@@ -77,23 +77,38 @@ type Body struct {
 
 	// the following two items are used in case of text import
 
-	Text string `json:"text"`
-	Lang string `json:"lang"`
+	Text          string `json:"text"`
+	Lang          string `json:"lang"`
+	TextCharCount int    `json:"textCharCount"`
+	TextWordCount int    `json:"textWordCount"`
 }
 
 type Headers struct {
-	UserAgent string `json:"user-agent"`
+	UserAgent     string `json:"user-agent"`
+	XForwardedFor string `json:"x-forwarded-for"`
+	XUserID       string `json:"x-user-id"`
 }
 
 // InputRecord is a Kwords parsed log record
 type InputRecord struct {
-	Time      string  `json:"time"`
-	Client    [2]any  `json:"client"`
-	Headers   Headers `json:"headers"`
-	Path      string  `json:"path"`
-	Body      Body    `json:"body"`
-	UserID    int     `json:"userId"`
-	Exception string  `json:"exception,omitempty"`
+	Time    string  `json:"time"`
+	Client  [2]any  `json:"client"`
+	Headers Headers `json:"headers"`
+	Path    string  `json:"path"`
+	Body    Body    `json:"body"`
+
+	// UserID is currently not filled by KWords2
+	// and we get the user ID information
+	// from within `Headers` (`XUserID` attr.)
+	UserID int `json:"userId"`
+
+	// Action is produced by KWords2 to distingish easily
+	// between actions with the same URL path. It looks
+	// like this: /text/POST, /keywords/POST. I.e. it combines
+	// the path and HTTP method.
+	Action    string `json:"action"`
+	IsQuery   bool   `json:"isQuery"`
+	Exception string `json:"exception,omitempty"`
 }
 
 func (rec *InputRecord) GetTime() time.Time {
