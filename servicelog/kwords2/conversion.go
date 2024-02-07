@@ -17,17 +17,14 @@
 package kwords2
 
 import (
-	"fmt"
 	"klogproc/servicelog"
 	"math"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
-)
 
-var (
-	textSplitPattern = regexp.MustCompile(`\s+`)
+	"github.com/czcorpus/cnc-gokit/collections"
+	"github.com/rs/zerolog/log"
 )
 
 func convertMultitypeInt(v any) int {
@@ -44,14 +41,6 @@ func convertMultitypeInt(v any) int {
 		return v
 	}
 	return -1
-}
-
-func getNumOfWords(text string) int {
-	tmp := strings.TrimSpace(text)
-	if len(tmp) == 0 {
-		return 0
-	}
-	return len(textSplitPattern.Split(tmp, -1))
 }
 
 // --
@@ -93,21 +82,38 @@ func (t *Transformer) Transform(
 			Percent:      convertMultitypeInt(logRecord.Body.Percent),
 		}
 	}
+	userID := logRecord.Headers.XUserID
+	if userID == "-1" {
+		userID = ""
+	}
+	var userIDAttr *string
+	isAnonymous := true
+	if userID != "" {
+		userIDAttr = &userID
+		v, err := strconv.Atoi(userID)
+		if err != nil {
+			log.Error().Err(err).Str("value", userID).Msg("failed to parse user ID entry")
+
+		} else {
+			isAnonymous = collections.SliceContains(anonymousUsers, v)
+		}
+	}
 	r := &OutputRecord{
-		Type:              recType,
-		Action:            t.getActionName(logRecord),
-		Corpus:            logRecord.Body.RefCorpus,
-		NumInputTextWords: getNumOfWords(logRecord.Body.Text),
-		TextLang:          logRecord.Body.Lang,
-		Datetime:          logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		IPAddress:         logRecord.GetClientIP().String(),
-		IsAnonymous:       true, // TODO !!!
-		IsQuery:           t.getActionName(logRecord) == "keywords",
-		UserAgent:         logRecord.Headers.UserAgent,
-		UserID:            fmt.Sprint(logRecord.UserID),
-		Error:             logRecord.Exception,
-		Args:              args,
-		Version:           "2",
+		Type:          recType,
+		Action:        t.getActionName(logRecord),
+		Corpus:        logRecord.Body.RefCorpus,
+		TextCharCount: logRecord.Body.TextCharCount,
+		TextWordCount: logRecord.Body.TextWordCount,
+		TextLang:      logRecord.Body.Lang,
+		Datetime:      logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		IPAddress:     logRecord.GetClientIP().String(),
+		IsAnonymous:   isAnonymous,
+		IsQuery:       logRecord.IsQuery,
+		UserAgent:     logRecord.Headers.UserAgent,
+		UserID:        userIDAttr,
+		Error:         logRecord.Exception,
+		Args:          args,
+		Version:       "2",
 	}
 	r.ID = createID(r)
 	return r, nil
