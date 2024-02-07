@@ -130,13 +130,13 @@ func (c *ESClient) manualBulkRecordOp(
 	totalUpdated := 0
 	if !filters.Disabled {
 		items, err := c.SearchRecords(filters, scrollTTL, srchChunkSize)
+		if err != nil {
+			return totalUpdated, err
+		}
 		if filters.WithProbability > 0 {
 			items.Hits = items.Hits.Sampled(filters.WithProbability)
 		}
-		if err != nil {
-			return totalUpdated, err
-
-		} else if items.Hits.Total == 0 {
+		if items.Hits.Total == 0 {
 			return 0, nil
 
 		} else if len(items.Hits.Hits) > 0 {
@@ -149,11 +149,11 @@ func (c *ESClient) manualBulkRecordOp(
 		if items.ScrollID != "" {
 			for len(items.Hits.Hits) > 0 {
 				items, err = c.FetchScroll(items.ScrollID, scrollTTL)
-				if filters.WithProbability > 0 {
-					items.Hits = items.Hits.Sampled(filters.WithProbability)
-				}
 				if err != nil {
 					return totalUpdated, err
+				}
+				if filters.WithProbability > 0 {
+					items.Hits = items.Hits.Sampled(filters.WithProbability)
 				}
 				if len(items.Hits.Hits) > 0 {
 					ans, bulkErr := c.bulkUpdateUpdRecordScroll(index, items.Hits, rawOp)
