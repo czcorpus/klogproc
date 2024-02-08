@@ -172,7 +172,9 @@ func (tp *tailProcessor) OnCheckStop(dataWriter *tail.LogDataWriter) {
 
 func (tp *tailProcessor) OnQuit() {
 	tp.alarm.Reset()
-	close(tp.analysis)
+	if tp.analysis != nil {
+		close(tp.analysis)
+	}
 }
 
 func (tp *tailProcessor) AppType() string {
