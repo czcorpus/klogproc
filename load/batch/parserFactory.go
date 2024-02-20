@@ -32,6 +32,7 @@ import (
 	"klogproc/servicelog/mapka3"
 	"klogproc/servicelog/masm"
 	"klogproc/servicelog/morfio"
+	"klogproc/servicelog/mquerysru"
 	"klogproc/servicelog/shiny"
 	"klogproc/servicelog/ske"
 	"klogproc/servicelog/syd"
@@ -244,6 +245,16 @@ func (parser *masmLineParser) ParseLine(s string, lineNum int64) (servicelog.Inp
 
 // ------------------------------------
 
+type mquerySRULineParser struct {
+	lp *mquerysru.LineParser
+}
+
+func (parser *mquerySRULineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
+}
+
+// ------------------------------------
+
 // NewLineParser creates a parser for individual lines of a respective appType
 func NewLineParser(appType string, version string, appErrRegister servicelog.AppErrorRegister) (LineParser, error) {
 	switch appType {
@@ -306,6 +317,8 @@ func NewLineParser(appType string, version string, appErrRegister servicelog.App
 		return &wsserverLineParser{lp: &wsserver.LineParser{}}, nil
 	case servicelog.AppTypeMasm:
 		return &masmLineParser{lp: &masm.LineParser{}}, nil
+	case servicelog.AppTypeMquerySRU:
+		return &mquerySRULineParser{lp: &mquerysru.LineParser{}}, nil
 	default:
 		return nil, fmt.Errorf("Parser not found for application type %s", appType)
 	}

@@ -84,6 +84,9 @@ const (
 
 	// AppTypeMasm defines a universal storage identifier for Masm
 	AppTypeMasm = "masm"
+
+	// AppTypeMquerySRU defines a universal storage identifier for Mquery-SRU
+	AppTypeMquerySRU = "mquery-sru"
 )
 
 type ServiceLogBuffer logbuffer.AbstractRecentRecords[InputRecord, logbuffer.SerializableState]
