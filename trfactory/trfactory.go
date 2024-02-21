@@ -32,6 +32,7 @@ import (
 	"klogproc/servicelog/mapka3"
 	"klogproc/servicelog/masm"
 	"klogproc/servicelog/morfio"
+	"klogproc/servicelog/mquerysru"
 	"klogproc/servicelog/shiny"
 	"klogproc/servicelog/ske"
 	"klogproc/servicelog/syd"
@@ -132,6 +133,8 @@ func GetLogTransformer(
 		return &wsserverTransformer{t: &wsserver.Transformer{}}, nil
 	case servicelog.AppTypeMasm:
 		return &masmTransformer{t: &masm.Transformer{}}, nil
+	case servicelog.AppTypeMquerySRU:
+		return &mquerySRUTransformer{t: &mquerysru.Transformer{}}, nil
 	default:
 		return nil, fmt.Errorf("cannot find log transformer for app type %s", appType)
 	}
