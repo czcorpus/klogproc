@@ -237,7 +237,14 @@ func newTailProcessor(
 		log.Fatal().Msgf("Failed to initialize parser: %s", err)
 	}
 	logTransformer, err := trfactory.GetLogTransformer(
-		tailConf.AppType, tailConf.Version, tailConf.Buffer, userMap, true, notifier)
+		tailConf.AppType,
+		tailConf.Version,
+		tailConf.Buffer,
+		userMap,
+		tailConf.ExcludeIPList,
+		true,
+		notifier,
+	)
 	if err != nil {
 		log.Fatal().Msgf("Failed to initialize transformer: %s", err)
 	}

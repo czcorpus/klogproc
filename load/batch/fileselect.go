@@ -41,8 +41,8 @@ import (
 )
 
 var (
-	datetimePattern = regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2}\\s[012]\\d:[0-5]\\d:[0-5]\\d)[\\.,]\\d+")
-	tzRangePattern  = regexp.MustCompile("^\\d+$")
+	datetimePattern = regexp.MustCompile(`^(\d{4}-\d{2}-\d{2}\s[012]\d:[0-5]\d:[0-5]\d)[\.,]\d+`)
+	tzRangePattern  = regexp.MustCompile(`^\d+$`)
 )
 
 // Conf represents a configuration for a single batch task. Currently it is not
@@ -54,6 +54,7 @@ type Conf struct {
 	LogBufferStateDir      string           `json:"logBufferStateDir"`
 	AppType                string           `json:"appType"`
 	Buffer                 *load.BufferConf `json:"buffer"`
+	ExcludeIPList          []string         `json:"excludeIpList"`
 
 	// Version represents a major and minor version signature as used in semantic versioning
 	// (e.g. 0.15, 1.2)

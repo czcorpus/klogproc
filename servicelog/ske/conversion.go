@@ -23,11 +23,15 @@ import (
 
 	"klogproc/servicelog"
 	"klogproc/users"
+
+	"github.com/czcorpus/cnc-gokit/collections"
+	"github.com/rs/zerolog/log"
 )
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	userMap *users.UserMap
+	userMap       *users.UserMap
+	ExcludeIPList []string
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
@@ -36,7 +40,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 	if logRecord.User != "-" && logRecord.User != "" {
 		uid := t.userMap.GetIdOf(logRecord.User)
 		if uid < 0 {
-			return nil, fmt.Errorf("Failed to find user ID of [%s]", logRecord.User)
+			return nil, fmt.Errorf("failed to find user ID of [%s]", logRecord.User)
 		}
 		userID = uid
 	}
@@ -68,11 +72,18 @@ func (t *Transformer) HistoryLookupItems() int {
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
+	if collections.SliceContains(t.ExcludeIPList, rec.GetClientIP().String()) {
+		log.Debug().Str("ip", rec.GetClientIP().String()).Msg("excluded IP")
+		return []servicelog.InputRecord{}
+	}
 	return []servicelog.InputRecord{rec}
 }
 
 // NewTransformer is a default constructor for the Transformer.
 // It also loads user ID map from a configured file (if exists).
-func NewTransformer(userMap *users.UserMap) *Transformer {
-	return &Transformer{userMap: userMap}
+func NewTransformer(userMap *users.UserMap, excludeIPList []string) *Transformer {
+	return &Transformer{
+		userMap:       userMap,
+		ExcludeIPList: excludeIPList,
+	}
 }

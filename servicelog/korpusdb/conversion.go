@@ -23,6 +23,9 @@ import (
 	"time"
 
 	"klogproc/servicelog"
+
+	"github.com/czcorpus/cnc-gokit/collections"
+	"github.com/rs/zerolog/log"
 )
 
 func getQueryType(rec *InputRecord) string {
@@ -45,7 +48,9 @@ func testIsQuery(rec *InputRecord) bool {
 }
 
 // Transformer converts a KorpusDB log record to a destination format
-type Transformer struct{}
+type Transformer struct {
+	ExcludeIPList []string
+}
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
@@ -84,5 +89,9 @@ func (t *Transformer) HistoryLookupItems() int {
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
+	if collections.SliceContains(t.ExcludeIPList, rec.GetClientIP().String()) {
+		log.Debug().Str("ip", rec.GetClientIP().String()).Msg("excluded IP")
+		return []servicelog.InputRecord{}
+	}
 	return []servicelog.InputRecord{rec}
 }

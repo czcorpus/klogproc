@@ -52,6 +52,7 @@ func runBatchAction(
 		conf.LogFiles.Version,
 		conf.LogFiles.Buffer,
 		userMap,
+		conf.LogFiles.ExcludeIPList,
 		false,
 		nullMailNot,
 	)
