@@ -49,6 +49,7 @@ func GetLogTransformer(
 	version string,
 	bufferConf *load.BufferConf,
 	userMap *users.UserMap,
+	excludeIpList []string,
 	realtimeClock bool,
 	emailNotifier notifications.Notifier,
 ) (servicelog.LogItemTransformer, error) {
@@ -73,6 +74,7 @@ func GetLogTransformer(
 					bufferConf,
 					realtimeClock,
 					emailNotifier,
+					excludeIpList,
 				),
 			}, nil
 		default:
@@ -83,13 +85,17 @@ func GetLogTransformer(
 		case "1":
 			return &kwordsTransformer{t: &kwords.Transformer{}}, nil
 		case "2":
-			return &kwords2Transformer{t: &kwords2.Transformer{}}, nil
+			return &kwords2Transformer{t: &kwords2.Transformer{
+				ExcludeIPList: excludeIpList,
+			}}, nil
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported KWords version: %s", version)
 		}
 
 	case servicelog.AppTypeKorpusDB:
-		return &korpusDBTransformer{t: &korpusdb.Transformer{}}, nil
+		return &korpusDBTransformer{t: &korpusdb.Transformer{
+			ExcludeIPList: excludeIpList,
+		}}, nil
 	case servicelog.AppTypeMapka:
 		switch version {
 		case "1":
@@ -100,6 +106,7 @@ func GetLogTransformer(
 			return &mapka3Transformer{
 				t: mapka3.NewTransformer(
 					bufferConf,
+					excludeIpList,
 					realtimeClock,
 				),
 			}, nil
@@ -107,13 +114,20 @@ func GetLogTransformer(
 			return nil, fmt.Errorf("cannot create transformer, unsupported Mapka version: %s", version)
 		}
 	case servicelog.AppTypeMorfio:
-		return &morfioTransformer{t: &morfio.Transformer{}}, nil
+		return &morfioTransformer{t: &morfio.Transformer{
+			ExcludeIPList: excludeIpList,
+		}}, nil
 	case servicelog.AppTypeSke:
-		return &skeTransformer{t: ske.NewTransformer(userMap)}, nil
+		return &skeTransformer{
+				t: ske.NewTransformer(userMap, excludeIpList),
+			},
+			nil
 	case servicelog.AppTypeSyd:
 		return &sydTransformer{t: syd.NewTransformer(version)}, nil
 	case servicelog.AppTypeTreq:
-		return &treqTransformer{t: &treq.Transformer{}}, nil
+		return &treqTransformer{t: &treq.Transformer{
+			ExcludeIPList: excludeIpList,
+		}}, nil
 	case servicelog.AppTypeWag:
 		switch version {
 		case "0.6":
@@ -122,6 +136,7 @@ func GetLogTransformer(
 			return &wag07Transformer{
 				t: wag07.NewTransformer(
 					bufferConf,
+					excludeIpList,
 					realtimeClock,
 					emailNotifier,
 				),
@@ -132,9 +147,16 @@ func GetLogTransformer(
 	case servicelog.AppTypeWsserver:
 		return &wsserverTransformer{t: &wsserver.Transformer{}}, nil
 	case servicelog.AppTypeMasm:
-		return &masmTransformer{t: &masm.Transformer{}}, nil
+		return &masmTransformer{t: &masm.Transformer{
+			ExcludeIPList: excludeIpList,
+		}}, nil
 	case servicelog.AppTypeMquerySRU:
-		return &mquerySRUTransformer{t: &mquerysru.Transformer{}}, nil
+		return &mquerySRUTransformer{
+				t: &mquerysru.Transformer{
+					ExcludeIPList: excludeIpList,
+				},
+			},
+			nil
 	default:
 		return nil, fmt.Errorf("cannot find log transformer for app type %s", appType)
 	}

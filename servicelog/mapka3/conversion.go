@@ -24,6 +24,9 @@ import (
 	"klogproc/analysis/clustering"
 	"klogproc/load"
 	"klogproc/servicelog"
+
+	"github.com/czcorpus/cnc-gokit/collections"
+	"github.com/rs/zerolog/log"
 )
 
 // createID creates an idempotent ID of rec based on its properties.
@@ -39,8 +42,9 @@ func createID(rec *OutputRecord, tzShiftMin int) string {
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	bufferConf *load.BufferConf
-	analyzer   servicelog.Preprocessor
+	bufferConf    *load.BufferConf
+	analyzer      servicelog.Preprocessor
+	ExcludeIPList []string
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
@@ -78,14 +82,19 @@ func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord,
 	prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
+	if collections.SliceContains(t.ExcludeIPList, rec.GetClientIP().String()) {
+		log.Debug().Str("ip", rec.GetClientIP().String()).Msg("excluded IP")
+		return []servicelog.InputRecord{}
+	}
 	return t.analyzer.Preprocess(rec, prevRecs)
 }
 
 // NewTransformer is a default constructor for the Transformer.
 // It also loads user ID map from a configured file (if exists).
-func NewTransformer(bufferConf *load.BufferConf, realtimeClock bool) *Transformer {
+func NewTransformer(bufferConf *load.BufferConf, excludeIPList []string, realtimeClock bool) *Transformer {
 	return &Transformer{
-		bufferConf: bufferConf,
-		analyzer:   clustering.NewAnalyzer[*InputRecord]("mapka", bufferConf, realtimeClock),
+		bufferConf:    bufferConf,
+		ExcludeIPList: excludeIPList,
+		analyzer:      clustering.NewAnalyzer[*InputRecord]("mapka", bufferConf, realtimeClock),
 	}
 }
