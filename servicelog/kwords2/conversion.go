@@ -45,7 +45,7 @@ func convertMultitypeInt(v any) int {
 // --
 
 type Transformer struct {
-	ExcludeIPList []string
+	ExcludeIPList servicelog.ExcludeIPList
 }
 
 func (t *Transformer) HistoryLookupItems() int {
@@ -55,8 +55,7 @@ func (t *Transformer) HistoryLookupItems() int {
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
-	if collections.SliceContains(t.ExcludeIPList, rec.GetClientIP().String()) {
-		log.Debug().Str("ip", rec.GetClientIP().String()).Msg("excluded IP")
+	if t.ExcludeIPList.Excludes(rec) {
 		return []servicelog.InputRecord{}
 	}
 	return []servicelog.InputRecord{rec}

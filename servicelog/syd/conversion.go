@@ -22,9 +22,6 @@ import (
 	"time"
 
 	"klogproc/servicelog"
-
-	"github.com/czcorpus/cnc-gokit/collections"
-	"github.com/rs/zerolog/log"
 )
 
 // Transformer converts a SyD log record to a destination format
@@ -32,7 +29,7 @@ type Transformer struct {
 	Version       string
 	SyncCorpora   []string
 	DiaCorpora    []string
-	ExcludeIPList []string
+	ExcludeIPList servicelog.ExcludeIPList
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
@@ -77,8 +74,7 @@ func (t *Transformer) HistoryLookupItems() int {
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
-	if collections.SliceContains(t.ExcludeIPList, rec.GetClientIP().String()) {
-		log.Debug().Str("ip", rec.GetClientIP().String()).Msg("excluded IP")
+	if t.ExcludeIPList.Excludes(rec) {
 		return []servicelog.InputRecord{}
 	}
 	return []servicelog.InputRecord{rec}
@@ -86,13 +82,14 @@ func (t *Transformer) Preprocess(
 
 // NewTransformer is a recommended factory for new Transformer instances
 // to reflect the version properly
-func NewTransformer(version string) *Transformer {
+func NewTransformer(version string, excludeIPList servicelog.ExcludeIPList) *Transformer {
 	switch version {
 	case "0.1":
 		return &Transformer{
-			Version:     version,
-			SyncCorpora: []string{"syn2010", "oral_v2", "ksk-dopisy"},
-			DiaCorpora:  []string{"diakon"},
+			Version:       version,
+			SyncCorpora:   []string{"syn2010", "oral_v2", "ksk-dopisy"},
+			DiaCorpora:    []string{"diakon"},
+			ExcludeIPList: excludeIPList,
 		}
 	default:
 		return nil

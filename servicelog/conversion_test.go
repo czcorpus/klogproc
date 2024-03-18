@@ -77,15 +77,15 @@ func TestTimezoneToInt(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 120, mins)
 
-	mins, err = TimezoneToInt("08:30")
+	_, err = TimezoneToInt("08:30")
 	assert.Error(t, err)
 
-	mins, err = TimezoneToInt("a08:30")
+	_, err = TimezoneToInt("a08:30")
 	assert.Error(t, err)
 
-	mins, err = TimezoneToInt("+a:b")
+	_, err = TimezoneToInt("+a:b")
 	assert.Error(t, err)
 
-	mins, err = TimezoneToInt("+12-30")
+	_, err = TimezoneToInt("+12-30")
 	assert.Error(t, err)
 }

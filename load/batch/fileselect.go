@@ -48,13 +48,13 @@ var (
 // Conf represents a configuration for a single batch task. Currently it is not
 // possible to have configured multiple tasks in a single file. (TODO)
 type Conf struct {
-	SrcPath                string           `json:"srcPath"`
-	PartiallyMatchingFiles bool             `json:"partiallyMatchingFiles"`
-	WorklogPath            string           `json:"worklogPath"`
-	LogBufferStateDir      string           `json:"logBufferStateDir"`
-	AppType                string           `json:"appType"`
-	Buffer                 *load.BufferConf `json:"buffer"`
-	ExcludeIPList          []string         `json:"excludeIpList"`
+	SrcPath                string                   `json:"srcPath"`
+	PartiallyMatchingFiles bool                     `json:"partiallyMatchingFiles"`
+	WorklogPath            string                   `json:"worklogPath"`
+	LogBufferStateDir      string                   `json:"logBufferStateDir"`
+	AppType                string                   `json:"appType"`
+	Buffer                 *load.BufferConf         `json:"buffer"`
+	ExcludeIPList          servicelog.ExcludeIPList `json:"excludeIpList"`
 
 	// Version represents a major and minor version signature as used in semantic versioning
 	// (e.g. 0.15, 1.2)

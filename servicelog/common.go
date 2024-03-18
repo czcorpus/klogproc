@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/czcorpus/cnc-gokit/collections"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
@@ -321,4 +322,20 @@ type Preprocessor interface {
 		rec InputRecord,
 		prevRecs logbuffer.AbstractRecentRecords[InputRecord, logbuffer.SerializableState],
 	) []InputRecord
+}
+
+// ExcludeIPList represents a list of IP addresses
+// which should not be included in log processing
+// and archiving. These are typically requests from
+// watchdog services.
+type ExcludeIPList []string
+
+// Excludes tests an input record whether it should
+// be excluded based in its IP address.
+func (elist ExcludeIPList) Excludes(rec InputRecord) bool {
+	excludes := collections.SliceContains(elist, rec.GetClientIP().String())
+	if excludes {
+		log.Debug().Str("ip", rec.GetClientIP().String()).Msg("excluded IP")
+	}
+	return excludes
 }

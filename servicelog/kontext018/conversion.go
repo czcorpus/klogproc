@@ -24,9 +24,6 @@ import (
 	"klogproc/load"
 	"klogproc/notifications"
 	"klogproc/servicelog"
-
-	"github.com/czcorpus/cnc-gokit/collections"
-	"github.com/rs/zerolog/log"
 )
 
 func exportArgs(data map[string]interface{}) map[string]interface{} {
@@ -42,7 +39,7 @@ func exportArgs(data map[string]interface{}) map[string]interface{} {
 // Transformer converts a source log object into a destination one
 type Transformer struct {
 	analyzer      *analysis.BotAnalyzer[*QueryInputRecord]
-	ExcludeIPList []string
+	ExcludeIPList servicelog.ExcludeIPList
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
@@ -76,8 +73,7 @@ func (t *Transformer) HistoryLookupItems() int {
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
-	if collections.SliceContains(t.ExcludeIPList, rec.GetClientIP().String()) {
-		log.Debug().Str("ip", rec.GetClientIP().String()).Msg("excluded IP")
+	if t.ExcludeIPList.Excludes(rec) {
 		return []servicelog.InputRecord{}
 	}
 	return []servicelog.InputRecord{rec}

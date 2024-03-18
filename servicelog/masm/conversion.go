@@ -20,14 +20,11 @@ package masm
 import (
 	"klogproc/servicelog"
 	"time"
-
-	"github.com/czcorpus/cnc-gokit/collections"
-	"github.com/rs/zerolog/log"
 )
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	ExcludeIPList []string
+	ExcludeIPList servicelog.ExcludeIPList
 }
 
 func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
@@ -56,8 +53,7 @@ func (t *Transformer) HistoryLookupItems() int {
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
-	if collections.SliceContains(t.ExcludeIPList, rec.GetClientIP().String()) {
-		log.Debug().Str("ip", rec.GetClientIP().String()).Msg("excluded IP")
+	if t.ExcludeIPList.Excludes(rec) {
 		return []servicelog.InputRecord{}
 	}
 	return []servicelog.InputRecord{rec}
