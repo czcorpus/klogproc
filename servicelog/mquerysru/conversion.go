@@ -18,12 +18,39 @@ package mquerysru
 
 import (
 	"klogproc/servicelog"
+	"strings"
 	"time"
 )
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
 	ExcludeIPList servicelog.ExcludeIPList
+}
+
+func (t *Transformer) getCorpus(logRecord *InputRecord) string {
+	corpus := logRecord.Args.XFCSContext
+	if corpus != "" {
+		return t.corpusPID2ID(corpus)
+
+	} else {
+		if len(logRecord.Args.Sources) > 0 {
+			return strings.Join(logRecord.Args.Sources, "+")
+		}
+	}
+	return ""
+}
+
+func (t *Transformer) intFromAny(v any) int {
+	intV, ok := v.(int)
+	if ok {
+		return intV
+	}
+	return 0
+}
+
+func (t *Transformer) corpusPID2ID(s string) string {
+	tmp := strings.Split(s, "/")
+	return tmp[len(tmp)-1]
 }
 
 func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
@@ -35,12 +62,11 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 		IPAddress: logRecord.ClientIP,
 		ProcTime:  logRecord.Latency,
 		Error:     logRecord.ErrorMessage,
-
+		Corpus:    t.getCorpus(logRecord),
 		Version:   logRecord.Version,
 		Operation: logRecord.Operation,
 		IsQuery:   logRecord.IsQuery(),
-
-		Args: logRecord.Args,
+		Args:      logRecord.Args,
 	}
 	rec.ID = CreateID(rec)
 	return rec, nil

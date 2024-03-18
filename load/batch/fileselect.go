@@ -24,7 +24,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"regexp"
@@ -164,7 +163,7 @@ func LogFileMatches(filePath string, minTimestamp int64, strictMatch bool, tzShi
 
 // getFilesInDir lists all the matching log files
 func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, tzShiftMin int) []string {
-	tmp, err := ioutil.ReadDir(dirPath)
+	tmp, err := os.ReadDir(dirPath)
 	var ans []string
 	if err == nil {
 		ans = make([]string, len(tmp))
