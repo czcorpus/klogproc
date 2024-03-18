@@ -36,11 +36,11 @@ type OutputRecord struct {
 	ProcTime  float64                  `json:"procTime"`
 	Error     string                   `json:"error,omitempty"`
 	GeoIP     servicelog.GeoDataRecord `json:"geoip,omitempty"`
-
-	Version   string                 `json:"version"`
-	Operation string                 `json:"operation"`
-	IsQuery   bool                   `json:"isQuery"`
-	Args      map[string]interface{} `json:"args"`
+	Corpus    string                   `json:"corpus,omitempty"`
+	Version   string                   `json:"version"`
+	Operation string                   `json:"operation"`
+	IsQuery   bool                     `json:"isQuery"`
+	Args      InputArgs                `json:"args"`
 }
 
 // GetID returns an idempotent ID of the record.

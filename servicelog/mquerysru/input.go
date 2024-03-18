@@ -22,6 +22,16 @@ import (
 	"time"
 )
 
+type InputArgs struct {
+	Corpus         string   `json:"corpus"`
+	MaximumRecords int      `json:"maximumRecords"`
+	QueryType      string   `json:"queryType"`
+	Sources        []string `json:"sources"`
+	StartRecord    int      `json:"startRecord"`
+	XFCSContext    string   `json:"x-fcs-context"`
+	XFCSDataView   string   `json:"x-fcs-dataviews"`
+}
+
 // InputRecord represents a raw-parsed version of masm query log
 type InputRecord struct {
 	// gokit logging middleware log events
@@ -40,7 +50,7 @@ type InputRecord struct {
 	RecordXMLEscaping string `json:"recordXMLEscaping"`
 	RecordPacking     string `json:"recordPacking"`
 
-	Args map[string]interface{} `json:"args"`
+	Args InputArgs `json:"args"`
 }
 
 // GetTime returns a normalized log date and time information
@@ -72,7 +82,7 @@ func (r *InputRecord) GetUserAgent() string {
 
 func (r *InputRecord) IsProcessable() bool {
 	// process only http requests
-	return len(r.Method) > 0
+	return r.Method != ""
 }
 
 func (rec *InputRecord) IsSuspicious() bool {
@@ -80,5 +90,5 @@ func (rec *InputRecord) IsSuspicious() bool {
 }
 
 func (rec *InputRecord) IsQuery() bool {
-	return rec.Operation == "searchRetrieve"
+	return rec.Operation == "searchRetrieve" || rec.Operation == "scan"
 }
