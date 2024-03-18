@@ -200,10 +200,6 @@ func main() {
 		conf = setup(flag.Arg(1), action)
 		log.Print(startingServiceMsg)
 		processLogs(conf, action, procOpts)
-	case config.ActionCelery:
-		conf = setup(flag.Arg(1), action)
-		log.Print(startingServiceMsg)
-		processCeleryStatus(conf)
 	case config.ActionTestNotification:
 		conf = setup(flag.Arg(1), action)
 		notifier, err := notifications.NewNotifier(

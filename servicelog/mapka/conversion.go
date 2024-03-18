@@ -34,8 +34,9 @@ func createID(rec *OutputRecord) string {
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	prevReqs   *PrevReqPool
-	numSimilar int
+	prevReqs      *PrevReqPool
+	numSimilar    int
+	excludeIPList servicelog.ExcludeIPList
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
@@ -72,13 +73,17 @@ func (t *Transformer) HistoryLookupItems() int {
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
+	if t.excludeIPList.Excludes(rec) {
+		return []servicelog.InputRecord{}
+	}
 	return []servicelog.InputRecord{rec}
 }
 
 // NewTransformer is a default constructor for the Transformer.
 // It also loads user ID map from a configured file (if exists).
-func NewTransformer() *Transformer {
+func NewTransformer(excludeIPList servicelog.ExcludeIPList) *Transformer {
 	return &Transformer{
-		prevReqs: NewPrevReqPool(5),
+		excludeIPList: excludeIPList,
+		prevReqs:      NewPrevReqPool(5),
 	}
 }

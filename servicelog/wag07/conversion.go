@@ -24,15 +24,12 @@ import (
 	"klogproc/notifications"
 	"klogproc/servicelog"
 	"klogproc/servicelog/wag06"
-
-	"github.com/czcorpus/cnc-gokit/collections"
-	"github.com/rs/zerolog/log"
 )
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
 	analyzer      servicelog.Preprocessor
-	ExcludeIPList []string
+	excludeIPList servicelog.ExcludeIPList
 }
 
 func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*wag06.OutputRecord, error) {
@@ -63,8 +60,7 @@ func (t *Transformer) HistoryLookupItems() int {
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
-	if collections.SliceContains(t.ExcludeIPList, rec.GetClientIP().String()) {
-		log.Debug().Str("ip", rec.GetClientIP().String()).Msg("excluded IP")
+	if t.excludeIPList.Excludes(rec) {
 		return []servicelog.InputRecord{}
 	}
 	return t.analyzer.Preprocess(rec, prevRecs)
@@ -85,6 +81,6 @@ func NewTransformer(
 	}
 	return &Transformer{
 		analyzer:      analyzer,
-		ExcludeIPList: excludeIPList,
+		excludeIPList: excludeIPList,
 	}
 }

@@ -22,7 +22,6 @@ import (
 	"klogproc/common"
 	"klogproc/fsop"
 	"klogproc/load/batch"
-	"klogproc/load/celery"
 	"klogproc/load/tail"
 	"klogproc/save/elastic"
 	"klogproc/save/influx"
@@ -36,7 +35,6 @@ const (
 	ActionBatch            = "batch"
 	ActionTail             = "tail"
 	ActionRedis            = "redis"
-	ActionCelery           = "celery"
 	ActionKeyremove        = "keyremove"
 	ActionDocupdate        = "docupdate"
 	ActionDocremove        = "docremove"
@@ -51,7 +49,6 @@ const (
 type Main struct {
 	LogFiles           *batch.Conf                    `json:"logFiles"`
 	LogTail            *tail.Conf                     `json:"logTail"`
-	CeleryStatus       celery.Conf                    `json:"celeryStatus"`
 	GeoIPDbPath        string                         `json:"geoIpDbPath"`
 	AnonymousUsers     []int                          `json:"anonymousUsers"`
 	LogPath            string                         `json:"logPath"`

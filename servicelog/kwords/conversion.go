@@ -25,16 +25,23 @@ import (
 )
 
 // Transformer converts a Morfio log record to a destination format
-type Transformer struct{}
+type Transformer struct {
+	ExcludeIPList servicelog.ExcludeIPList
+}
 
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
+func (t *Transformer) Transform(
+	logRecord *InputRecord,
+	recType string,
+	tzShiftMin int,
+	anonymousUsers []int,
+) (*OutputRecord, error) {
 
 	userID := -1
 	if logRecord.UserID != "-" && logRecord.UserID != "" {
 		uid, err := strconv.Atoi(logRecord.UserID)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to convert user ID [%s]", logRecord.UserID)
+			return nil, fmt.Errorf("failed to convert user ID [%s]", logRecord.UserID)
 		}
 		userID = uid
 	}
@@ -110,5 +117,8 @@ func (t *Transformer) HistoryLookupItems() int {
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
+	if t.ExcludeIPList.Excludes(rec) {
+		return []servicelog.InputRecord{}
+	}
 	return []servicelog.InputRecord{rec}
 }

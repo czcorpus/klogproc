@@ -24,7 +24,9 @@ import (
 )
 
 // Transformer converts a source log object into a destination one
-type Transformer struct{}
+type Transformer struct {
+	ExcludeIPList servicelog.ExcludeIPList
+}
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
@@ -57,5 +59,8 @@ func (t *Transformer) HistoryLookupItems() int {
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
+	if t.ExcludeIPList.Excludes(rec) {
+		return []servicelog.InputRecord{}
+	}
 	return []servicelog.InputRecord{rec}
 }
