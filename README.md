@@ -29,6 +29,7 @@ concurrently which makes it quite fast.
 | Lists      | lists       | a Shiny app with a custom log (*)     |
 | Mapka      | mapka       | using Nginx/Apache access log         |
 | Morfio     | morfio      |                                       |
+| MQuery-SRU | mquery-sru  | a Clarin FCS endpoint (JSONL log)     |
 | QuitaUP    | quita-up    | a Shiny app with a custom log (*)     |
 | SkE        | ske         | using Nginx/Apache access log         |
 | SyD        | syd         | a custom app log                      |
