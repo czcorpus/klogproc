@@ -86,6 +86,9 @@ const (
 	// AppTypeMasm defines a universal storage identifier for Masm
 	AppTypeMasm = "masm"
 
+	// AppTypeMquery defines a universal storage identifier for Mquery
+	AppTypeMquery = "mquery"
+
 	// AppTypeMquerySRU defines a universal storage identifier for Mquery-SRU
 	AppTypeMquerySRU = "mquery-sru"
 )

@@ -14,23 +14,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mquerysru
+package mquery
 
 import (
 	"klogproc/servicelog"
 	"net"
+	"strings"
 	"time"
 )
-
-type InputArgs struct {
-	Corpus         string   `json:"corpus"`
-	MaximumRecords int      `json:"maximumRecords"`
-	QueryType      string   `json:"queryType"`
-	Sources        []string `json:"sources"`
-	StartRecord    int      `json:"startRecord"`
-	XFCSContext    string   `json:"x-fcs-context"`
-	XFCSDataView   string   `json:"x-fcs-dataviews"`
-}
 
 // InputRecord represents a raw-parsed version of masm query log
 type InputRecord struct {
@@ -45,12 +36,8 @@ type InputRecord struct {
 	BodySize     int     `json:"bodySize"`
 	Path         string  `json:"path"`
 	// additional log events
-	Version           string `json:"version"`
-	Operation         string `json:"operation"`
-	RecordXMLEscaping string `json:"recordXMLEscaping"`
-	RecordPacking     string `json:"recordPacking"`
-
-	Args InputArgs `json:"args"`
+	UserAgent string `json:"userAgent"`
+	CorpusId  string `json:"corpusId"`
 }
 
 // GetTime returns a normalized log date and time information
@@ -77,18 +64,26 @@ func (rec *InputRecord) SetCluster(size int) {
 }
 
 func (r *InputRecord) GetUserAgent() string {
-	return ""
+	return r.UserAgent
 }
 
 func (r *InputRecord) IsProcessable() bool {
 	// process only http requests
-	return r.Method != ""
+	return len(r.Method) > 0
 }
 
 func (rec *InputRecord) IsSuspicious() bool {
 	return false
 }
 
-func (rec *InputRecord) IsQuery() bool {
-	return rec.Operation == "searchRetrieve" || rec.Operation == "scan"
+func (rec *InputRecord) IsAI() bool {
+	return strings.Contains(rec.GetUserAgent(), "GPT")
+}
+
+func (rec *InputRecord) GetAction() string {
+	split := strings.Split(rec.Path, "/")
+	if len(split) >= 2 {
+		return split[1]
+	}
+	return ""
 }
