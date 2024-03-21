@@ -32,6 +32,7 @@ import (
 	"klogproc/servicelog/mapka3"
 	"klogproc/servicelog/masm"
 	"klogproc/servicelog/morfio"
+	"klogproc/servicelog/mquery"
 	"klogproc/servicelog/mquerysru"
 	"klogproc/servicelog/shiny"
 	"klogproc/servicelog/ske"
@@ -179,6 +180,10 @@ func GetLogTransformer(
 		}, nil
 	case servicelog.AppTypeMasm:
 		return &masmTransformer{t: &masm.Transformer{
+			ExcludeIPList: excludeIpList,
+		}}, nil
+	case servicelog.AppTypeMquery:
+		return &mqueryTransformer{t: &mquery.Transformer{
 			ExcludeIPList: excludeIpList,
 		}}, nil
 	case servicelog.AppTypeMquerySRU:
