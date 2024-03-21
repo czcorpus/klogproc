@@ -39,7 +39,7 @@ type OutputRecord struct {
 	Error     string                   `json:"error,omitempty"`
 	GeoIP     servicelog.GeoDataRecord `json:"geoip,omitempty"`
 	Action    string                   `json:"action,omitempty"`
-	CorpusID  string                   `json:"corpusId,omitempty"`
+	CorpusID  string                   `json:"corpus,omitempty"`
 }
 
 // GetID returns an idempotent ID of the record.
@@ -70,7 +70,7 @@ func (r *OutputRecord) ToInfluxDB() (tags map[string]string, values map[string]i
 	values["isAI"] = r.IsAI
 	values["error"] = r.Error
 	tags["action"] = r.Action
-	tags["corpusId"] = r.CorpusID
+	tags["corpus"] = r.CorpusID
 	return
 }
 
