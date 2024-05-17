@@ -38,6 +38,7 @@ import (
 	"klogproc/servicelog/ske"
 	"klogproc/servicelog/syd"
 	"klogproc/servicelog/treq"
+	"klogproc/servicelog/vlo"
 	"klogproc/servicelog/wag06"
 	"klogproc/servicelog/wag07"
 	"klogproc/servicelog/wsserver"
@@ -266,6 +267,16 @@ func (parser *mquerySRULineParser) ParseLine(s string, lineNum int64) (servicelo
 
 // ------------------------------------
 
+type VLOLineParser struct {
+	lp *vlo.LineParser
+}
+
+func (parser *VLOLineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
+}
+
+// ------------------------------------
+
 // NewLineParser creates a parser for individual lines of a respective appType
 func NewLineParser(appType string, version string, appErrRegister servicelog.AppErrorRegister) (LineParser, error) {
 	switch appType {
@@ -332,6 +343,8 @@ func NewLineParser(appType string, version string, appErrRegister servicelog.App
 		return &mqueryLineParser{lp: &mquery.LineParser{}}, nil
 	case servicelog.AppTypeMquerySRU:
 		return &mquerySRULineParser{lp: &mquerysru.LineParser{}}, nil
+	case servicelog.AppTypeVLO:
+		return &VLOLineParser{lp: &vlo.LineParser{}}, nil
 	default:
 		return nil, fmt.Errorf("Parser not found for application type %s", appType)
 	}

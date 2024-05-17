@@ -91,6 +91,9 @@ const (
 
 	// AppTypeMquerySRU defines a universal storage identifier for Mquery-SRU
 	AppTypeMquerySRU = "mquery-sru"
+
+	// AppTypeVLO defines a universal storage identifier for CNC-VLO
+	AppTypeVLO = "vlo"
 )
 
 type ServiceLogBuffer logbuffer.AbstractRecentRecords[InputRecord, logbuffer.SerializableState]

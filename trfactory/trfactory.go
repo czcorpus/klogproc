@@ -38,6 +38,7 @@ import (
 	"klogproc/servicelog/ske"
 	"klogproc/servicelog/syd"
 	"klogproc/servicelog/treq"
+	"klogproc/servicelog/vlo"
 	"klogproc/servicelog/wag06"
 	"klogproc/servicelog/wag07"
 	"klogproc/servicelog/wsserver"
@@ -189,6 +190,13 @@ func GetLogTransformer(
 	case servicelog.AppTypeMquerySRU:
 		return &mquerySRUTransformer{
 				t: &mquerysru.Transformer{
+					ExcludeIPList: excludeIpList,
+				},
+			},
+			nil
+	case servicelog.AppTypeVLO:
+		return &VLOTransformer{
+				t: &vlo.Transformer{
 					ExcludeIPList: excludeIpList,
 				},
 			},
