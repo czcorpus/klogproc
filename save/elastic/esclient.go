@@ -137,6 +137,7 @@ type ESClient struct {
 	server         string
 	index          string
 	reqTimeoutSecs int
+	version        int
 }
 
 // NewClient returns an instance of ESClient
@@ -145,6 +146,7 @@ func NewClient(conf *ConnectionConf) *ESClient {
 		server:         conf.Server,
 		index:          conf.Index,
 		reqTimeoutSecs: conf.ReqTimeoutSecs,
+		version:        5,
 	}
 }
 
@@ -154,11 +156,14 @@ func NewClient6(conf *ConnectionConf, appType string) *ESClient {
 		server:         conf.Server,
 		index:          fmt.Sprintf("%s_%s", conf.Index, appType),
 		reqTimeoutSecs: conf.ReqTimeoutSecs,
+		version:        6,
 	}
 }
 
 func (c ESClient) String() string {
-	return fmt.Sprintf("ElasticSearchClient{server: %s, index: %s}", c.server, c.index)
+	return fmt.Sprintf(
+		"ESClient{server: %s, index: %s, version: %d}",
+		c.server, c.index, c.version)
 }
 
 // Do sends a general request to ElasticSearch server where
