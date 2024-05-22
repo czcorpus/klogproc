@@ -31,7 +31,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*QueryInputRecord, err
 	var record QueryInputRecord
 	err := json.Unmarshal([]byte(s), &record)
 	if err != nil {
-		return nil, servicelog.NewStreamedLineParsingError(s, "json Unmarshal error")
+		return nil, servicelog.NewStreamedLineParsingError(s, "json Unmarshal error [kontext]")
 	}
 	if record.Logger == "QUERY" {
 		record.isProcessable = true

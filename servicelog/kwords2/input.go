@@ -100,7 +100,7 @@ type InputRecord struct {
 	// UserID is currently not filled by KWords2
 	// and we get the user ID information
 	// from within `Headers` (`XUserID` attr.)
-	UserID int `json:"userId"`
+	UserID any `json:"userId"`
 
 	// Action is produced by KWords2 to distingish easily
 	// between actions with the same URL path. It looks

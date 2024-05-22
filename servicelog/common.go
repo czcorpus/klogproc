@@ -342,3 +342,11 @@ func (elist ExcludeIPList) Excludes(rec InputRecord) bool {
 	}
 	return excludes
 }
+
+// ErrorRecord specifies a thrown error along with
+// optional anchor for easier search within text file
+// log
+type ErrorRecord struct {
+	Name   string `json:"name"`
+	Anchor string `json:"anchor"`
+}

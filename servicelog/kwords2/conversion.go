@@ -78,6 +78,14 @@ func (t *Transformer) Transform(
 		}
 	}
 	userID := logRecord.Headers.XUserID
+	if userID == "" {
+		switch tUserID := logRecord.UserID.(type) {
+		case int:
+			userID = strconv.Itoa(tUserID)
+		case string:
+			userID = tUserID
+		}
+	}
 	if userID == "-1" {
 		userID = ""
 	}
@@ -106,9 +114,11 @@ func (t *Transformer) Transform(
 		IsQuery:       logRecord.IsQuery,
 		UserAgent:     logRecord.Headers.UserAgent,
 		UserID:        userIDAttr,
-		Error:         logRecord.Exception,
-		Args:          args,
-		Version:       "2",
+		Error: servicelog.ErrorRecord{
+			Name: logRecord.Exception,
+		},
+		Args:    args,
+		Version: "2",
 	}
 	r.ID = createID(r)
 	return r, nil
