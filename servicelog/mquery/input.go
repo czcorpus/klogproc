@@ -87,3 +87,12 @@ func (rec *InputRecord) GetAction() string {
 	}
 	return ""
 }
+
+func (rec *InputRecord) ExportError() *servicelog.ErrorRecord {
+	if rec.ErrorMessage != "" {
+		return &servicelog.ErrorRecord{
+			Name: rec.ErrorMessage,
+		}
+	}
+	return nil
+}

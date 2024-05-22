@@ -100,16 +100,6 @@ type Request struct {
 
 // ------------------------------------------------------------
 
-// ErrorRecord specifies a thrown error along with
-// optional anchor for easier search within text file
-// log
-type ErrorRecord struct {
-	Name   string `json:"name"`
-	Anchor string `json:"anchor"`
-}
-
-// ------------------------------------------------------------
-
 // InputRecord represents a parsed KonText record
 type InputRecord struct {
 	UserID         int                    `json:"user_id"`
@@ -119,7 +109,7 @@ type InputRecord struct {
 	IsIndirectCall bool                   `json:"is_indirect_call"`
 	Request        Request                `json:"request"`
 	Args           map[string]interface{} `json:"args"`
-	Error          ErrorRecord            `json:"error"`
+	Error          servicelog.ErrorRecord `json:"error"`
 }
 
 // GetTime returns record's time as a Golang's Time

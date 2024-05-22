@@ -89,7 +89,7 @@ type OutputRecord struct {
 	UserAgent      string                   `json:"userAgent"`
 	UserID         string                   `json:"userId"`
 	GeoIP          servicelog.GeoDataRecord `json:"geoip,omitempty"`
-	Error          ErrorRecord              `json:"error"`
+	Error          *servicelog.ErrorRecord  `json:"error,omitempty"`
 }
 
 // ToJSON converts self to JSON string

@@ -55,7 +55,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 		QueryType:      importQueryType(logRecord),
 		UserAgent:      logRecord.Request.HTTPUserAgent,
 		UserID:         strconv.Itoa(logRecord.UserID),
-		Error:          logRecord.Error,
+		Error:          logRecord.Error.AsPointer(),
 		Args:           exportArgs(logRecord.Args),
 	}
 	r.ID = createID(r)

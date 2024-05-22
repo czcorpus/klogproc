@@ -21,6 +21,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"klogproc/servicelog"
 	"strconv"
 	"strings"
 	"time"
@@ -33,14 +34,14 @@ type OutputRecord struct {
 	Level          string `json:"level"`
 	Datetime       string `json:"datetime"`
 	time           time.Time
-	Message        string   `json:"message"`
-	IsQuery        bool     `json:"isQuery"`
-	Corpus         string   `json:"corpus,omitempty"`
-	AlignedCorpora []string `json:"alignedCorpora,omitempty"`
-	IsAutocomplete bool     `json:"isAutocomplete"`
-	IsCached       bool     `json:"isCached"`
-	ProcTimeSecs   float64  `json:"procTimeSecs,omitempty"`
-	Error          string   `json:"error,omitempty"`
+	Message        string                  `json:"message"`
+	IsQuery        bool                    `json:"isQuery"`
+	Corpus         string                  `json:"corpus,omitempty"`
+	AlignedCorpora []string                `json:"alignedCorpora,omitempty"`
+	IsAutocomplete bool                    `json:"isAutocomplete"`
+	IsCached       bool                    `json:"isCached"`
+	ProcTimeSecs   float64                 `json:"procTimeSecs,omitempty"`
+	Error          *servicelog.ErrorRecord `json:"error,omitempty"`
 }
 
 // GetID returns an idempotent ID of the record.
@@ -77,7 +78,7 @@ func (r *OutputRecord) SetLocation(countryName string, latitude float32, longitu
 func CreateID(rec *OutputRecord) string {
 	str := rec.Level + rec.Datetime + rec.Message + strconv.FormatBool(rec.IsQuery) + rec.Corpus +
 		strings.Join(rec.AlignedCorpora, ", ") + strconv.FormatBool(rec.IsAutocomplete) + strconv.FormatBool(rec.IsCached) +
-		strconv.FormatFloat(rec.ProcTimeSecs, 'E', -1, 64) + rec.Error
+		strconv.FormatFloat(rec.ProcTimeSecs, 'E', -1, 64) + rec.Error.String()
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }

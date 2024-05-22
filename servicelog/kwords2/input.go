@@ -147,3 +147,12 @@ func (rec *InputRecord) IsProcessable() bool {
 func (rec *InputRecord) IsSuspicious() bool {
 	return false
 }
+
+func (rec *InputRecord) ExportError() *servicelog.ErrorRecord {
+	if rec.Exception != "" {
+		return &servicelog.ErrorRecord{
+			Name: rec.Exception,
+		}
+	}
+	return nil
+}

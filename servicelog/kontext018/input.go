@@ -66,14 +66,6 @@ type Request struct {
 	RemoteAddr       string `json:"REMOTE_ADDR"`
 }
 
-// ErrorRecord specifies a thrown error along with
-// optional anchor for easier search within text file
-// log
-type ErrorRecord struct {
-	Name   string `json:"name"`
-	Anchor string `json:"anchor"`
-}
-
 // QueryInputRecord represents Kontext query log
 type QueryInputRecord struct {
 	GeneralInputRecord
@@ -83,7 +75,7 @@ type QueryInputRecord struct {
 	IsIndirectCall bool                   `json:"is_indirect_call"`
 	Request        Request                `json:"request"`
 	Args           map[string]interface{} `json:"args"`
-	Error          ErrorRecord            `json:"error"`
+	Error          servicelog.ErrorRecord `json:"error"`
 	isProcessable  bool
 }
 

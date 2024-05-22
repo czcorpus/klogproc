@@ -61,7 +61,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 		Level:     logRecord.Level,
 		IPAddress: logRecord.ClientIP,
 		ProcTime:  logRecord.Latency,
-		Error:     logRecord.ErrorMessage,
+		Error:     logRecord.ExportError(),
 		Corpus:    t.getCorpus(logRecord),
 		Version:   logRecord.Version,
 		Operation: logRecord.Operation,

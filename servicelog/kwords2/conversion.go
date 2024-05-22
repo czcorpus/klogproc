@@ -114,11 +114,9 @@ func (t *Transformer) Transform(
 		IsQuery:       logRecord.IsQuery,
 		UserAgent:     logRecord.Headers.UserAgent,
 		UserID:        userIDAttr,
-		Error: servicelog.ErrorRecord{
-			Name: logRecord.Exception,
-		},
-		Args:    args,
-		Version: "2",
+		Error:         logRecord.ExportError(),
+		Args:          args,
+		Version:       "2",
 	}
 	r.ID = createID(r)
 	return r, nil
