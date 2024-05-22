@@ -30,7 +30,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 	err := json.Unmarshal([]byte(s), &record)
 	if err != nil {
 		return nil, servicelog.NewStreamedLineParsingError(
-			s, fmt.Sprintf("json Unmarshal error: %s", err))
+			s, fmt.Sprintf("json Unmarshal error [kwords2]: %s", err))
 	}
 	return &record, nil
 }
