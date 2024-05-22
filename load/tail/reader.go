@@ -89,6 +89,12 @@ func (ftw *FileTailReader) ApplyNewContent(
 		ftw.internalSeek = prevPosition.SeekEnd
 		ftw.file.Seek(ftw.internalSeek, io.SeekStart)
 		log.Warn().Msgf("FileTailReader[%s] updated internalSeek position to %d due to updated position status", ftw.filePath, ftw.internalSeek)
+
+	} else {
+		// we must make sure we start from the proper place
+		// as the bufio reader might have read stuff in advance
+		// during the previous run
+		ftw.file.Seek(ftw.internalSeek, io.SeekStart)
 	}
 
 	sc := bufio.NewReader(ftw.file)
@@ -98,7 +104,12 @@ func (ftw *FileTailReader) ApplyNewContent(
 		rawLine, err := sc.ReadBytes('\n')
 		if err == io.EOF {
 			break
+
 		} else if err != nil {
+			// here we assume the file cannot be processed at the position
+			// so we try to move further
+			newPosition.SeekEnd = newPosition.SeekStart + int64(len(rawLine))
+			ftw.internalSeek = newPosition.SeekEnd
 			return err
 		}
 		newPosition.SeekEnd = newPosition.SeekStart + int64(len(rawLine))
