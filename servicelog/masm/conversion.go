@@ -40,7 +40,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 		IsAutocomplete: logRecord.IsAutocomplete,
 		IsCached:       logRecord.IsCached,
 		ProcTimeSecs:   logRecord.ProcTimeSecs,
-		Error:          logRecord.Error,
+		Error:          logRecord.ExportError(),
 	}
 	rec.ID = CreateID(rec)
 	return rec, nil

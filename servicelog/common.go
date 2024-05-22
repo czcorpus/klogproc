@@ -350,3 +350,25 @@ type ErrorRecord struct {
 	Name   string `json:"name"`
 	Anchor string `json:"anchor"`
 }
+
+func (er *ErrorRecord) String() string {
+	if er == nil {
+		return ""
+	}
+	return er.Name
+}
+
+// IsEmpty tests whether the error record is empty
+// (i.e. whether it is nil or has zero Name)
+func (er *ErrorRecord) IsEmpty() bool {
+	return er == nil || er.Name == ""
+}
+
+// AsPointer returns nil in case the ErrorRecord is empty,
+// otherwise it returns a pointer to its value
+func (er ErrorRecord) AsPointer() *ErrorRecord {
+	if er.Name == "" {
+		return nil
+	}
+	return &er
+}

@@ -34,7 +34,7 @@ type OutputRecord struct {
 	Level     string                   `json:"level"`
 	IPAddress string                   `json:"ipAddress"`
 	ProcTime  float64                  `json:"procTime"`
-	Error     string                   `json:"error,omitempty"`
+	Error     *servicelog.ErrorRecord  `json:"error,omitempty"`
 	GeoIP     servicelog.GeoDataRecord `json:"geoip,omitempty"`
 	Corpus    string                   `json:"corpus,omitempty"`
 	Version   string                   `json:"version"`
@@ -87,7 +87,7 @@ func (r *OutputRecord) SetLocation(countryName string, latitude float32, longitu
 // CreateID creates an idempotent ID of rec based on its properties.
 func CreateID(rec *OutputRecord) string {
 	str := rec.Level + rec.Datetime + rec.IPAddress + rec.Operation +
-		strconv.FormatFloat(rec.ProcTime, 'E', -1, 64) + rec.Error
+		strconv.FormatFloat(rec.ProcTime, 'E', -1, 64) + rec.Error.String()
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }

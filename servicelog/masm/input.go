@@ -71,3 +71,12 @@ func (r *InputRecord) IsProcessable() bool {
 func (rec *InputRecord) IsSuspicious() bool {
 	return false
 }
+
+func (r *InputRecord) ExportError() *servicelog.ErrorRecord {
+	if r.Error != "" {
+		return &servicelog.ErrorRecord{
+			Name: r.Error,
+		}
+	}
+	return nil
+}

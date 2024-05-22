@@ -36,7 +36,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 		UserAgent: logRecord.GetUserAgent(),
 		IsAI:      logRecord.IsAI(),
 		ProcTime:  logRecord.Latency,
-		Error:     logRecord.ErrorMessage,
+		Error:     logRecord.ExportError(),
 		Action:    logRecord.GetAction(),
 		CorpusID:  logRecord.CorpusId,
 	}

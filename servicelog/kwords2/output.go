@@ -60,7 +60,7 @@ type OutputRecord struct {
 	GeoIP         servicelog.GeoDataRecord `json:"geoip,omitempty"`
 	Args          *Args                    `json:"args,omitempty"`
 	UserAgent     string                   `json:"userAgent"`
-	Error         servicelog.ErrorRecord   `json:"error"`
+	Error         *servicelog.ErrorRecord  `json:"error,omitempty"`
 	Version       string                   `json:"version,omitempty"`
 }
 
