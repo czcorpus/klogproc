@@ -34,7 +34,7 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 		Level:     logRecord.Level,
 		IPAddress: logRecord.ClientIP,
 		ProcTime:  logRecord.Latency,
-		Error:     logRecord.ErrorMessage,
+		Error:     logRecord.ExportError(),
 		Operation: logRecord.Operation,
 		IsQuery:   logRecord.IsQuery(),
 	}
