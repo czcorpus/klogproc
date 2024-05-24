@@ -77,3 +77,12 @@ func (rec *InputRecord) IsSuspicious() bool {
 func (rec *InputRecord) IsQuery() bool {
 	return rec.Operation == "GetRecord" || rec.Operation == "ListRecords"
 }
+
+func (rec *InputRecord) ExportError() *servicelog.ErrorRecord {
+	if rec.ErrorMessage != "" {
+		return &servicelog.ErrorRecord{
+			Name: rec.ErrorMessage,
+		}
+	}
+	return nil
+}
