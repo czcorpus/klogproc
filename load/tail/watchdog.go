@@ -17,6 +17,8 @@
 package tail
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -72,7 +74,7 @@ func (fc *FileConf) GetAppType() string {
 type Conf struct {
 	IntervalSecs          int        `json:"intervalSecs"`
 	MaxLinesPerCheck      int        `json:"maxLinesPerCheck"`
-	WorklogPath           string     `json:"worklogPath"`
+	WorklogDir            string     `json:"worklogDir"`
 	LogBufferStateDir     string     `json:"logBufferStateDir"`
 	Files                 []FileConf `json:"files"`
 	NumErrorsAlarm        int        `json:"numErrorsAlarm"`
@@ -118,14 +120,14 @@ func (conf *Conf) Validate() error {
 	if conf.MaxLinesPerCheck < conf.IntervalSecs*100 {
 		return errors.New("logTail.maxLinesPerCheck must be at least logTail.intervalSecs * 100")
 	}
-	isf, err := fs.IsFile(conf.WorklogPath)
+	isd, err := fs.IsDir(conf.WorklogDir)
 	if err != nil {
-		return fmt.Errorf("logTail.worklogPath failed to validate: %w", err)
+		return fmt.Errorf("logTail.worklogDir failed to validate: %w", err)
 	}
-	if !isf {
+	if !isd {
 		return fmt.Errorf("logTail.worklogPath does not refer to a file")
 	}
-	isd, err := fs.IsDir(conf.LogBufferStateDir)
+	isd, err = fs.IsDir(conf.LogBufferStateDir)
 	if err != nil {
 		return fmt.Errorf("logTail.logBufferStateDir failed to validate: %w", err)
 	}
@@ -219,17 +221,26 @@ func Run(conf *Conf, processors []FileTailProcessor, finishEvent chan<- bool) {
 	syscallChan := make(chan os.Signal, 10)
 	signal.Notify(syscallChan, os.Interrupt)
 	signal.Notify(syscallChan, syscall.SIGTERM)
-	worklog := NewWorklog(conf.WorklogPath)
+
+	sum := sha1.New()
+	for _, v := range conf.Files {
+		if _, err := sum.Write([]byte(v.Path)); err != nil {
+			log.Error().Err(err).Send()
+			quitChan <- true
+			break
+		}
+	}
+	worklog := NewWorklog(conf.WorklogDir, hex.EncodeToString(sum.Sum(nil)[:8]))
 	var readers []*FileTailReader
 	err := worklog.Init()
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		log.Error().Err(err).Send()
 		quitChan <- true
 
 	} else {
 		readers, err = initReaders(processors, worklog)
 		if err != nil {
-			log.Error().Err(err).Msg("")
+			log.Error().Err(err).Send()
 			quitChan <- true
 		}
 	}

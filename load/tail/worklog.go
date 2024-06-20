@@ -21,12 +21,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"klogproc/fsop"
 	"klogproc/servicelog"
 
 	"github.com/czcorpus/cnc-gokit/collections"
+	"github.com/czcorpus/cnc-gokit/fs"
 
 	"github.com/rs/zerolog/log"
 )
@@ -50,10 +52,11 @@ type WorklogRecord = map[string]servicelog.LogRange
 // situation (e.g. ignored lines are confirmed sooner that the ones
 // send to Elastic/Influx).
 type Worklog struct {
-	filePath    string
-	rec         *collections.ConcurrentMap[string, servicelog.LogRange]
-	updRequests chan updateRequest
-	initialized bool
+	rec            *collections.ConcurrentMap[string, servicelog.LogRange]
+	updRequests    chan updateRequest
+	storeFilePath  string
+	backupFilePath string
+	initialized    bool
 }
 
 // Init initializes the worklog. It must be called before any other
@@ -63,20 +66,27 @@ func (w *Worklog) Init() error {
 		panic("Worklog already initialized")
 	}
 	var err error
-	if w.filePath == "" {
+	if w.storeFilePath == "" {
 		return fmt.Errorf("failed to initialize tail worklog - no path specified")
 	}
-	log.Info().Msgf("Initializing worklog %s", w.filePath)
-	wlData, err := os.ReadFile(w.filePath)
+	log.Info().Msgf("Initializing worklog %s", w.storeFilePath)
+	isf, err := fs.IsFile(w.storeFilePath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to initialize tail worklog: %w", err)
 	}
-
-	if len(wlData) > 0 {
-		var err error
-		w.rec, err = collections.NewConcurrentMapFromJSON[string, servicelog.LogRange](wlData)
+	if isf {
+		wlData, err := os.ReadFile(w.storeFilePath)
 		if err != nil {
 			return err
+		}
+
+		if len(wlData) > 0 {
+			log.Info().Msg("Found worklog file")
+			var err error
+			w.rec, err = collections.NewConcurrentMapFromJSON[string, servicelog.LogRange](wlData)
+			if err != nil {
+				return fmt.Errorf("failed to initialize tail worklog: %w", err)
+			}
 		}
 	}
 	w.updRequests = make(chan updateRequest)
@@ -136,23 +146,29 @@ func (w *Worklog) Close() {
 // It is called automatically after each log update
 // request is processed.
 func (w *Worklog) save() error {
-	backup, err := os.OpenFile(w.filePath+".bak", os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
+	isf, err := fs.IsFile(w.storeFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to save worklog: %w", err)
 	}
-	f0, err := os.Open(w.filePath)
-	if err != nil {
+	if isf {
+		backup, err := os.OpenFile(w.backupFilePath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
+		if err != nil {
+			return fmt.Errorf("failed to save worklog: %w", err)
+		}
+		f0, err := os.Open(w.storeFilePath)
+		if err != nil {
+			backup.Close()
+			return fmt.Errorf("failed to save worklog: %w", err)
+		}
+		_, err = io.Copy(backup, f0)
+		f0.Close()
 		backup.Close()
-		return fmt.Errorf("failed to save worklog: %w", err)
-	}
-	_, err = io.Copy(backup, f0)
-	f0.Close()
-	backup.Close()
-	if err != nil {
-		return fmt.Errorf("failed to save worklog: %w", err)
+		if err != nil {
+			return fmt.Errorf("failed to save worklog: %w", err)
+		}
 	}
 
-	f1, err := os.OpenFile(w.filePath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
+	f1, err := os.OpenFile(w.storeFilePath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to save worklog: %w", err)
 	}
@@ -207,9 +223,11 @@ func (w *Worklog) GetData(filePath string) servicelog.LogRange {
 
 // NewWorklog creates a new Worklog instance. Please note that
 // Init() must be called before you can begin using the worklog.
-func NewWorklog(path string) *Worklog {
+func NewWorklog(path, instanceID string) *Worklog {
+
 	return &Worklog{
-		filePath: path,
-		rec:      collections.NewConcurrentMap[string, servicelog.LogRange](),
+		storeFilePath:  filepath.Join(path, instanceID+".json"),
+		backupFilePath: filepath.Join(path, instanceID+".json.bak"),
+		rec:            collections.NewConcurrentMap[string, servicelog.LogRange](),
 	}
 }
