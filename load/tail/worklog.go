@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"klogproc/fsop"
 	"klogproc/servicelog"
@@ -28,6 +29,10 @@ import (
 	"github.com/czcorpus/cnc-gokit/collections"
 
 	"github.com/rs/zerolog/log"
+)
+
+const (
+	worklogAutosaveInterval = 30 * time.Second
 )
 
 type updateRequest struct {
@@ -46,35 +51,53 @@ type WorklogRecord = map[string]servicelog.LogRange
 // send to Elastic/Influx).
 type Worklog struct {
 	filePath    string
-	fr          *os.File
 	rec         *collections.ConcurrentMap[string, servicelog.LogRange]
 	updRequests chan updateRequest
+	initialized bool
 }
 
 // Init initializes the worklog. It must be called before any other
 // operation.
 func (w *Worklog) Init() error {
+	if w.initialized {
+		panic("Worklog already initialized")
+	}
 	var err error
 	if w.filePath == "" {
 		return fmt.Errorf("failed to initialize tail worklog - no path specified")
 	}
 	log.Info().Msgf("Initializing worklog %s", w.filePath)
-	w.fr, err = os.OpenFile(w.filePath, os.O_CREATE|os.O_RDWR, 0644)
+	wlData, err := os.ReadFile(w.filePath)
 	if err != nil {
 		return err
 	}
-	byteValue, err := io.ReadAll(w.fr)
-	if err != nil {
-		return err
-	}
-	if len(byteValue) > 0 {
+
+	if len(wlData) > 0 {
 		var err error
-		w.rec, err = collections.NewConcurrentMapFromJSON[string, servicelog.LogRange](byteValue)
+		w.rec, err = collections.NewConcurrentMapFromJSON[string, servicelog.LogRange](wlData)
 		if err != nil {
 			return err
 		}
 	}
 	w.updRequests = make(chan updateRequest)
+	w.initialized = true
+	w.goAutosave()
+	w.goReadRequests()
+	return nil
+}
+
+func (w *Worklog) goAutosave() {
+	ticker := time.NewTicker(worklogAutosaveInterval)
+	go func() {
+		for range ticker.C {
+			if err := w.save(); err != nil {
+				log.Error().Err(err).Msg("failed to autosave worklog")
+			}
+		}
+	}()
+}
+
+func (w *Worklog) goReadRequests() {
 	go func() {
 		for req := range w.updRequests {
 			curr := w.rec.Get(req.FilePath)
@@ -92,47 +115,53 @@ func (w *Worklog) Init() error {
 				curr.Written && req.Value.SeekEnd >= curr.SeekEnd ||
 				!req.Value.Written && (curr.Written || req.Value.SeekEnd < curr.SeekEnd) {
 				w.rec.Set(req.FilePath, req.Value)
-				w.save()
 
 			} else {
 				log.Warn().Msgf("worklog[%s] item %v won't be saved due to the current %v", req.FilePath, req.Value, curr)
 			}
 		}
 	}()
-	return nil
 }
 
 // Close cleans up worklog for safe exit
 func (w *Worklog) Close() {
-	if w.fr != nil {
-		w.fr.Close()
-	}
+	w.save()
 	if w.updRequests != nil {
 		close(w.updRequests)
 	}
+	w.initialized = false
 }
 
 // save stores worklog's state to a configured file.
 // It is called automatically after each log update
 // request is processed.
 func (w *Worklog) save() error {
-	err := w.fr.Truncate(0)
+	backup, err := os.OpenFile(w.filePath+".bak", os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to save worklog: %w", err)
 	}
-	_, err = w.fr.Seek(0, os.SEEK_SET)
+	f0, err := os.Open(w.filePath)
 	if err != nil {
-		return err
+		backup.Close()
+		return fmt.Errorf("failed to save worklog: %w", err)
 	}
+	_, err = io.Copy(backup, f0)
+	f0.Close()
+	backup.Close()
+	if err != nil {
+		return fmt.Errorf("failed to save worklog: %w", err)
+	}
+
+	f1, err := os.OpenFile(w.filePath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to save worklog: %w", err)
+	}
+	defer f1.Close()
 	data, err := json.Marshal(w.rec)
 	if err != nil {
 		return err
 	}
-	_, err = w.fr.Write(data)
-	if err != nil {
-		return err
-	}
-	err = w.fr.Sync()
+	_, err = f1.Write(data)
 	if err != nil {
 		return err
 	}

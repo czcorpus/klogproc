@@ -75,7 +75,6 @@ func (ftw *FileTailReader) ApplyNewContent(
 	} else if !prevPosition.Written {
 		ftw.internalSeek = prevPosition.SeekStart
 		log.Warn().Msgf("FileTailReader(%s) updated internalSeek position to %d due to unsaved last record", ftw.filePath, prevPosition.SeekStart)
-		ftw.file.Seek(ftw.internalSeek, io.SeekStart)
 
 	} else if ftw.internalSeek != prevPosition.SeekEnd {
 		// some external action has changed processed position (typically in case of a write error)
@@ -87,9 +86,11 @@ func (ftw *FileTailReader) ApplyNewContent(
 			}
 		}
 		ftw.internalSeek = prevPosition.SeekEnd
-		ftw.file.Seek(ftw.internalSeek, io.SeekStart)
 		log.Warn().Msgf("FileTailReader[%s] updated internalSeek position to %d due to updated position status", ftw.filePath, ftw.internalSeek)
 	}
+	// always make sure the current position is OK (it can be off e.g. thanks
+	// to using the buffered reader)
+	ftw.file.Seek(ftw.internalSeek, io.SeekStart)
 
 	sc := bufio.NewReader(ftw.file)
 	var i int
@@ -111,6 +112,14 @@ func (ftw *FileTailReader) ApplyNewContent(
 			Str("logFile", ftw.filePath).
 			Str("name", ftw.AppType()).
 			Msg("tail processor hit the maxLinesPerCheck limit")
+
+	} else {
+		log.Debug().
+			Int("processedLines", i).
+			Str("logFile", ftw.filePath).
+			Str("name", ftw.AppType()).
+			Msg("processed a chunk of lines")
+
 	}
 	return nil
 }
@@ -129,7 +138,7 @@ func NewReader(processor FileTailProcessor, lastLogPosition servicelog.LogRange)
 		if err != nil {
 			return nil, err
 		}
-		_, err = r.file.Seek(lastLogPosition.SeekEnd, os.SEEK_SET)
+		_, err = r.file.Seek(lastLogPosition.SeekEnd, io.SeekStart)
 		if err != nil {
 			return nil, err
 		}
