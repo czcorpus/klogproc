@@ -159,7 +159,7 @@ func main() {
 	flag.BoolVar(&procOpts.analysisOnly, "analysis-only", false, "In batch mode, analyze logs for bots etc.")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending CNC app logs to ElasticSearch & InfluxDB\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\t%s\n\nOptions:\n",
+		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending CNC app logs to ElasticSearch\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\t%s\n\nOptions:\n",
 			filepath.Base(
 				os.Args[0]),
 			strings.Join([]string{

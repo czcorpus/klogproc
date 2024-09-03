@@ -77,18 +77,6 @@ func (cnkr *OutputRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(cnkr)
 }
 
-func (cnkr *OutputRecord) ToInfluxDB() (tags map[string]string, values map[string]interface{}) {
-	tags = make(map[string]string)
-	values = make(map[string]interface{})
-	values["procTime"] = cnkr.ProcTime
-	values["error"] = cnkr.Error.Name
-	values["errorAnchor"] = cnkr.Error.Anchor
-	tags["corpname"] = cnkr.Corpus
-	tags["queryType"] = cnkr.QueryType
-	tags["action"] = cnkr.Action
-	return
-}
-
 func (cnkr *OutputRecord) GetID() string {
 	return cnkr.ID
 }

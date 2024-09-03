@@ -77,11 +77,6 @@ func (r *OutputRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-// ToInfluxDB creates tags and values to store in InfluxDB
-func (r *OutputRecord) ToInfluxDB() (tags map[string]string, values map[string]interface{}) {
-	return make(map[string]string), make(map[string]interface{})
-}
-
 // GetID Returns an unique ID of the record
 func (r *OutputRecord) GetID() string {
 	return r.ID

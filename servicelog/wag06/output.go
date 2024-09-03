@@ -80,11 +80,6 @@ func (r *OutputRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-// ToInfluxDB creates tags and values to store in InfluxDB
-func (r *OutputRecord) ToInfluxDB() (tags map[string]string, values map[string]interface{}) {
-	return make(map[string]string), make(map[string]interface{})
-}
-
 // NewTimedOutputRecord creates a general empty record with specified date and time
 func NewTimedOutputRecord(t time.Time, tzShiftMin int) *OutputRecord {
 	dt := t.Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339)

@@ -50,7 +50,7 @@ type WorklogRecord = map[string]servicelog.LogRange
 // interruption/error. Worklog can handle incoming status updates
 // even if they arrive out of order - which is rather a typical
 // situation (e.g. ignored lines are confirmed sooner that the ones
-// send to Elastic/Influx).
+// send to Elastic).
 type Worklog struct {
 	rec            *collections.ConcurrentMap[string, servicelog.LogRange]
 	updRequests    chan updateRequest

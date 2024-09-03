@@ -24,7 +24,6 @@ import (
 	"klogproc/load/batch"
 	"klogproc/load/tail"
 	"klogproc/save/elastic"
-	"klogproc/save/influx"
 
 	"github.com/czcorpus/cnc-gokit/mail"
 	conomiClient "github.com/czcorpus/conomi/client"
@@ -57,16 +56,9 @@ type Main struct {
 	RecUpdate          elastic.DocUpdConf             `json:"recordUpdate"`
 	RecRemove          elastic.DocRemConf             `json:"recordRemove"`
 	ElasticSearch      elastic.ConnectionConf         `json:"elasticSearch"`
-	InfluxDB           influx.ConnectionConf          `json:"influxDb"`
 	EmailNotification  *mail.NotificationConf         `json:"emailNotification"`
 	ConomiNotification *conomiClient.ConomiClientConf `json:"conomiNotification"`
 	TimeZone           string                         `json:"timeZone"`
-}
-
-// HasInfluxOut tests whether an InfluxDB
-// output is confgured
-func (c *Main) HasInfluxOut() bool {
-	return c.InfluxDB.Server != ""
 }
 
 func (c *Main) TimezoneLocation() *time.Location {
@@ -83,12 +75,6 @@ func Validate(conf *Main, action string) {
 	var err error
 	if conf.ElasticSearch.IsConfigured() {
 		err = conf.ElasticSearch.Validate()
-		if err != nil {
-			log.Fatal().Msgf("%s", err)
-		}
-	}
-	if conf.InfluxDB.IsConfigured() {
-		err = conf.InfluxDB.Validate()
 		if err != nil {
 			log.Fatal().Msgf("%s", err)
 		}

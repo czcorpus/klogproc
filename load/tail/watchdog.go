@@ -151,7 +151,6 @@ type LineProcConfirmChan chan interface{}
 // their data.
 type LogDataWriter struct {
 	Elastic chan *servicelog.BoundOutputRecord
-	Influx  chan *servicelog.BoundOutputRecord
 	Ignored chan save.IgnoredItemMsg
 }
 

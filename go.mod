@@ -6,7 +6,6 @@ require (
 	github.com/czcorpus/cnc-gokit v0.9.2
 	github.com/czcorpus/conomi v0.0.7
 	github.com/google/uuid v1.3.0
-	github.com/influxdata/influxdb1-client v0.0.0-20220302092344-a9ab5670611c
 	github.com/kelindar/dbscan v0.0.1
 	github.com/oschwald/geoip2-golang v1.8.0
 	github.com/rs/zerolog v1.31.0

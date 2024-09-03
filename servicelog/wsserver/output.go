@@ -68,14 +68,3 @@ func (r *OutputRecord) GetTime() time.Time {
 func (r *OutputRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
-
-// ToInfluxDB creates tags and values to store in InfluxDB
-func (r *OutputRecord) ToInfluxDB() (tags map[string]string, values map[string]interface{}) {
-	tags = make(map[string]string)
-	tags["model"] = r.Model
-	tags["corpus"] = r.Corpus
-	tags["action"] = r.Action
-	values = make(map[string]interface{})
-	values["procTime"] = r.ProcTime
-	return
-}
