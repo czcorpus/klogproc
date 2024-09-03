@@ -43,16 +43,6 @@ func (orec *OutputRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(orec)
 }
 
-func (cnkr *OutputRecord) ToInfluxDB() (tags map[string]string, values map[string]interface{}) {
-	tags = make(map[string]string)
-	values = make(map[string]interface{})
-	values["procTime"] = cnkr.ProcTime
-	values["isCached"] = cnkr.IsCached
-	values["isIndirect"] = cnkr.IsIndirect
-	tags["type"] = cnkr.Type
-	return
-}
-
 func (cnkr *OutputRecord) GetID() string {
 	return cnkr.ID
 }

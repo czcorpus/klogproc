@@ -24,12 +24,10 @@ import (
 	"klogproc/notifications"
 	"klogproc/save"
 	"klogproc/save/elastic"
-	"klogproc/save/influx"
 	"klogproc/servicelog"
 	"klogproc/trfactory"
 	"klogproc/users"
 	"reflect"
-	"sync"
 	"time"
 
 	"github.com/czcorpus/cnc-gokit/collections"
@@ -106,7 +104,6 @@ func runBatchAction(
 		logBuffer:      buffStorage,
 	}
 	channelWriteES := make(chan *servicelog.BoundOutputRecord, conf.ElasticSearch.PushChunkSize*2)
-	channelWriteInflux := make(chan *servicelog.BoundOutputRecord, conf.InfluxDB.PushChunkSize)
 	worklog := batch.NewWorklog(conf.LogFiles.WorklogPath)
 	log.Info().Msgf("using worklog %s", conf.LogFiles.WorklogPath)
 	if options.worklogReset {
@@ -118,48 +115,31 @@ func runBatchAction(
 	}
 	defer worklog.Save()
 
-	var wg sync.WaitGroup
-	wg.Add(2)
+	wait := make(chan any)
 	if options.dryRun || options.analysisOnly {
-		ch1 := save.RunWriteConsumer(channelWriteES, !options.analysisOnly)
+		wch := save.RunWriteConsumer(channelWriteES, !options.analysisOnly)
 		go func() {
-			for range ch1 {
+			for range wch {
 			}
-			wg.Done()
-		}()
-		ch2 := save.RunWriteConsumer(channelWriteInflux, !options.analysisOnly)
-		go func() {
-			for range ch2 {
-			}
-			wg.Done()
+			wait <- struct{}{}
 		}()
 		log.Warn().Msg("using dry-run mode, output goes to stdout")
 
 	} else {
-		ch1 := elastic.RunWriteConsumer(conf.LogFiles.AppType, &conf.ElasticSearch, channelWriteES)
-		ch2 := influx.RunWriteConsumer(&conf.InfluxDB, channelWriteInflux)
+		wch := elastic.RunWriteConsumer(conf.LogFiles.AppType, &conf.ElasticSearch, channelWriteES)
 		go func() {
-			for confirm := range ch1 {
+			for confirm := range wch {
 				if confirm.Error != nil {
 					log.Error().Err(confirm.Error).Msg("failed to save data to ElasticSearch database")
 					// TODO
 				}
 			}
-			wg.Done()
-		}()
-		go func() {
-			for confirm := range ch2 {
-				if confirm.Error != nil {
-					log.Error().Err(confirm.Error).Msg("Failed to save data to InfluxDB database")
-					// TODO
-				}
-			}
-			wg.Done()
+			wait <- struct{}{}
 		}()
 	}
-	proc := batch.CreateLogFileProcFunc(processor, options.datetimeRange, channelWriteES, channelWriteInflux)
+	proc := batch.CreateLogFileProcFunc(processor, options.datetimeRange, channelWriteES)
 	proc(conf.LogFiles, worklog.GetLastRecord())
-	wg.Wait()
+	<-wait
 	log.Info().Msgf("Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)
 	stateData := buffStorage.GetStateData(time.Now())
 	if stateData != nil && !reflect.ValueOf(stateData).IsNil() {

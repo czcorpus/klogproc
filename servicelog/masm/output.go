@@ -64,11 +64,6 @@ func (r *OutputRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-// ToInfluxDB creates tags and values to store in InfluxDB
-func (r *OutputRecord) ToInfluxDB() (tags map[string]string, values map[string]interface{}) {
-	return make(map[string]string), make(map[string]interface{})
-}
-
 // SetLocation sets all the location related properties
 func (r *OutputRecord) SetLocation(countryName string, latitude float32, longitude float32, timezone string) {
 

@@ -29,7 +29,6 @@ import (
 	"klogproc/notifications"
 	"klogproc/save"
 	"klogproc/save/elastic"
-	"klogproc/save/influx"
 	"klogproc/servicelog"
 	"klogproc/trfactory"
 	"klogproc/users"
@@ -54,7 +53,6 @@ type tailProcessor struct {
 	geoDB             *geoip2.Reader
 	anonymousUsers    []int
 	elasticChunkSize  int
-	influxChunkSize   int
 	alarm             servicelog.AppErrorRegister
 	analysis          chan<- servicelog.InputRecord
 	logBuffer         servicelog.ServiceLogBuffer
@@ -65,24 +63,16 @@ func (tp *tailProcessor) OnCheckStart() (tail.LineProcConfirmChan, *tail.LogData
 	itemConfirm := make(tail.LineProcConfirmChan, 10)
 	dataWriter := tail.LogDataWriter{
 		Elastic: make(chan *servicelog.BoundOutputRecord, tp.elasticChunkSize*2),
-		Influx:  make(chan *servicelog.BoundOutputRecord, tp.influxChunkSize),
 		Ignored: make(chan save.IgnoredItemMsg),
 	}
 
 	go func() {
 		var waitMergeEnd sync.WaitGroup
-		waitMergeEnd.Add(3)
+		waitMergeEnd.Add(2)
 		if tp.dryRun {
-			confirmChan1 := save.RunWriteConsumer(dataWriter.Elastic, false)
+			confirmChan := save.RunWriteConsumer(dataWriter.Elastic, false)
 			go func() {
-				for item := range confirmChan1 {
-					itemConfirm <- item
-				}
-				waitMergeEnd.Done()
-			}()
-			confirmChan2 := save.RunWriteConsumer(dataWriter.Influx, false)
-			go func() {
-				for item := range confirmChan2 {
+				for item := range confirmChan {
 					itemConfirm <- item
 				}
 				waitMergeEnd.Done()
@@ -94,14 +84,6 @@ func (tp *tailProcessor) OnCheckStart() (tail.LineProcConfirmChan, *tail.LogData
 				tp.appType, &tp.conf.ElasticSearch, dataWriter.Elastic)
 			go func() {
 				for item := range confirmChan1 {
-					itemConfirm <- item
-				}
-				waitMergeEnd.Done()
-			}()
-			confirmChan2 := influx.RunWriteConsumer(
-				&tp.conf.InfluxDB, dataWriter.Influx)
-			go func() {
-				for item := range confirmChan2 {
 					itemConfirm <- item
 				}
 				waitMergeEnd.Done()
@@ -151,11 +133,6 @@ func (tp *tailProcessor) OnEntry(
 				Rec:      outRec,
 				FilePos:  logPosition,
 			}
-			dataWriter.Influx <- &servicelog.BoundOutputRecord{
-				FilePath: tp.filePath,
-				Rec:      outRec,
-				FilePos:  logPosition,
-			}
 		}
 
 	} else {
@@ -165,7 +142,6 @@ func (tp *tailProcessor) OnEntry(
 
 func (tp *tailProcessor) OnCheckStop(dataWriter *tail.LogDataWriter) {
 	close(dataWriter.Elastic)
-	close(dataWriter.Influx)
 	close(dataWriter.Ignored)
 	tp.alarm.Evaluate()
 }
@@ -329,7 +305,6 @@ func newTailProcessor(
 		geoDB:             geoDB,
 		anonymousUsers:    conf.AnonymousUsers,
 		elasticChunkSize:  conf.ElasticSearch.PushChunkSize,
-		influxChunkSize:   conf.InfluxDB.PushChunkSize,
 		alarm:             procAlarm,
 		logBuffer:         buffStorage,
 		dryRun:            options.dryRun,

@@ -16,13 +16,6 @@
 	    "pushChunkSize": 20,
         "scrollTtl": "3m"
     },
-    "influxDb": {
-        "server": "http://192.168.1.24:8086",
-        "pushChunkSize": 1,
-        "database": "klogproc",
-        "measurement": "procTime",
-        "retentionPolicy": "midterm"
-    },
 	"geoIpDbPath": "/usr/local/geodata/GeoLite2-City.mmdb",
 	"localTimezone": "+01:00",
 	"anonymousUsers": [1531, 1532],

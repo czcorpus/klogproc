@@ -201,11 +201,6 @@ type OutputRecord interface {
 	// document-oriented databases
 	ToJSON() ([]byte, error)
 
-	// ToInfluxDB creates two maps: 1) tags, 2) values as defined
-	// by InfluxDB architecture. These can be directly saved via
-	// a respective InfluxDB client.
-	ToInfluxDB() (tags map[string]string, values map[string]interface{})
-
 	// Create an idempotent unique identifier of the record.
 	// This can be typically acomplished by hashing the original
 	// log record.
