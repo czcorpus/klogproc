@@ -73,7 +73,7 @@ func NewTransformer(
 	emailNotifier notifications.Notifier,
 ) *Transformer {
 	var analyzer servicelog.Preprocessor
-	if bufferConf.BotDetection != nil {
+	if bufferConf != nil && bufferConf.BotDetection != nil {
 		analyzer = analysis.NewBotAnalyzer[*InputRecord]("wag", bufferConf, realtimeClock, emailNotifier)
 
 	} else {
