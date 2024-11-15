@@ -17,6 +17,7 @@
 package kontext018
 
 import (
+	"reflect"
 	"strconv"
 	"time"
 
@@ -24,13 +25,48 @@ import (
 	"klogproc/load"
 	"klogproc/notifications"
 	"klogproc/servicelog"
+
+	"github.com/rs/zerolog/log"
 )
 
-func exportArgs(data map[string]interface{}) map[string]interface{} {
+func convertUrlValue(v string, tryBool bool) any {
+	ans, err := strconv.Atoi(v)
+	if err != nil {
+		return v
+	}
+	if tryBool {
+		return ans > 0
+	}
+	return ans
+}
+
+func exportArgs(action string, data map[string]interface{}) map[string]interface{} {
 	ans := make(map[string]interface{})
-	for k, v := range data {
-		if k != "corpora" && k != "corpname" {
-			ans[k] = v
+	switch action {
+	case "user/ajax_query_history":
+		for k, v := range data {
+			switch tv := v.(type) {
+			case string:
+				switch k {
+				case "extended_search":
+					ans[k] = convertUrlValue(tv, true)
+				default:
+					ans[k] = convertUrlValue(tv, false)
+				}
+			case []string:
+				ans[k] = v
+			default:
+				log.Error().
+					Str("attr", k).
+					Str("foundType", reflect.TypeOf(v).String()).
+					Msg("kontext18 conversion expects `args` to contain only string or []string values")
+			}
+		}
+	default:
+		for k, v := range data {
+			if k != "corpora" && k != "corpname" {
+				ans[k] = v
+			}
 		}
 	}
 	return ans
@@ -60,7 +96,7 @@ func (t *Transformer) Transform(logRecord *QueryInputRecord, recType string, tzS
 		UserAgent:      logRecord.Request.HTTPUserAgent,
 		UserID:         strconv.Itoa(logRecord.UserID),
 		Error:          logRecord.Error.AsPointer(),
-		Args:           exportArgs(logRecord.Args),
+		Args:           exportArgs(logRecord.Action, logRecord.Args),
 	}
 	r.ID = createID(r)
 	return r, nil
