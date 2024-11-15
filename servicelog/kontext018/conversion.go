@@ -43,7 +43,7 @@ func convertUrlValue(v string, tryBool bool) any {
 func exportArgs(action string, data map[string]interface{}) map[string]interface{} {
 	ans := make(map[string]interface{})
 	switch action {
-	case "user/ajax_query_history":
+	case "/user/ajax_query_history":
 		for k, v := range data {
 			switch tv := v.(type) {
 			case string:
