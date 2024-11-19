@@ -25,6 +25,7 @@ import (
 	"klogproc/load/tail"
 	"klogproc/save/elastic"
 
+	"github.com/czcorpus/cnc-gokit/logging"
 	"github.com/czcorpus/cnc-gokit/mail"
 	conomiClient "github.com/czcorpus/conomi/client"
 	"github.com/rs/zerolog/log"
@@ -50,8 +51,7 @@ type Main struct {
 	LogTail            *tail.Conf                     `json:"logTail"`
 	GeoIPDbPath        string                         `json:"geoIpDbPath"`
 	AnonymousUsers     []int                          `json:"anonymousUsers"`
-	LogPath            string                         `json:"logPath"`
-	LogLevel           string                         `json:"logLevel"`
+	Logging            logging.LoggingConf            `json:"logging"`
 	CustomConfDir      string                         `json:"customConfDir"`
 	RecUpdate          elastic.DocUpdConf             `json:"recordUpdate"`
 	RecRemove          elastic.DocRemConf             `json:"recordRemove"`

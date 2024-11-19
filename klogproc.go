@@ -23,6 +23,7 @@ import (
 
 	"os"
 
+	"github.com/czcorpus/cnc-gokit/logging"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -116,37 +117,13 @@ func help(topic string) {
 	fmt.Println()
 }
 
-func setupLog(path, level string) {
-	lev, ok := logLevelMapping[level]
-	if !ok {
-		log.Fatal().Msgf("invalid logging level: %s", level)
-	}
-	zerolog.SetGlobalLevel(lev)
-	if path != "" {
-		logf, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			log.Fatal().Msgf("Failed to initialize log. File: %s", path)
-		}
-		log.Logger = log.Output(logf)
-
-	} else {
-		log.Logger = log.Output(
-			zerolog.ConsoleWriter{
-				Out:        os.Stderr,
-				TimeFormat: time.RFC3339,
-			},
-		)
-	}
-}
-
 func setup(confPath, action string) *config.Main {
 	conf := config.Load(confPath)
 	config.Validate(conf, action)
-	llevel := "info"
-	if conf.LogLevel != "" {
-		llevel = conf.LogLevel
+	if conf.Logging.Level == "" {
+		conf.Logging.Level = "info"
 	}
-	setupLog(conf.LogPath, llevel)
+	logging.SetupLogging(conf.Logging)
 	return conf
 }
 

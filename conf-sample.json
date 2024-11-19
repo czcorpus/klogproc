@@ -19,7 +19,9 @@
 	"geoIpDbPath": "/usr/local/geodata/GeoLite2-City.mmdb",
 	"localTimezone": "+01:00",
 	"anonymousUsers": [1531, 1532],
-    "logPath": "/var/log/klogproc/klogproc.log",
+    "logging": {
+        "path": "/var/log/klogproc/klogproc.log" 
+    },
     "recordUpdate": {
         "searchChunkSize": 10,
         "filters": [
