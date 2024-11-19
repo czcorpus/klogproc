@@ -90,7 +90,9 @@ Create a config file (e.g. in /usr/local/etc/klogproc.json):
 
 ```json
 {
-  "logPath": "/var/log/klogproc/klogproc.log",
+  "logging": {
+    "path": "/var/log/klogproc/klogproc.log"
+  },
   "logTail": {
     "intervalSecs": 15,
     "worklogPath": "/var/opt/klogproc/worklog-tail.log",
