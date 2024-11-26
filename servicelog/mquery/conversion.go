@@ -17,8 +17,11 @@
 package mquery
 
 import (
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"time"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // Transformer converts a source log object into a destination one
@@ -26,22 +29,37 @@ type Transformer struct {
 	ExcludeIPList servicelog.ExcludeIPList
 }
 
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
+func (t *Transformer) AppType() string {
+	return servicelog.AppTypeMquery
+}
+
+func (t *Transformer) Transform(
+	logRecord servicelog.InputRecord,
+	tzShiftMin int,
+) (servicelog.OutputRecord, error) {
+	tLogRecord, ok := logRecord.(*InputRecord)
+	if !ok {
+		panic(servicelog.ErrFailedTypeAssertion)
+	}
 	rec := &OutputRecord{
-		Type:      recType,
-		Datetime:  logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		datetime:  logRecord.GetTime(),
-		Level:     logRecord.Level,
-		IPAddress: logRecord.ClientIP,
-		UserAgent: logRecord.GetUserAgent(),
-		IsAI:      logRecord.IsAI(),
-		ProcTime:  logRecord.Latency,
-		Error:     logRecord.ExportError(),
-		Action:    logRecord.GetAction(),
-		CorpusID:  logRecord.CorpusId,
+		Type:      t.AppType(),
+		Datetime:  tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		datetime:  tLogRecord.GetTime(),
+		Level:     tLogRecord.Level,
+		IPAddress: tLogRecord.ClientIP,
+		UserAgent: tLogRecord.GetUserAgent(),
+		IsAI:      tLogRecord.IsAI(),
+		ProcTime:  tLogRecord.Latency,
+		Error:     tLogRecord.ExportError(),
+		Action:    tLogRecord.GetAction(),
+		CorpusID:  tLogRecord.CorpusId,
 	}
 	rec.ID = CreateID(rec)
 	return rec, nil
+}
+
+func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

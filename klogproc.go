@@ -107,8 +107,6 @@ func help(topic string) {
 		fmt.Println(helpTexts[0])
 	case config.ActionTail:
 		fmt.Println(helpTexts[1])
-	case config.ActionRedis:
-		fmt.Println(helpTexts[2])
 	case config.ActionDocupdate:
 		fmt.Println(helpTexts[3])
 	default:
@@ -129,11 +127,32 @@ func setup(confPath, action string) *config.Main {
 
 func main() {
 	procOpts := new(ProcessOptions)
-	flag.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
-	flag.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
-	fromTimestamp := flag.String("from-time", "", "Batch process only the records with datetime greater or equal to this time (UNIX timestamp, or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm)")
-	toTimestamp := flag.String("to-time", "", "Batch process only the records with datetime less or equal to this UNIX timestamp, or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm)")
-	flag.BoolVar(&procOpts.analysisOnly, "analysis-only", false, "In batch mode, analyze logs for bots etc.")
+
+	batchCmd := flag.NewFlagSet(config.ActionBatch, flag.ExitOnError)
+	batchCmd.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
+	batchCmd.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
+	fromTimestamp := batchCmd.String("from-time", "", "Batch process only the records with datetime greater or equal to this time (UNIX timestamp, or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm)")
+	toTimestamp := batchCmd.String("to-time", "", "Batch process only the records with datetime less or equal to this UNIX timestamp, or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm)")
+	batchCmd.BoolVar(&procOpts.analysisOnly, "analysis-only", false, "In batch mode, analyze logs for bots etc.")
+
+	tailCmd := flag.NewFlagSet(config.ActionTail, flag.ExitOnError)
+	tailCmd.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
+
+	docupdateCmd := flag.NewFlagSet(config.ActionDocupdate, flag.ExitOnError)
+	docupdateCmd.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
+	docupdateCmd.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
+
+	docremoveCmd := flag.NewFlagSet(config.ActionDocremove, flag.ExitOnError)
+	docremoveCmd.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
+	docremoveCmd.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
+
+	keyremoveCmd := flag.NewFlagSet(config.ActionKeyremove, flag.ExitOnError)
+	keyremoveCmd.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
+	keyremoveCmd.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
+
+	testnotifCmd := flag.NewFlagSet(config.ActionTestNotification, flag.ExitOnError)
+
+	mkscriptCmd := flag.NewFlagSet(config.ActionMkScript, flag.ExitOnError)
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending CNC app logs to ElasticSearch\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\t%s\n\nOptions:\n",
@@ -142,9 +161,9 @@ func main() {
 			strings.Join([]string{
 				config.ActionBatch,
 				config.ActionTail,
-				config.ActionRedis,
 				config.ActionDocupdate,
 				config.ActionKeyremove,
+				config.ActionDocremove,
 				config.ActionHelp,
 				config.ActionVersion,
 			}, ", "))
@@ -165,20 +184,31 @@ func main() {
 	case config.ActionHelp:
 		help(flag.Arg(1))
 	case config.ActionDocupdate:
-		conf = setup(flag.Arg(1), action)
+		docupdateCmd.Parse(os.Args[2:])
+		conf = setup(docupdateCmd.Arg(0), action)
 		updateRecords(conf, procOpts)
 	case config.ActionDocremove:
-		conf = setup(flag.Arg(1), action)
+		docremoveCmd.Parse(os.Args[2:])
+		conf = setup(docremoveCmd.Arg(0), action)
 		removeRecords(conf, procOpts)
 	case config.ActionKeyremove:
-		conf = setup(flag.Arg(1), action)
+		keyremoveCmd.Parse(os.Args[2:])
+		conf = setup(keyremoveCmd.Arg(0), action)
 		removeKeyFromRecords(conf, procOpts)
-	case config.ActionBatch, config.ActionTail, config.ActionRedis:
-		conf = setup(flag.Arg(1), action)
+	case config.ActionBatch:
+		batchCmd.Parse(os.Args[2:])
+		fmt.Println("PATH: ", batchCmd.Arg(0))
+		fmt.Println("OPTS: ", procOpts)
+		conf = setup(batchCmd.Arg(0), action)
+		processLogs(conf, action, procOpts)
+	case config.ActionTail:
+		tailCmd.Parse(os.Args[2:])
+		conf = setup(tailCmd.Arg(0), action)
 		log.Print(startingServiceMsg)
 		processLogs(conf, action, procOpts)
 	case config.ActionTestNotification:
-		conf = setup(flag.Arg(1), action)
+		testnotifCmd.Parse(os.Args[2:])
+		conf = setup(testnotifCmd.Arg(0), action)
 		notifier, err := notifications.NewNotifier(
 			conf.EmailNotification, conf.ConomiNotification, conf.TimezoneLocation())
 		if err != nil {
@@ -190,6 +220,10 @@ func main() {
 			map[string]any{"app": "klogproc", "dt": time.Now().In(conf.TimezoneLocation())},
 			"This is just a testing notification triggered by running `klogproc test-notification`",
 		)
+	case config.ActionMkScript:
+		mkscriptCmd.Parse(os.Args[2:])
+		GenerateLuaStub(mkscriptCmd.Arg(0), mkscriptCmd.Arg(1))
+
 	case config.ActionVersion:
 		fmt.Printf("Klogproc %s\nbuild date: %s\nlast commit: %s\n", version, build, gitCommit)
 	default:

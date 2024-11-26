@@ -50,6 +50,31 @@ type FileConf struct {
 	TZShift       int                      `json:"tzShift"`
 	Buffer        *load.BufferConf         `json:"buffer"`
 	ExcludeIPList servicelog.ExcludeIPList `json:"excludeIpList"`
+	ScriptPath    string                   `json:"scriptPath"`
+}
+
+func (fc *FileConf) GetAppType() string {
+	return fc.AppType
+}
+
+func (fc *FileConf) GetVersion() string {
+	return fc.Version
+}
+
+func (fc *FileConf) GetBuffer() *load.BufferConf {
+	return fc.Buffer
+}
+
+func (fc *FileConf) GetExcludeIPList() servicelog.ExcludeIPList {
+	return fc.ExcludeIPList
+}
+
+func (fc *FileConf) GetScriptPath() string {
+	return fc.ScriptPath
+}
+
+func (fc *FileConf) GetPath() string {
+	return fc.Path
 }
 
 func (fc *FileConf) Validate() error {
@@ -60,14 +85,6 @@ func (fc *FileConf) Validate() error {
 		return fc.Buffer.Validate()
 	}
 	return nil
-}
-
-func (fc *FileConf) GetPath() string {
-	return fc.Path
-}
-
-func (fc *FileConf) GetAppType() string {
-	return fc.AppType
 }
 
 // Conf wraps all the configuration for the 'tail' function

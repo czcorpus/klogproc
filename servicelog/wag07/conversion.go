@@ -22,35 +22,54 @@ import (
 	"klogproc/analysis"
 	"klogproc/load"
 	"klogproc/notifications"
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"klogproc/servicelog/wag06"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	analyzer      servicelog.Preprocessor
-	excludeIPList servicelog.ExcludeIPList
+	analyzer       servicelog.Preprocessor
+	excludeIPList  servicelog.ExcludeIPList
+	anonymousUsers []int
 }
 
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*wag06.OutputRecord, error) {
-	rec := wag06.NewTimedOutputRecord(logRecord.GetTime(), tzShiftMin)
-	rec.Type = recType
-	rec.Action = logRecord.Action
-	rec.IPAddress = logRecord.Request.Origin
-	rec.UserAgent = logRecord.Request.HTTPUserAgent
-	rec.ReferringDomain = logRecord.Request.Referer
-	rec.UserID = strconv.Itoa(logRecord.UserID)
-	rec.IsAnonymous = servicelog.UserBelongsToList(logRecord.UserID, anonymousUsers)
-	rec.IsQuery = logRecord.IsQuery
-	rec.IsMobileClient = logRecord.IsMobileClient
-	rec.HasPosSpecification = logRecord.HasPosSpecification
-	rec.QueryType = logRecord.QueryType
-	rec.Lang1 = logRecord.Lang1
-	rec.Lang2 = logRecord.Lang2
+func (t *Transformer) AppType() string {
+	return servicelog.AppTypeWag
+}
+
+func (t *Transformer) Transform(
+	logRecord servicelog.InputRecord,
+	tzShiftMin int,
+) (servicelog.OutputRecord, error) {
+	tLogRecord, ok := logRecord.(*InputRecord)
+	if !ok {
+		panic(servicelog.ErrFailedTypeAssertion)
+	}
+	rec := wag06.NewTimedOutputRecord(tLogRecord.GetTime(), tzShiftMin)
+	rec.Type = t.AppType()
+	rec.Action = tLogRecord.Action
+	rec.IPAddress = tLogRecord.Request.Origin
+	rec.UserAgent = tLogRecord.Request.HTTPUserAgent
+	rec.ReferringDomain = tLogRecord.Request.Referer
+	rec.UserID = strconv.Itoa(tLogRecord.UserID)
+	rec.IsAnonymous = servicelog.UserBelongsToList(tLogRecord.UserID, t.anonymousUsers)
+	rec.IsQuery = tLogRecord.IsQuery
+	rec.IsMobileClient = tLogRecord.IsMobileClient
+	rec.HasPosSpecification = tLogRecord.HasPosSpecification
+	rec.QueryType = tLogRecord.QueryType
+	rec.Lang1 = tLogRecord.Lang1
+	rec.Lang2 = tLogRecord.Lang2
 	rec.Queries = []string{} // no more used?
 	rec.ProcTime = -1        // TODO not available; does it have a value
 	rec.ID = wag06.CreateID(rec)
 	return rec, nil
+}
+
+func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {
@@ -69,6 +88,7 @@ func (t *Transformer) Preprocess(
 func NewTransformer(
 	bufferConf *load.BufferConf,
 	excludeIPList []string,
+	anonymousUsers []int,
 	realtimeClock bool,
 	emailNotifier notifications.Notifier,
 ) *Transformer {
@@ -80,7 +100,8 @@ func NewTransformer(
 		analyzer = analysis.NewNullAnalyzer[*InputRecord]("wag")
 	}
 	return &Transformer{
-		analyzer:      analyzer,
-		excludeIPList: excludeIPList,
+		analyzer:       analyzer,
+		excludeIPList:  excludeIPList,
+		anonymousUsers: anonymousUsers,
 	}
 }

@@ -16,7 +16,6 @@ package config
 
 import (
 	"encoding/json"
-	"flag"
 	"time"
 
 	"klogproc/common"
@@ -34,11 +33,11 @@ import (
 const (
 	ActionBatch            = "batch"
 	ActionTail             = "tail"
-	ActionRedis            = "redis"
 	ActionKeyremove        = "keyremove"
 	ActionDocupdate        = "docupdate"
 	ActionDocremove        = "docremove"
 	ActionHelp             = "help"
+	ActionMkScript         = "mkscript"
 	ActionVersion          = "version"
 	ActionTestNotification = "test-notification"
 
@@ -108,7 +107,7 @@ func Validate(conf *Main, action string) {
 
 // Load loads main configuration (either from a local fs or via http(s))
 func Load(path string) *Main {
-	rawData, err := common.LoadSupportedResource(flag.Arg(1))
+	rawData, err := common.LoadSupportedResource(path)
 	if err != nil {
 		log.Fatal().Msgf("%s", err)
 	}

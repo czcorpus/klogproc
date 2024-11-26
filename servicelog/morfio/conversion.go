@@ -21,32 +21,46 @@ import (
 	"strconv"
 	"time"
 
+	"klogproc/scripting"
 	"klogproc/servicelog"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // Transformer converts a Morfio log record to a destination format
 type Transformer struct {
-	ExcludeIPList servicelog.ExcludeIPList
+	ExcludeIPList  servicelog.ExcludeIPList
+	AnonymousUsers []int
+}
+
+func (t *Transformer) AppType() string {
+	return servicelog.AppTypeMorfio
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
-
+func (t *Transformer) Transform(
+	logRecord servicelog.InputRecord,
+	tzShiftMin int,
+) (servicelog.OutputRecord, error) {
+	tLogRecord, ok := logRecord.(*InputRecord)
+	if !ok {
+		panic(servicelog.ErrFailedTypeAssertion)
+	}
 	userID := -1
-	if logRecord.UserID != "-" && logRecord.UserID != "" {
-		uid, err := strconv.Atoi(logRecord.UserID)
+	if tLogRecord.UserID != "-" && tLogRecord.UserID != "" {
+		uid, err := strconv.Atoi(tLogRecord.UserID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to convert user ID [%s]", logRecord.UserID)
+			return nil, fmt.Errorf("failed to convert user ID [%s]", tLogRecord.UserID)
 		}
 		userID = uid
 	}
 
-	minFreq, err := strconv.Atoi(logRecord.MinFreq)
+	minFreq, err := strconv.Atoi(tLogRecord.MinFreq)
 	if err != nil {
 		return nil, err
 	}
 
-	caseIns, err := servicelog.ImportBool(logRecord.CaseInsensitive, "caseInsensitive")
+	caseIns, err := servicelog.ImportBool(tLogRecord.CaseInsensitive, "caseInsensitive")
 	if err != nil {
 		return nil, err
 	}
@@ -54,25 +68,29 @@ func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftM
 	ans := &OutputRecord{
 		// ID set later
 		Type:            "morfio",
-		time:            logRecord.GetTime(),
-		Datetime:        logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		IPAddress:       logRecord.IPAddress,
-		UserID:          logRecord.UserID,
-		IsAnonymous:     userID == -1 || servicelog.UserBelongsToList(userID, anonymousUsers),
+		time:            tLogRecord.GetTime(),
+		Datetime:        tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		IPAddress:       tLogRecord.IPAddress,
+		UserID:          tLogRecord.UserID,
+		IsAnonymous:     userID == -1 || servicelog.UserBelongsToList(userID, t.AnonymousUsers),
 		IsQuery:         true,
-		KeyReq:          logRecord.KeyReq,
-		KeyUsed:         logRecord.KeyUsed,
-		Key:             logRecord.Key,
-		RunScript:       logRecord.RunScript,
-		Corpus:          logRecord.Corpus,
+		KeyReq:          tLogRecord.KeyReq,
+		KeyUsed:         tLogRecord.KeyUsed,
+		Key:             tLogRecord.Key,
+		RunScript:       tLogRecord.RunScript,
+		Corpus:          tLogRecord.Corpus,
 		MinFreq:         minFreq,
-		InputAttr:       logRecord.InputAttr,
-		OutputAttr:      logRecord.OutputAttr,
+		InputAttr:       tLogRecord.InputAttr,
+		OutputAttr:      tLogRecord.OutputAttr,
 		CaseInsensitive: caseIns,
 	}
 
 	ans.ID = createID(ans)
 	return ans, nil
+}
+
+func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

@@ -25,61 +25,71 @@ import (
 )
 
 func TestTransformDia(t *testing.T) {
-	tmr := NewTransformer("0.1", servicelog.ExcludeIPList{})
+	tmr := NewTransformer("0.1", servicelog.ExcludeIPList{}, []int{0, 1})
 	rec := &InputRecord{
 		UserID: "30",
 		Ltool:  "D",
 	}
-	outRec, err := tmr.Transform(rec, "syd_xxx", 0, []int{0, 1})
+	outRec, err := tmr.Transform(rec, 0)
+	tOutRec, ok := outRec.(*OutputRecord)
+	assert.True(t, ok)
 	assert.Nil(t, err)
-	assert.Contains(t, outRec.Corpus, "diakon")
-	assert.Equal(t, 1, len(outRec.Corpus))
+	assert.Contains(t, tOutRec.Corpus, "diakon")
+	assert.Equal(t, 1, len(tOutRec.Corpus))
 }
 
 func TestTransformSync(t *testing.T) {
-	tmr := NewTransformer("0.1", servicelog.ExcludeIPList{})
+	tmr := NewTransformer("0.1", servicelog.ExcludeIPList{}, []int{0, 1})
 	rec := &InputRecord{
 		UserID: "30",
 		Ltool:  "S",
 	}
-	outRec, err := tmr.Transform(rec, "syd_xxx", 0, []int{0, 1})
+	outRec, err := tmr.Transform(rec, 0)
+	tOutRec, ok := outRec.(*OutputRecord)
+	assert.True(t, ok)
 	assert.Nil(t, err)
-	assert.Contains(t, outRec.Corpus, "syn2010")
-	assert.Contains(t, outRec.Corpus, "oral_v2")
-	assert.Contains(t, outRec.Corpus, "ksk-dopisy")
-	assert.Equal(t, 3, len(outRec.Corpus))
+	assert.Contains(t, tOutRec.Corpus, "syn2010")
+	assert.Contains(t, tOutRec.Corpus, "oral_v2")
+	assert.Contains(t, tOutRec.Corpus, "ksk-dopisy")
+	assert.Equal(t, 3, len(tOutRec.Corpus))
 }
 
 func TestAcceptsDashAsUserID(t *testing.T) {
-	tmr := NewTransformer("0.1", servicelog.ExcludeIPList{})
+	tmr := NewTransformer("0.1", servicelog.ExcludeIPList{}, []int{0, 1})
 	rec := &InputRecord{
 		UserID: "-",
 	}
-	outRec, err := tmr.Transform(rec, "foo", 0, []int{0, 1})
+	outRec, err := tmr.Transform(rec, 0)
 	assert.Nil(t, err)
-	assert.Nil(t, outRec.UserID)
+	tOutRec, ok := outRec.(*OutputRecord)
+	assert.True(t, ok)
+	assert.Nil(t, tOutRec.UserID)
 }
 
 func TestAnonymousUserDetection(t *testing.T) {
-	tmr := NewTransformer("0.1", servicelog.ExcludeIPList{})
+	tmr := NewTransformer("0.1", servicelog.ExcludeIPList{}, []int{26, 27})
 
 	rec := &InputRecord{
 		UserID: "27",
 	}
-	outRec, err := tmr.Transform(rec, "foo", 0, []int{26, 27})
+	outRec, err := tmr.Transform(rec, 0)
 	assert.Nil(t, err)
-	assert.True(t, outRec.IsAnonymous)
+	tOutRec, ok := outRec.(*OutputRecord)
+	assert.True(t, ok)
+	assert.True(t, tOutRec.IsAnonymous)
 
 	rec = &InputRecord{
 		UserID: "28",
 	}
-	outRec, err = tmr.Transform(rec, "foo", 0, []int{26, 27})
+	outRec, err = tmr.Transform(rec, 0)
 	assert.Nil(t, err)
-	assert.False(t, outRec.IsAnonymous)
+	tOutRec, ok = outRec.(*OutputRecord)
+	assert.True(t, ok)
+	assert.False(t, tOutRec.IsAnonymous)
 }
 
 func TestExcludesIP(t *testing.T) {
-	tmr := NewTransformer("0.1", servicelog.ExcludeIPList{"192.168.1.123"})
+	tmr := NewTransformer("0.1", servicelog.ExcludeIPList{"192.168.1.123"}, []int{})
 	rec := &InputRecord{
 		UserID:    "27",
 		IPAddress: "192.168.1.123",

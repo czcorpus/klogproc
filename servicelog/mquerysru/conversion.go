@@ -17,14 +17,21 @@
 package mquerysru
 
 import (
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"strings"
 	"time"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
 	ExcludeIPList servicelog.ExcludeIPList
+}
+
+func (t *Transformer) AppType() string {
+	return servicelog.AppTypeMquerySRU
 }
 
 func (t *Transformer) getCorpus(logRecord *InputRecord) string {
@@ -45,23 +52,34 @@ func (t *Transformer) corpusPID2ID(s string) string {
 	return tmp[len(tmp)-1]
 }
 
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
+func (t *Transformer) Transform(
+	logRecord servicelog.InputRecord,
+	tzShiftMin int,
+) (servicelog.OutputRecord, error) {
+	tLogRecord, ok := logRecord.(*InputRecord)
+	if !ok {
+		panic(servicelog.ErrFailedTypeAssertion)
+	}
 	rec := &OutputRecord{
-		Type:      recType,
-		Datetime:  logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		datetime:  logRecord.GetTime(),
-		Level:     logRecord.Level,
-		IPAddress: logRecord.ClientIP,
-		ProcTime:  logRecord.Latency,
-		Error:     logRecord.ExportError(),
-		Corpus:    t.getCorpus(logRecord),
-		Version:   logRecord.Version,
-		Operation: logRecord.Operation,
-		IsQuery:   logRecord.IsQuery(),
-		Args:      logRecord.Args,
+		Type:      t.AppType(),
+		Datetime:  tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		datetime:  tLogRecord.GetTime(),
+		Level:     tLogRecord.Level,
+		IPAddress: tLogRecord.ClientIP,
+		ProcTime:  tLogRecord.Latency,
+		Error:     tLogRecord.ExportError(),
+		Corpus:    t.getCorpus(tLogRecord),
+		Version:   tLogRecord.Version,
+		Operation: tLogRecord.Operation,
+		IsQuery:   tLogRecord.IsQuery(),
+		Args:      tLogRecord.Args,
 	}
 	rec.ID = CreateID(rec)
 	return rec, nil
+}
+
+func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

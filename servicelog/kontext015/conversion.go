@@ -20,7 +20,10 @@ import (
 	"strconv"
 	"time"
 
+	"klogproc/scripting"
 	"klogproc/servicelog"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 func exportArgs(data map[string]interface{}) map[string]interface{} {
@@ -35,31 +38,47 @@ func exportArgs(data map[string]interface{}) map[string]interface{} {
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	ExcludeIPList servicelog.ExcludeIPList
+	ExcludeIPList  servicelog.ExcludeIPList
+	AnonymousUsers []int
+}
+
+func (t *Transformer) AppType() string {
+	return servicelog.AppTypeKontext
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
-	corpname := importCorpname(logRecord)
+func (t *Transformer) Transform(
+	logRecord servicelog.InputRecord,
+	tzShiftMin int,
+) (servicelog.OutputRecord, error) {
+	tLogRecord, ok := logRecord.(*InputRecord)
+	if !ok {
+		panic(servicelog.ErrFailedTypeAssertion)
+	}
+	corpname := importCorpname(tLogRecord)
 	r := &OutputRecord{
-		Type:           recType,
-		Action:         logRecord.Action,
+		Type:           t.AppType(),
+		Action:         tLogRecord.Action,
 		Corpus:         corpname,
-		AlignedCorpora: logRecord.GetAlignedCorpora(),
-		Datetime:       logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		datetime:       logRecord.GetTime(),
-		IPAddress:      logRecord.GetClientIP().String(),
-		IsAnonymous:    servicelog.UserBelongsToList(logRecord.UserID, anonymousUsers),
-		IsQuery:        isEntryQuery(logRecord.Action) && !logRecord.IsIndirectCall,
-		ProcTime:       logRecord.ProcTime,
-		QueryType:      importQueryType(logRecord),
-		UserAgent:      logRecord.Request.HTTPUserAgent,
-		UserID:         strconv.Itoa(logRecord.UserID),
-		Error:          logRecord.Error.AsPointer(),
-		Args:           exportArgs(logRecord.Args),
+		AlignedCorpora: tLogRecord.GetAlignedCorpora(),
+		Datetime:       tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		datetime:       tLogRecord.GetTime(),
+		IPAddress:      tLogRecord.GetClientIP().String(),
+		IsAnonymous:    servicelog.UserBelongsToList(tLogRecord.UserID, t.AnonymousUsers),
+		IsQuery:        isEntryQuery(tLogRecord.Action) && !tLogRecord.IsIndirectCall,
+		ProcTime:       tLogRecord.ProcTime,
+		QueryType:      importQueryType(tLogRecord),
+		UserAgent:      tLogRecord.Request.HTTPUserAgent,
+		UserID:         strconv.Itoa(tLogRecord.UserID),
+		Error:          tLogRecord.Error.AsPointer(),
+		Args:           exportArgs(tLogRecord.Args),
 	}
 	r.ID = createID(r)
 	return r, nil
+}
+
+func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

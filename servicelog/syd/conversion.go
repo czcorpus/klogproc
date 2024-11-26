@@ -21,50 +21,69 @@ import (
 	"strconv"
 	"time"
 
+	"klogproc/scripting"
 	"klogproc/servicelog"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // Transformer converts a SyD log record to a destination format
 type Transformer struct {
-	Version       string
-	SyncCorpora   []string
-	DiaCorpora    []string
-	ExcludeIPList servicelog.ExcludeIPList
+	version        string
+	syncCorpora    []string
+	diaCorpora     []string
+	excludeIPList  servicelog.ExcludeIPList
+	anonymousUsers []int
+}
+
+func (t *Transformer) AppType() string {
+	return servicelog.AppTypeSyd
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
+func (t *Transformer) Transform(
+	logRecord servicelog.InputRecord,
+	tzShiftMin int,
+) (servicelog.OutputRecord, error) {
+	tLogRecord, ok := logRecord.(*InputRecord)
+	if !ok {
+		panic(servicelog.ErrFailedTypeAssertion)
+	}
 	var userID *int
-	if logRecord.UserID != "-" {
-		uid, err := strconv.Atoi(logRecord.UserID)
+	if tLogRecord.UserID != "-" {
+		uid, err := strconv.Atoi(tLogRecord.UserID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to convert user ID [%s]", logRecord.UserID)
+			return nil, fmt.Errorf("failed to convert user ID [%s]", tLogRecord.UserID)
 		}
 		userID = &uid
 	}
 
 	r := &OutputRecord{
-		Type:        recType,
-		Datetime:    logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		time:        logRecord.GetTime(),
-		IPAddress:   logRecord.IPAddress,
+		Type:        t.AppType(),
+		Datetime:    tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		time:        tLogRecord.GetTime(),
+		IPAddress:   tLogRecord.IPAddress,
 		UserID:      userID,
-		IsAnonymous: userID == nil || servicelog.UserBelongsToList(*userID, anonymousUsers),
-		KeyReq:      logRecord.KeyReq,
-		KeyUsed:     logRecord.KeyUsed,
-		Key:         logRecord.Key,
-		Ltool:       logRecord.Ltool,
-		RunScript:   logRecord.RunScript,
+		IsAnonymous: userID == nil || servicelog.UserBelongsToList(*userID, t.anonymousUsers),
+		KeyReq:      tLogRecord.KeyReq,
+		KeyUsed:     tLogRecord.KeyUsed,
+		Key:         tLogRecord.Key,
+		Ltool:       tLogRecord.Ltool,
+		RunScript:   tLogRecord.RunScript,
 		IsQuery:     true,
 	}
 	r.ID = createID(r)
-	if logRecord.Ltool == "S" {
-		r.Corpus = t.SyncCorpora
+	if tLogRecord.Ltool == "S" {
+		r.Corpus = t.syncCorpora
 
-	} else if logRecord.Ltool == "D" {
-		r.Corpus = t.DiaCorpora
+	} else if tLogRecord.Ltool == "D" {
+		r.Corpus = t.diaCorpora
 	}
 	return r, nil
+}
+
+func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {
@@ -74,7 +93,7 @@ func (t *Transformer) HistoryLookupItems() int {
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
-	if t.ExcludeIPList.Excludes(rec) {
+	if t.excludeIPList.Excludes(rec) {
 		return []servicelog.InputRecord{}
 	}
 	return []servicelog.InputRecord{rec}
@@ -82,14 +101,19 @@ func (t *Transformer) Preprocess(
 
 // NewTransformer is a recommended factory for new Transformer instances
 // to reflect the version properly
-func NewTransformer(version string, excludeIPList servicelog.ExcludeIPList) *Transformer {
+func NewTransformer(
+	version string,
+	excludeIPList servicelog.ExcludeIPList,
+	anonymousUsers []int,
+) *Transformer {
 	switch version {
 	case "0.1":
 		return &Transformer{
-			Version:       version,
-			SyncCorpora:   []string{"syn2010", "oral_v2", "ksk-dopisy"},
-			DiaCorpora:    []string{"diakon"},
-			ExcludeIPList: excludeIPList,
+			version:        version,
+			syncCorpora:    []string{"syn2010", "oral_v2", "ksk-dopisy"},
+			diaCorpora:     []string{"diakon"},
+			excludeIPList:  excludeIPList,
+			anonymousUsers: anonymousUsers,
 		}
 	default:
 		return nil

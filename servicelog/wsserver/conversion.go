@@ -19,9 +19,12 @@ package wsserver
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"strings"
 	"time"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // createID creates an idempotent ID of rec based on its properties.
@@ -41,22 +44,37 @@ type Transformer struct {
 	ExcludeIPList servicelog.ExcludeIPList
 }
 
+func (t *Transformer) AppType() string {
+	return servicelog.AppTypeWsserver
+}
+
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
+func (t *Transformer) Transform(
+	logRecord servicelog.InputRecord,
+	tzShiftMin int,
+) (servicelog.OutputRecord, error) {
+	tLogRecord, ok := logRecord.(*InputRecord)
+	if !ok {
+		panic(servicelog.ErrFailedTypeAssertion)
+	}
 	ans := &OutputRecord{
-		Action:    logRecord.Action,
-		Corpus:    logRecord.Corpus,
-		Model:     logRecord.Model,
-		time:      logRecord.GetTime(),
-		ProcTime:  logRecord.ProcTime,
+		Action:    tLogRecord.Action,
+		Corpus:    tLogRecord.Corpus,
+		Model:     tLogRecord.Model,
+		time:      tLogRecord.GetTime(),
+		ProcTime:  tLogRecord.ProcTime,
 		IsQuery:   true,
-		IPAddress: cleanIPInfo(logRecord.IPAddress),
-		UserAgent: logRecord.HTTPUserAgent,
+		IPAddress: cleanIPInfo(tLogRecord.IPAddress),
+		UserAgent: tLogRecord.HTTPUserAgent,
 		UserID:    "-1",
 	}
 
 	ans.ID = createID(ans)
 	return ans, nil
+}
+
+func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

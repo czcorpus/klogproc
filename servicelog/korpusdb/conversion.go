@@ -22,7 +22,10 @@ import (
 	"strings"
 	"time"
 
+	"klogproc/scripting"
 	"klogproc/servicelog"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 func getQueryType(rec *InputRecord) string {
@@ -46,37 +49,52 @@ func testIsQuery(rec *InputRecord) bool {
 
 // Transformer converts a KorpusDB log record to a destination format
 type Transformer struct {
-	ExcludeIPList servicelog.ExcludeIPList
+	ExcludeIPList  servicelog.ExcludeIPList
+	AnonymousUsers []int
+}
+
+func (t *Transformer) AppType() string {
+	return servicelog.AppTypeKorpusDB
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
-
+func (t *Transformer) Transform(
+	logRecord servicelog.InputRecord,
+	tzShiftMin int,
+) (servicelog.OutputRecord, error) {
+	tLogRecord, ok := logRecord.(*InputRecord)
+	if !ok {
+		panic(servicelog.ErrFailedTypeAssertion)
+	}
 	userID := -1
-	if logRecord.UserID != "" { // null is converted into an empty string
-		uid, err := strconv.Atoi(logRecord.UserID)
+	if tLogRecord.UserID != "" { // null is converted into an empty string
+		uid, err := strconv.Atoi(tLogRecord.UserID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to convert user ID [%s]", logRecord.UserID)
+			return nil, fmt.Errorf("failed to convert user ID [%s]", tLogRecord.UserID)
 		}
 		userID = uid
 	}
 
 	out := &OutputRecord{
-		Type:        servicelog.AppTypeKorpusDB,
-		time:        logRecord.GetTime(),
-		Path:        logRecord.Path,
-		Page:        logRecord.Request.Page,
-		IPAddress:   logRecord.IP,
-		Datetime:    logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		UserID:      logRecord.UserID,
-		ClientFlag:  logRecord.Request.ClientFlag,
-		IsAnonymous: userID == -1 || servicelog.UserBelongsToList(userID, anonymousUsers),
-		IsQuery:     testIsQuery(logRecord),
-		IsAPI:       testIsAPI(logRecord),
-		QueryType:   getQueryType(logRecord),
+		Type:        t.AppType(),
+		time:        tLogRecord.GetTime(),
+		Path:        tLogRecord.Path,
+		Page:        tLogRecord.Request.Page,
+		IPAddress:   tLogRecord.IP,
+		Datetime:    tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		UserID:      tLogRecord.UserID,
+		ClientFlag:  tLogRecord.Request.ClientFlag,
+		IsAnonymous: userID == -1 || servicelog.UserBelongsToList(userID, t.AnonymousUsers),
+		IsQuery:     testIsQuery(tLogRecord),
+		IsAPI:       testIsAPI(tLogRecord),
+		QueryType:   getQueryType(tLogRecord),
 	}
 	out.ID = createID(out)
 	return out, nil
+}
+
+func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {
@@ -90,4 +108,12 @@ func (t *Transformer) Preprocess(
 		return []servicelog.InputRecord{}
 	}
 	return []servicelog.InputRecord{rec}
+}
+
+func NewTransformer(
+	excludeIPList servicelog.ExcludeIPList,
+) *Transformer {
+	return &Transformer{
+		ExcludeIPList: excludeIPList,
+	}
 }

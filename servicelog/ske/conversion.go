@@ -21,45 +21,64 @@ import (
 	"strconv"
 	"time"
 
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"klogproc/users"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	userMap       *users.UserMap
-	excludeIPList servicelog.ExcludeIPList
+	userMap        *users.UserMap
+	excludeIPList  servicelog.ExcludeIPList
+	anonymousUsers []int
+}
+
+func (t *Transformer) AppType() string {
+	return servicelog.AppTypeSke
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
+func (t *Transformer) Transform(
+	logRecord servicelog.InputRecord,
+	tzShiftMin int,
+) (servicelog.OutputRecord, error) {
+	tLogRecord, ok := logRecord.(*InputRecord)
+	if !ok {
+		panic(servicelog.ErrFailedTypeAssertion)
+	}
 	userID := -1
-	if logRecord.User != "-" && logRecord.User != "" {
-		uid := t.userMap.GetIdOf(logRecord.User)
+	if tLogRecord.User != "-" && tLogRecord.User != "" {
+		uid := t.userMap.GetIdOf(tLogRecord.User)
 		if uid < 0 {
-			return nil, fmt.Errorf("failed to find user ID of [%s]", logRecord.User)
+			return nil, fmt.Errorf("failed to find user ID of [%s]", tLogRecord.User)
 		}
 		userID = uid
 	}
 
-	corpname, isLimited := importCorpname(logRecord.Corpus)
+	corpname, isLimited := importCorpname(tLogRecord.Corpus)
 	r := &OutputRecord{
-		Type:        recType,
-		time:        logRecord.GetTime(),
-		Datetime:    logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		IPAddress:   logRecord.Request.RemoteAddr,
-		UserAgent:   logRecord.Request.HTTPUserAgent,
-		IsAnonymous: userID == -1 || servicelog.UserBelongsToList(userID, anonymousUsers),
-		IsQuery:     isEntryQuery(logRecord.Action),
+		Type:        t.AppType(),
+		time:        tLogRecord.GetTime(),
+		Datetime:    tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		IPAddress:   tLogRecord.Request.RemoteAddr,
+		UserAgent:   tLogRecord.Request.HTTPUserAgent,
+		IsAnonymous: userID == -1 || servicelog.UserBelongsToList(userID, t.anonymousUsers),
+		IsQuery:     isEntryQuery(tLogRecord.Action),
 		UserID:      strconv.Itoa(userID),
-		Action:      logRecord.Action,
+		Action:      tLogRecord.Action,
 		Corpus:      corpname,
 		Limited:     isLimited,
-		Subcorpus:   logRecord.Subcorpus,
-		ProcTime:    logRecord.ProcTime,
+		Subcorpus:   tLogRecord.Subcorpus,
+		ProcTime:    tLogRecord.ProcTime,
 	}
 	r.ID = createID(r)
 	return r, nil
+}
+
+func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {
@@ -77,9 +96,14 @@ func (t *Transformer) Preprocess(
 
 // NewTransformer is a default constructor for the Transformer.
 // It also loads user ID map from a configured file (if exists).
-func NewTransformer(userMap *users.UserMap, excludeIPList servicelog.ExcludeIPList) *Transformer {
+func NewTransformer(
+	userMap *users.UserMap,
+	excludeIPList servicelog.ExcludeIPList,
+	anonymousUsers []int,
+) *Transformer {
 	return &Transformer{
-		userMap:       userMap,
-		excludeIPList: excludeIPList,
+		userMap:        userMap,
+		excludeIPList:  excludeIPList,
+		anonymousUsers: anonymousUsers,
 	}
 }

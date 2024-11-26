@@ -63,7 +63,7 @@ type OutputRecord struct {
 	IPAddress      string                   `json:"ipAddress"`
 	IsAnonymous    bool                     `json:"isAnonymous"`
 	IsQuery        bool                     `json:"isQuery"`
-	ProcTime       float32                  `json:"procTime"`
+	ProcTime       float64                  `json:"procTime"`
 	QueryType      string                   `json:"queryType"`
 	UserAgent      string                   `json:"userAgent"`
 	UserID         string                   `json:"userId"`

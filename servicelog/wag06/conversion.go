@@ -17,11 +17,13 @@
 package wag06
 
 import (
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"net/url"
 	"time"
 
 	"github.com/rs/zerolog/log"
+	lua "github.com/yuin/gopher-lua"
 )
 
 func isQuery(action string) bool {
@@ -42,28 +44,43 @@ type Transformer struct {
 	ExcludeIPList servicelog.ExcludeIPList
 }
 
+func (t *Transformer) AppType() string {
+	return servicelog.AppTypeWag
+}
+
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
+func (t *Transformer) Transform(
+	logRecord servicelog.InputRecord,
+	tzShiftMin int,
+) (servicelog.OutputRecord, error) {
+	tLogRecord, ok := logRecord.(*InputRecord)
+	if !ok {
+		panic(servicelog.ErrFailedTypeAssertion)
+	}
 	r := &OutputRecord{
-		Type:                recType,
-		time:                logRecord.GetTime(),
-		Datetime:            logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		IPAddress:           logRecord.Request.RemoteAddr,
-		UserAgent:           logRecord.Request.HTTPUserAgent,
-		ReferringDomain:     domainFromURL(logRecord.Request.Referer),
+		Type:                t.AppType(),
+		time:                tLogRecord.GetTime(),
+		Datetime:            tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		IPAddress:           tLogRecord.Request.RemoteAddr,
+		UserAgent:           tLogRecord.Request.HTTPUserAgent,
+		ReferringDomain:     domainFromURL(tLogRecord.Request.Referer),
 		IsAnonymous:         true, // from a web access log, we cannot extract the information
-		IsQuery:             isQuery(logRecord.Action),
-		IsMobileClient:      logRecord.IsMobileClient,
-		HasPosSpecification: logRecord.HasPosSpecification,
-		QueryType:           logRecord.QueryType,
-		Lang1:               logRecord.Lang1,
-		Lang2:               logRecord.Lang2,
-		Queries:             logRecord.Queries,
-		Action:              logRecord.Action,
-		ProcTime:            logRecord.ProcTime,
+		IsQuery:             isQuery(tLogRecord.Action),
+		IsMobileClient:      tLogRecord.IsMobileClient,
+		HasPosSpecification: tLogRecord.HasPosSpecification,
+		QueryType:           tLogRecord.QueryType,
+		Lang1:               tLogRecord.Lang1,
+		Lang2:               tLogRecord.Lang2,
+		Queries:             tLogRecord.Queries,
+		Action:              tLogRecord.Action,
+		ProcTime:            tLogRecord.ProcTime,
 	}
 	r.ID = CreateID(r)
 	return r, nil
+}
+
+func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

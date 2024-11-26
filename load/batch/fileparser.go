@@ -37,9 +37,6 @@ func newParser(path string, tzShift int, appType string, version string, appErrR
 	if err != nil {
 		panic(err)
 	}
-	if err != nil {
-		panic(err)
-	}
 	sc := bufio.NewScanner(f)
 	lineParser, err := NewLineParser(appType, version, appErrRegister)
 	if err != nil {
@@ -74,7 +71,7 @@ type Parser struct {
 // Parse runs the parsing process based on provided minimum accepted record
 // time, record type (which is just passed to ElasticSearch) and a
 // provided LogInterceptor).
-func (p *Parser) Parse(fromTimestamp int64, proc LogItemProcessor, datetimeRange DatetimeRange, outputs ...chan *servicelog.BoundOutputRecord) {
+func (p *Parser) Parse(fromTimestamp int64, proc logItemProcessor, datetimeRange DatetimeRange, outputs ...chan *servicelog.BoundOutputRecord) {
 	for i := int64(0); p.fr.Scan(); i++ {
 		rec, err := p.lineParser.ParseLine(p.fr.Text(), i)
 		if err == nil {
