@@ -26,7 +26,6 @@ import (
 	"klogproc/servicelog/wag06"
 	"klogproc/servicelog/wag07"
 	"klogproc/servicelog/wsserver"
-	"os"
 	"reflect"
 	"text/template"
 )
@@ -144,15 +143,45 @@ Output record:
 {{.Indent}}{{.Name}} {{.Type}} {{if .IsContainer}}of {{.ContentType}}{{end}}{{if .Nested}}{{range .Nested}}
 {{.Indent}}  {{.Name}} {{.Type}} {{if .IsContainer}}of {{.ContentType}}{{end}}{{end}}{{end}}{{end}}
 
+To create an output record using default (hardcoded)
+transformation (suitable if you want to perform just
+a slight modification with your Lua script):
 
+out = transform_default(input_rec, tz_shift_mins)
+
+To create a new output record from scratch:
+
+out = new_out_record()
+
+To set a property in output record:
+
+set_out_prop(rec, name, value)
+
+To test if a record (input or output) has a property:
+
+if record_prop_exists(any_rec, name, value)
+
+For debugging, use:
+
+dump = require('dump')
+print(dump(my_value))
+
+For logging:
+
+log.info("message", map_with_args)
+
+(also: warn, debug, error)
+The second arg. is optional
+
+]]--
 
 -- transform function processes the input record and returns an output record
-function transform(inputRec)
-    local ans = outputRecord.new()
+function transform(input_rec)
+    local out = transform_default(input_rec, 0)
 	-- setting an output field:
 	set_out(ans, "{{.FirstFieldName}}", string.format("%s[modified]", logRec.{{.FirstFieldName}}))
     -- TODO: Transform input record to output format
-    -- Available fields are documented above
+    -- Available fields and functions are documented above
     return ans
 end
 `
@@ -186,7 +215,7 @@ end
 	return buf.String(), nil
 }
 
-func GenerateLuaStub(appType, version string) {
+func generateLuaStub(appType, version string) error {
 	var src string
 	var err error
 	switch appType {
@@ -207,7 +236,7 @@ func GenerateLuaStub(appType, version string) {
 		case "018":
 			src, err = generateLuaStubForType(&kontext018.QueryInputRecord{}, &kontext018.OutputRecord{})
 		default:
-			panic("unknown kontext version") // TODO
+			return fmt.Errorf("failed to create Lua script stub for 'kontext': unknown version '%s'", version)
 		}
 	case servicelog.AppTypeKontextAPI:
 		// TODO
@@ -220,7 +249,7 @@ func GenerateLuaStub(appType, version string) {
 		case "2":
 			src, err = generateLuaStubForType(&kwords2.InputRecord{}, &kwords2.OutputRecord{})
 		default:
-			panic("unknown kwords version") // TODO
+			return fmt.Errorf("failed to create Lua script stub for 'kwords': unknown version '%s'", version)
 		}
 	case servicelog.AppTypeLists:
 		src, err = generateLuaStubForType(&shiny.InputRecord{}, &shiny.OutputRecord{})
@@ -233,7 +262,7 @@ func GenerateLuaStub(appType, version string) {
 		case "3":
 			src, err = generateLuaStubForType(&mapka3.InputRecord{}, &mapka3.OutputRecord{})
 		default:
-			panic("unknown mapka version") // TODO
+			return fmt.Errorf("failed to create Lua script stub for 'mapka': unknown version '%s'", version)
 		}
 	case servicelog.AppTypeMorfio:
 		src, err = generateLuaStubForType(&morfio.InputRecord{}, &morfio.OutputRecord{})
@@ -252,7 +281,7 @@ func GenerateLuaStub(appType, version string) {
 		case "0.7":
 			src, err = generateLuaStubForType(&wag07.InputRecord{}, &wag06.OutputRecord{})
 		default:
-			panic("unknown wag version") // TODO
+			return fmt.Errorf("failed to create Lua script stub for 'wag': unknown version '%s'", version)
 		}
 	case servicelog.AppTypeWsserver:
 		src, err = generateLuaStubForType(&wsserver.InputRecord{}, &wsserver.OutputRecord{})
@@ -265,14 +294,13 @@ func GenerateLuaStub(appType, version string) {
 	case servicelog.AppTypeVLO:
 		src, err = generateLuaStubForType(&vlo.InputRecord{}, &vlo.OutputRecord{})
 	default:
-		fmt.Fprintf(os.Stderr, "error generating Lua script stub - unknown app: %s\n", appType)
-		os.Exit(1)
+		return fmt.Errorf("failed to create Lua script stub: unknown application '%s'", version)
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error generating Lua script stub: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to create Lua script stub for %s: %w", appType, err)
 
 	} else {
 		fmt.Println(src)
 	}
+	return nil
 }

@@ -17,54 +17,32 @@
 package scripting
 
 import (
-	"fmt"
 	"klogproc/servicelog"
 
 	"github.com/rs/zerolog/log"
 	lua "github.com/yuin/gopher-lua"
 )
 
-const (
-	transformerMTName = "default_transformer_mt"
-	transformerName   = "default_transformer"
-)
-
-func checkTransformer(L *lua.LState, pos int) servicelog.LogItemTransformer {
-	ud := L.CheckUserData(pos)
-	if v, ok := ud.Value.(servicelog.LogItemTransformer); ok {
-		return v
-	}
-	L.ArgError(1, "servicelog.LogItemTransformer expected")
-	return nil
-}
-
 func registerStaticTransformer[T servicelog.LogItemTransformer](env *lua.LState, transformer T) error {
 
-	transFn := func(L *lua.LState) int {
-		lrec := L.CheckUserData(2)
-		fmt.Println("LREC: ", lrec)
+	env.SetGlobal("transform_default", env.NewFunction(func(L *lua.LState) int {
+		lrec := L.CheckUserData(1)
 		tLrec, ok := lrec.Value.(servicelog.InputRecord)
 		if !ok {
-			L.ArgError(2, "expected InputRecord")
+			L.ArgError(1, "expected InputRecord")
 		}
-		tzshift := L.CheckInt(3)
+		tzshift := L.CheckInt(2)
 		ans, err := transformer.Transform(tLrec, tzshift)
 		if err != nil {
 			L.RaiseError("failed to transform record: %s", err)
 		}
 		ud := env.NewUserData()
 		ud.Value = ans
-		env.SetMetatable(ud, env.GetTypeMetatable(outputRecName))
 		env.Push(ud)
 		return 1
-	}
+	}))
 
-	var transformerMethods = map[string]lua.LGFunction{
-		"transform": transFn,
-	}
-	mt := env.NewTypeMetatable(transformerMTName)
-	env.SetGlobal(transformerMTName, mt)
-	env.SetGlobal("set_out", env.NewFunction(func(e *lua.LState) int {
+	env.SetGlobal("set_out_prop", env.NewFunction(func(e *lua.LState) int {
 		orec := checkOutputRecord(env, 1)
 		key := env.CheckString(2)
 		val := env.CheckAny(3)
@@ -74,9 +52,6 @@ func registerStaticTransformer[T servicelog.LogItemTransformer](env *lua.LState,
 		}
 		return 0
 	}))
-	env.SetField(mt, "__index", env.SetFuncs(env.NewTable(), transformerMethods))
-	tt := env.NewUserData()
-	env.SetMetatable(tt, mt)
-	env.SetGlobal(transformerName, tt)
+
 	return nil
 }

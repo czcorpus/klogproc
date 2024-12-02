@@ -31,7 +31,6 @@ import (
 	"klogproc/save/elastic"
 	"klogproc/servicelog"
 	"klogproc/trfactory"
-	"klogproc/users"
 
 	"github.com/czcorpus/cnc-gokit/collections"
 	"github.com/oschwald/geoip2-golang"
@@ -194,7 +193,6 @@ func newTailProcessor(
 	tailConf *tail.FileConf,
 	conf config.Main,
 	geoDB *geoip2.Reader,
-	userMap *users.UserMap,
 	logBuffers map[string]servicelog.ServiceLogBuffer,
 	options *ProcessOptions,
 ) *tailProcessor {
@@ -216,7 +214,6 @@ func newTailProcessor(
 	}
 	logTransformer, err := trfactory.GetLogTransformer(
 		tailConf,
-		userMap,
 		conf.AnonymousUsers,
 		true,
 		notifier,
@@ -317,7 +314,6 @@ func runTailAction(
 	conf *config.Main,
 	options *ProcessOptions,
 	geoDB *geoip2.Reader,
-	userMap *users.UserMap,
 	finishEvt chan bool,
 ) {
 	tailProcessors := make([]tail.FileTailProcessor, len(conf.LogTail.Files))
@@ -333,7 +329,7 @@ func runTailAction(
 	}
 
 	for i, f := range fullFiles {
-		tailProcessors[i] = newTailProcessor(&f, *conf, geoDB, userMap, logBuffers, options)
+		tailProcessors[i] = newTailProcessor(&f, *conf, geoDB, logBuffers, options)
 	}
 	go func() {
 		wg.Wait()

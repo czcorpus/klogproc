@@ -19,6 +19,7 @@ package scripting
 import (
 	"net"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	lua "github.com/yuin/gopher-lua"
@@ -27,31 +28,39 @@ import (
 func TestFieldAccess(t *testing.T) {
 	lt := new(ltrans)
 	exe, err := CreateCustomTransformer(
-		"print(\"megatest\")\n"+
-			"function transform (rec)\n"+
-			"  return rec.ClientIP\n"+
+		"function transform (rec)\n"+
+			"  return {rec.ClientIP, rec.Time}\n"+
 			"end\n",
 		lt,
 		func(env *lua.LState) {},
 	)
 	if assert.NoError(t, err) {
-		env := exe.GetLState()
+		L := exe.GetLState()
 		registerInputRecord(exe.GetLState())
-
+		tz, err := time.LoadLocation("Europe/Prague")
+		assert.NoError(t, err)
 		inp := &dummyInputRec{
 			ID:       "foobar",
+			Time:     time.Date(2024, time.December, 1, 10, 28, 13, 0, tz),
 			ClientIP: net.IPv4(192, 168, 1, 10),
 		}
 
-		env.Push(env.GetGlobal("transform"))
-		env.Push(importInputRecord(env, inp))
-		err = env.PCall(1, 1, nil)
+		L.Push(L.GetGlobal("transform"))
+		L.Push(importInputRecord(L, inp))
+		err = L.PCall(1, 1, nil)
 		assert.NoError(t, err)
-		ret := env.Get(-1) // returned value
-		env.Pop(1)
-		tRet, ok := ret.(lua.LString)
+		ret := L.Get(-1) // returned value
+		L.Pop(1)
+		tRet, ok := ret.(*lua.LTable)
 		assert.True(t, ok)
-		assert.Equal(t, "192.168.1.10", string(tRet))
+		rawRes := tRet.RawGetInt(1)
+		v1, ok := rawRes.(lua.LString)
+		assert.True(t, ok)
+		assert.Equal(t, "192.168.1.10", string(v1))
+		rawRes = tRet.RawGetInt(2)
+		v2, ok := rawRes.(lua.LString)
+		assert.True(t, ok)
+		assert.Equal(t, "2024-12-01T10:28:13+01:00", string(v2))
 	}
 
 }

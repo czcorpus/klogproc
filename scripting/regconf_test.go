@@ -26,7 +26,7 @@ import (
 func TestRegisterProcConf(t *testing.T) {
 	lt := new(ltrans)
 	ct, err := CreateCustomTransformer(
-		"appType = conf.appType\n"+
+		"app_type = conf.appType\n"+
 			"excludedIPList = conf.excludeIPList[1]..conf.excludeIPList[2]\n",
 		lt,
 		func(env *lua.LState) {
@@ -39,12 +39,12 @@ func TestRegisterProcConf(t *testing.T) {
 		},
 	)
 	assert.NoError(t, err)
-	env := ct.GetLState()
-	res, ok := env.GetGlobal("appType").(lua.LString)
+	L := ct.GetLState()
+	res, ok := L.GetGlobal("app_type").(lua.LString)
 	assert.True(t, ok)
 	assert.Equal(t, "dummy-app", string(res))
 
-	res2, ok := env.GetGlobal("excludedIPList").(lua.LString)
+	res2, ok := L.GetGlobal("excludedIPList").(lua.LString)
 	assert.True(t, ok)
 	assert.Equal(t, "192.168.1.1192.168.1.2", string(res2))
 

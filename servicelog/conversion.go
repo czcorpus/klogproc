@@ -76,7 +76,7 @@ func ConvertDatetimeString(datetime string) time.Time {
 	if err == nil {
 		return t
 	}
-	log.Warn().Msgf("%s", err)
+	log.Error().Err(err).Str("value", datetime).Msgf("failed to convert datetime string")
 	return time.Time{}
 }
 
@@ -85,7 +85,7 @@ func ConvertDatetimeStringWithMillis(datetime string) time.Time {
 	if err == nil {
 		return t
 	}
-	log.Warn().Msgf("%s", err)
+	log.Error().Err(err).Str("value", datetime).Msgf("failed to convert datetime string (with millis)")
 	return time.Time{}
 }
 
@@ -94,7 +94,7 @@ func ConvertDatetimeStringNoTZ(datetime string) time.Time {
 	if err == nil {
 		return t
 	}
-	log.Warn().Msgf("%s", err)
+	log.Error().Err(err).Str("value", datetime).Msgf("failed to convert datetime string (no tz)")
 	return time.Time{}
 }
 
@@ -103,7 +103,7 @@ func ConvertDatetimeStringWithMillisNoTZ(datetime string) time.Time {
 	if err == nil {
 		return t
 	}
-	log.Warn().Msgf("%s", err)
+	log.Error().Err(err).Str("value", datetime).Msgf("failed to convert datetime string (with millis, no tz)")
 	return time.Time{}
 }
 
@@ -112,6 +112,6 @@ func ConvertAccessLogDatetimeString(datetime string) time.Time {
 	if err == nil {
 		return t
 	}
-	log.Warn().Msgf("%s", err)
+	log.Error().Err(err).Str("value", datetime).Msgf("failed to convert datetime string (access log format)")
 	return time.Time{}
 }

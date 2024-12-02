@@ -41,13 +41,11 @@ import (
 	"klogproc/servicelog/wag06"
 	"klogproc/servicelog/wag07"
 	"klogproc/servicelog/wsserver"
-	"klogproc/users"
 )
 
 // GetStaticLogTransformer returns a type-safe transformer for a concrete app type
 func GetStaticLogTransformer(
 	logConf servicelog.LogProcConf,
-	userMap *users.UserMap,
 	anonymousUsers []int,
 	realtimeClock bool,
 	emailNotifier notifications.Notifier,
@@ -108,7 +106,7 @@ func GetStaticLogTransformer(
 		return &morfio.Transformer{
 			ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
 	case servicelog.AppTypeSke:
-		return ske.NewTransformer(userMap, excludeIpList, anonymousUsers), nil
+		return ske.NewTransformer(excludeIpList, anonymousUsers), nil
 	case servicelog.AppTypeSyd:
 		return syd.NewTransformer(version, excludeIpList, anonymousUsers), nil
 	case servicelog.AppTypeTreq:

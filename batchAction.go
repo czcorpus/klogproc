@@ -26,7 +26,6 @@ import (
 	"klogproc/save/elastic"
 	"klogproc/servicelog"
 	"klogproc/trfactory"
-	"klogproc/users"
 	"reflect"
 	"time"
 
@@ -92,7 +91,6 @@ func runBatchAction(
 	conf *config.Main,
 	options *ProcessOptions,
 	geoDB *geoip2.Reader,
-	userMap *users.UserMap,
 	finishEvent chan<- bool,
 ) {
 	// For debugging e-mail notification, you can pass `conf.EmailNotification`
@@ -101,7 +99,6 @@ func runBatchAction(
 
 	lt, err := trfactory.GetLogTransformer(
 		conf.LogFiles,
-		userMap,
 		conf.AnonymousUsers,
 		false,
 		nullMailNot,

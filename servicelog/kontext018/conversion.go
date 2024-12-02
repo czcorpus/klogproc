@@ -1,6 +1,7 @@
 // Copyright 2023 Institute of the Czech National Corpus,
 //                Faculty of Arts, Charles University
 // Copyright 2023 Martin Zimandl <martin.zimandl@gmail.com>
+// Copyright 2024 Tomas Machalek <tomas.machalek@gmail.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -145,6 +146,7 @@ func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string
 		}
 	case "Datetime":
 		if tValue, ok := value.(lua.LString); ok {
+			tRec.datetime = servicelog.ConvertDatetimeString(string(tValue))
 			tRec.Datetime = string(tValue)
 			return nil
 		}

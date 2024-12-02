@@ -26,12 +26,11 @@ Error (table (struct))
 
 dmp = require('dump')
 
-function transform (logRec, tzShiftMin)
-    --local out = outputRecord.new()
-    print(dmp(default_transformer))
-    local out = default_transformer:transform(logRec, tzShiftMin)
-    --print("Lua func. called...")
-    set_out(out, "Type", "kontext")
-    set_out(out, "Action", string.format("*** %s::modified: %s", logRec.Action, logRec.x))
+function transform (log_rec, tz_shift_min)
+    local out = new_out_rec()
+    --local out = transform_default(log_rec, tz_shift_min)
+    logger.warn("processing record", {foo="bar"})
+    set_out_prop(out, "Type", "kontext-xxx")
+    set_out_prop(out, "Action", string.format("*** %s::modified: %s", log_rec.Action, log_rec.x))
     return out
 end

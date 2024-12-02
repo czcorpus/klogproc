@@ -22,7 +22,6 @@ import (
 	"klogproc/scripting"
 	"klogproc/servicelog"
 	"klogproc/servicelog/kontext018"
-	"klogproc/users"
 )
 
 // GetLogTransformer creates a log transformer with optional support for Lua scripting.
@@ -31,12 +30,11 @@ import (
 // (i.e. the one compiled directly to klogproc).
 func GetLogTransformer(
 	logConf servicelog.LogProcConf,
-	userMap *users.UserMap,
 	anonymousUsers []int,
 	realtimeClock bool,
 	emailNotifier notifications.Notifier,
 ) (*scripting.Transformer, error) {
-	tr, err := GetStaticLogTransformer(logConf, userMap, anonymousUsers, realtimeClock, emailNotifier)
+	tr, err := GetStaticLogTransformer(logConf, anonymousUsers, realtimeClock, emailNotifier)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)
 	}

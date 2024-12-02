@@ -25,12 +25,10 @@ import (
 
 // RunWriteConsumer runs a dummy (null) write consumer
 func RunWriteConsumer(incomingData <-chan *servicelog.BoundOutputRecord, printOut bool) <-chan ConfirmMsg {
-	fmt.Println(">>>> run write cons: ", printOut)
 	confirmChan := make(chan ConfirmMsg)
 	go func() {
 		var chunkPosition *servicelog.LogRange
 		for item := range incomingData {
-			fmt.Println(">>>> DATA: ", item)
 			var jsonError error
 			if chunkPosition == nil {
 				chunkPosition = &item.FilePos

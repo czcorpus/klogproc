@@ -17,15 +17,10 @@
 package main
 
 import (
-	"path/filepath"
-
 	"github.com/rs/zerolog/log"
 
-	"klogproc/config"
-	"klogproc/fsop"
 	"klogproc/load/batch"
 	"klogproc/servicelog"
-	"klogproc/users"
 
 	"github.com/oschwald/geoip2-golang"
 )
@@ -49,44 +44,5 @@ type ProcessOptions struct {
 	dryRun        bool
 	analysisOnly  bool
 	datetimeRange batch.DatetimeRange
-}
-
-// ProcessLogs runs through all the logs found in configuration and matching
-// some basic properties (it is a query, preferably from a human user etc.).
-// The "producer" part of the processing runs in a separate goroutine while
-// the main goroutine consumes values via a channel and after each
-// n-th (conf.ElasticPushChunkSize) item it stores data to the ElasticSearch
-// server.
-// Based on config, the function reads either from a Redis list object
-// or from a directory of files (in such case it keeps a worklog containing
-// last loaded value). In case both locations are configured, Redis has
-// precedence.
-func processLogs(conf *config.Main, action string, options *ProcessOptions) {
-	geoDb, err := geoip2.Open(conf.GeoIPDbPath)
-	if err != nil {
-		log.Fatal().Msgf("%s", err)
-	}
-	userMap := users.EmptyUserMap()
-	confPath := filepath.Join(conf.CustomConfDir, "usermap.json")
-	if fsop.IsFile(confPath) {
-		userMap, err = users.LoadUserMap(confPath)
-		if err != nil {
-			log.Fatal().Msgf("%s", err)
-		}
-	}
-	defer geoDb.Close()
-
-	finishEvent := make(chan bool)
-
-	go func() {
-		switch action {
-		case config.ActionBatch:
-			runBatchAction(conf, options, geoDb, userMap, finishEvent)
-
-		case config.ActionTail:
-			runTailAction(conf, options, geoDb, userMap, finishEvent)
-		}
-	}()
-	<-finishEvent
-
+	scriptPath    string
 }

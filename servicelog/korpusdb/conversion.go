@@ -77,11 +77,11 @@ func (t *Transformer) Transform(
 
 	out := &OutputRecord{
 		Type:        t.AppType(),
+		Datetime:    tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
 		time:        tLogRecord.GetTime(),
 		Path:        tLogRecord.Path,
 		Page:        tLogRecord.Request.Page,
 		IPAddress:   tLogRecord.IP,
-		Datetime:    tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
 		UserID:      tLogRecord.UserID,
 		ClientFlag:  tLogRecord.Request.ClientFlag,
 		IsAnonymous: userID == -1 || servicelog.UserBelongsToList(userID, t.AnonymousUsers),
@@ -94,7 +94,67 @@ func (t *Transformer) Transform(
 }
 
 func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
-	return scripting.ErrScriptingNotSupported
+	tRec, ok := rec.(*OutputRecord)
+	if !ok {
+		return scripting.ErrFailedTypeAssertion
+	}
+	switch name {
+	case "Type":
+		if tValue, ok := value.(lua.LString); ok {
+			tRec.Type = string(tValue)
+			return nil
+		}
+	case "Datetime":
+		if tValue, ok := value.(lua.LString); ok {
+			tRec.time = servicelog.ConvertDatetimeString(string(tValue))
+			tRec.Datetime = string(tValue)
+			return nil
+		}
+	case "Path":
+		if tValue, ok := value.(lua.LString); ok {
+			tRec.Path = string(tValue)
+			return nil
+		}
+	case "Page":
+		if tValue, ok := value.(*lua.LTable); ok {
+			fromVal := tValue.RawGetString("From")
+			if tFromVal, ok := fromVal.(lua.LNumber); ok {
+				tRec.Page.From = int(tFromVal)
+			}
+			sizeVal := tValue.RawGetString("Size")
+			if tSizeVal, ok := sizeVal.(lua.LNumber); ok {
+				tRec.Page.Size = int(tSizeVal)
+			}
+			return nil
+		}
+	case "IPAddress":
+		if tValue, ok := value.(lua.LString); ok {
+			tRec.IPAddress = string(tValue)
+			return nil
+		}
+	case "UserID":
+		if tValue, ok := value.(lua.LString); ok {
+			tRec.UserID = string(tValue)
+			return nil
+		}
+	case "ClientFlag":
+		if tValue, ok := value.(lua.LString); ok {
+			tRec.ClientFlag = string(tValue)
+			return nil
+		}
+	case "IsAnonymous":
+		tRec.IsAnonymous = value == lua.LTrue
+		return nil
+	case "IsQuery":
+		tRec.IsQuery = value == lua.LTrue
+		return nil
+	case "QueryType":
+		if tValue, ok := value.(lua.LString); ok {
+			tRec.QueryType = string(tValue)
+			return nil
+		}
+	}
+	return scripting.InvalidAttrError{Attr: name}
 }
 
 func (t *Transformer) HistoryLookupItems() int {

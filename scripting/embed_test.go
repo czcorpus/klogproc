@@ -17,25 +17,18 @@
 package scripting
 
 import (
-	"klogproc/servicelog"
+	"testing"
 
+	"github.com/stretchr/testify/assert"
 	lua "github.com/yuin/gopher-lua"
 )
 
-func checkOutputRecord(L *lua.LState, pos int) servicelog.OutputRecord {
-	ud := L.CheckUserData(pos)
-	if v, ok := ud.Value.(servicelog.OutputRecord); ok {
-		return v
-	}
-	L.ArgError(1, "servicelog.OutputRecord expected")
-	return nil
-}
-
-func registerOutputRecord(env *lua.LState, outRecFact func() servicelog.OutputRecord) {
-	env.SetGlobal("new_out_rec", env.NewFunction(func(env *lua.LState) int {
-		ud := env.NewUserData()
-		ud.Value = outRecFact()
-		env.Push(ud)
-		return 1
-	}))
+func TestSetupRequireFn(t *testing.T) {
+	L := lua.NewState()
+	SetupRequireFn(L)
+	L.DoString(`
+md = require('dump')
+	`)
+	v := L.GetGlobal("md")
+	assert.NotEqual(t, v, lua.LNil)
 }

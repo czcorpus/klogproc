@@ -18,12 +18,12 @@ import (
 	"flag"
 	"fmt"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"os"
 
 	"github.com/czcorpus/cnc-gokit/logging"
+	"github.com/oschwald/geoip2-golang"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -133,6 +133,8 @@ func main() {
 	batchCmd.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
 	fromTimestamp := batchCmd.String("from-time", "", "Batch process only the records with datetime greater or equal to this time (UNIX timestamp, or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm)")
 	toTimestamp := batchCmd.String("to-time", "", "Batch process only the records with datetime less or equal to this UNIX timestamp, or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm)")
+	batchCmd.StringVar(&procOpts.scriptPath, "script-path", "", "Set or override Lua script path for log processing")
+	noScript := batchCmd.Bool("no-script", false, "disables Lua script for log processing (overrides both cmd arg and json conf)")
 	batchCmd.BoolVar(&procOpts.analysisOnly, "analysis-only", false, "In batch mode, analyze logs for bots etc.")
 
 	tailCmd := flag.NewFlagSet(config.ActionTail, flag.ExitOnError)
@@ -155,26 +157,26 @@ func main() {
 	mkscriptCmd := flag.NewFlagSet(config.ActionMkScript, flag.ExitOnError)
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending CNC app logs to ElasticSearch\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\t%s\n\nOptions:\n",
-			filepath.Base(
-				os.Args[0]),
-			strings.Join([]string{
-				config.ActionBatch,
-				config.ActionTail,
-				config.ActionDocupdate,
-				config.ActionKeyremove,
-				config.ActionDocremove,
-				config.ActionHelp,
-				config.ActionVersion,
-			}, ", "))
-		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "Klogproc - an utility for processing CNC application logs\n\n"+
+			"Usage:\n"+
+			"\t%s batch [options] [config.json]\n"+
+			"\t%s tail [options] [config.json]\n"+
+			"\t%s docupdate [options] [config.json]\n"+
+			"\t%s docremove [options] [config.json]\n"+
+			"\t%s keyremove [options] [config.json]\n"+
+			"\t%s test-nofification [options] [config.json]\n"+
+			"\t%s mkscript [options] [config.json]\n"+
+			"\t%s version\n",
+			filepath.Base(os.Args[0]), filepath.Base(os.Args[0]), filepath.Base(os.Args[0]),
+			filepath.Base(os.Args[0]), filepath.Base(os.Args[0]), filepath.Base(os.Args[0]),
+			filepath.Base(os.Args[0]), filepath.Base(os.Args[0]))
 	}
 	flag.Parse()
 
 	var err error
 	procOpts.datetimeRange, err = batch.NewDateTimeRange(fromTimestamp, toTimestamp)
 	if err != nil {
-		log.Fatal().Msgf("%s", err)
+		log.Fatal().Err(err).Msg("failed to parse command line date range")
 	}
 
 	var conf *config.Main
@@ -197,15 +199,31 @@ func main() {
 		removeKeyFromRecords(conf, procOpts)
 	case config.ActionBatch:
 		batchCmd.Parse(os.Args[2:])
-		fmt.Println("PATH: ", batchCmd.Arg(0))
-		fmt.Println("OPTS: ", procOpts)
 		conf = setup(batchCmd.Arg(0), action)
-		processLogs(conf, action, procOpts)
+		if *noScript {
+			procOpts.scriptPath = ""
+			conf.LogFiles.ScriptPath = ""
+		}
+		geoDb, err := geoip2.Open(conf.GeoIPDbPath)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to open geo IP database")
+		}
+		defer geoDb.Close()
+		finish := make(chan bool)
+		go runBatchAction(conf, procOpts, geoDb, finish)
+		<-finish
 	case config.ActionTail:
 		tailCmd.Parse(os.Args[2:])
 		conf = setup(tailCmd.Arg(0), action)
 		log.Print(startingServiceMsg)
-		processLogs(conf, action, procOpts)
+		geoDb, err := geoip2.Open(conf.GeoIPDbPath)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to open geo IP database")
+		}
+		defer geoDb.Close()
+		finish := make(chan bool)
+		go runTailAction(conf, procOpts, geoDb, finish)
+		<-finish
 	case config.ActionTestNotification:
 		testnotifCmd.Parse(os.Args[2:])
 		conf = setup(testnotifCmd.Arg(0), action)
@@ -222,7 +240,10 @@ func main() {
 		)
 	case config.ActionMkScript:
 		mkscriptCmd.Parse(os.Args[2:])
-		GenerateLuaStub(mkscriptCmd.Arg(0), mkscriptCmd.Arg(1))
+		if err := generateLuaStub(mkscriptCmd.Arg(0), mkscriptCmd.Arg(1)); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 
 	case config.ActionVersion:
 		fmt.Printf("Klogproc %s\nbuild date: %s\nlast commit: %s\n", version, build, gitCommit)

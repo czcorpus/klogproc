@@ -37,7 +37,7 @@ type InputRecord struct {
 	Path          string
 	Datetime      string
 	Request       *Request
-	ProcTime      float32
+	ProcTime      float64
 	isProcessable bool
 }
 

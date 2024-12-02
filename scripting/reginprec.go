@@ -17,7 +17,6 @@
 package scripting
 
 import (
-	"fmt"
 	"klogproc/servicelog"
 	"net"
 	"reflect"
@@ -31,7 +30,6 @@ const (
 )
 
 func importField(L *lua.LState, field reflect.Value) lua.LValue {
-	fmt.Println("KIND: ", field.Kind())
 	switch field.Kind() {
 	case reflect.String:
 		return lua.LString(field.String())
@@ -73,30 +71,22 @@ func importField(L *lua.LState, field reflect.Value) lua.LValue {
 func getIRecProp(L *lua.LState, inputRec servicelog.InputRecord, name string) lua.LValue {
 	val := reflect.ValueOf(inputRec).Elem()
 	field := val.FieldByName(name)
-	fmt.Println("FIELD ", field)
 	if !field.IsValid() {
 		return lua.LNil
 	}
 	return importField(L, field)
 }
 
-func get(env *lua.LState) int {
-	irec := env.CheckUserData(1)
+func get(L *lua.LState) int {
+	irec := L.CheckUserData(1)
 	tIrec, ok := irec.Value.(servicelog.InputRecord)
 	if !ok {
-		env.ArgError(1, "expecting InputRecord")
+		L.ArgError(1, "expecting InputRecord")
 	}
-	key := env.CheckString(2)
-	fmt.Println("getting ", key, " FROM ", tIrec)
-	ans := getIRecProp(env, tIrec, key)
-	env.Push(ans)
+	key := L.CheckString(2)
+	ans := getIRecProp(L, tIrec, key)
+	L.Push(ans)
 	return 1
-}
-
-func registerInputRecord(env *lua.LState) {
-	mt := env.NewTypeMetatable(inputRecName)
-	env.SetGlobal(inputRecName, mt)
-	env.SetField(mt, "__index", env.NewFunction(get))
 }
 
 func importInputRecord(L *lua.LState, rec servicelog.InputRecord) lua.LValue {
@@ -104,4 +94,10 @@ func importInputRecord(L *lua.LState, rec servicelog.InputRecord) lua.LValue {
 	d.Value = rec
 	L.SetMetatable(d, L.GetGlobal(inputRecName))
 	return d
+}
+
+func registerInputRecord(L *lua.LState) {
+	mt := L.NewTypeMetatable(inputRecName)
+	L.SetGlobal(inputRecName, mt)
+	L.SetField(mt, "__index", L.NewFunction(get))
 }
