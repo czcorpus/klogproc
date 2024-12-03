@@ -64,6 +64,8 @@ func ImportJSONLog(jsonLine []byte) (*InputRecord, error) {
 		record.Args["uses_context"] = vt > 0
 	case bool:
 		record.Args["uses_context"] = vt
+	case nil:
+		delete(record.Args, "uses_context")
 	default:
 		log.Error().
 			Str("appType", "kontext").

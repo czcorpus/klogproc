@@ -93,6 +93,7 @@ func exportArgs(action string, data map[string]any) map[string]any {
 		ans["uses_context"] = vt > 0
 	case bool:
 		ans["uses_context"] = vt
+	case nil: // just deleting the stuff above is enough here
 	default:
 		log.Error().
 			Str("type", fmt.Sprintf("%v", reflect.TypeOf(v))).
