@@ -68,7 +68,7 @@ func ImportJSONLog(jsonLine []byte) (*InputRecord, error) {
 		log.Error().
 			Str("appType", "kontext").
 			Str("version", "0.15").
-			Str("type", reflect.TypeOf(v).String()).
+			Str("type", fmt.Sprintf("%v", reflect.TypeOf(v))).
 			Msg("failed to process args.uses_context - unsupported type (removing from result)")
 		delete(record.Args, "uses_context")
 	}

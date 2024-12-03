@@ -95,7 +95,7 @@ func exportArgs(action string, data map[string]any) map[string]any {
 		ans["uses_context"] = vt
 	default:
 		log.Error().
-			Str("type", reflect.TypeOf(v).String()).
+			Str("type", fmt.Sprintf("%v", reflect.TypeOf(v))).
 			Msg("failed to process args.uses_context - unsupported type")
 	}
 	return ans
