@@ -17,8 +17,12 @@
 package main
 
 import (
+	"context"
+	"fmt"
+	"os/signal"
 	"path/filepath"
 	"sync"
+	"syscall"
 
 	"klogproc/analysis"
 	"klogproc/config"
@@ -31,7 +35,6 @@ import (
 	"klogproc/save/elastic"
 	"klogproc/servicelog"
 	"klogproc/trfactory"
-	"klogproc/users"
 
 	"github.com/czcorpus/cnc-gokit/collections"
 	"github.com/oschwald/geoip2-golang"
@@ -70,7 +73,7 @@ func (tp *tailProcessor) OnCheckStart() (tail.LineProcConfirmChan, *tail.LogData
 		var waitMergeEnd sync.WaitGroup
 		waitMergeEnd.Add(2)
 		if tp.dryRun {
-			confirmChan := save.RunWriteConsumer(dataWriter.Elastic, false)
+			confirmChan := save.RunWriteConsumer(dataWriter.Elastic, true)
 			go func() {
 				for item := range confirmChan {
 					itemConfirm <- item
@@ -121,7 +124,7 @@ func (tp *tailProcessor) OnEntry(
 	if parsed.IsProcessable() {
 		for _, precord := range tp.logTransformer.Preprocess(parsed, tp.logBuffer) {
 			tp.logBuffer.AddRecord(precord)
-			outRec, err := tp.logTransformer.Transform(precord, tp.appType, tp.tzShift, tp.anonymousUsers)
+			outRec, err := tp.logTransformer.Transform(precord, tp.tzShift)
 			if err != nil {
 				log.Error().Err(err).Msg("Failed to transform processable record")
 				dataWriter.Ignored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
@@ -189,10 +192,9 @@ func newProcAlarm(
 }
 
 func newTailProcessor(
-	tailConf tail.FileConf,
+	tailConf *tail.FileConf,
 	conf config.Main,
 	geoDB *geoip2.Reader,
-	userMap *users.UserMap,
 	logBuffers map[string]servicelog.ServiceLogBuffer,
 	options *ProcessOptions,
 ) *tailProcessor {
@@ -204,7 +206,7 @@ func newTailProcessor(
 		log.Fatal().Msgf("Failed to initialize e-mail notifier: %s", err)
 	}
 
-	procAlarm, err := newProcAlarm(&tailConf, conf.LogTail, notifier)
+	procAlarm, err := newProcAlarm(tailConf, conf.LogTail, notifier)
 	if err != nil {
 		log.Fatal().Msgf("Failed to initialize alarm: %s", err)
 	}
@@ -213,20 +215,21 @@ func newTailProcessor(
 		log.Fatal().Msgf("Failed to initialize parser: %s", err)
 	}
 	logTransformer, err := trfactory.GetLogTransformer(
-		tailConf.AppType,
-		tailConf.Version,
-		tailConf.Buffer,
-		userMap,
-		tailConf.ExcludeIPList,
+		tailConf,
+		conf.AnonymousUsers,
 		true,
 		notifier,
 	)
 	if err != nil {
 		log.Fatal().Msgf("Failed to initialize transformer: %s", err)
 	}
-	log.Info().Msgf(
-		"Creating tail processor for %s, app type: %s, app version: %s, tzShift: %d",
-		filepath.Clean(tailConf.Path), tailConf.AppType, tailConf.Version, tailConf.TZShift)
+	log.Info().
+		Str("logPath", filepath.Clean(tailConf.Path)).
+		Str("appType", tailConf.AppType).
+		Str("version", tailConf.Version).
+		Int("tzShift", tailConf.TZShift).
+		Str("script", tailConf.ScriptPath).
+		Msg("Creating tail log processor")
 
 	var buffStorage analysis.BufferedRecords
 	if tailConf.Buffer != nil {
@@ -317,9 +320,14 @@ func runTailAction(
 	conf *config.Main,
 	options *ProcessOptions,
 	geoDB *geoip2.Reader,
-	userMap *users.UserMap,
-	finishEvt chan bool,
-) {
+) error {
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	tailProcessors := make([]tail.FileTailProcessor, len(conf.LogTail.Files))
 	var wg sync.WaitGroup
 	wg.Add(len(conf.LogTail.Files))
@@ -327,16 +335,21 @@ func runTailAction(
 	logBuffers := make(map[string]servicelog.ServiceLogBuffer)
 	fullFiles, err := conf.LogTail.FullFiles()
 	if err != nil {
-		log.Error().Err(err).Msg("failed to initialize files configuration")
-		finishEvt <- true
-		return
+		return fmt.Errorf("runTailAction failed to initialize files configuration: %w", err)
 	}
 
 	for i, f := range fullFiles {
-		tailProcessors[i] = newTailProcessor(f, *conf, geoDB, userMap, logBuffers, options)
+		tailProcessors[i] = newTailProcessor(&f, *conf, geoDB, logBuffers, options)
 	}
 	go func() {
 		wg.Wait()
 	}()
-	go tail.Run(conf.LogTail, tailProcessors, finishEvt)
+
+	errChan := tail.GoRun(ctx, conf.LogTail, tailProcessors, options.worklogReset)
+	err = <-errChan
+	if err != nil {
+		cancel()
+		return fmt.Errorf("runTailAction ended by: %w", err)
+	}
+	return nil
 }

@@ -21,65 +21,74 @@ import (
 	"strconv"
 	"time"
 
+	"klogproc/scripting"
 	"klogproc/servicelog"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // Transformer converts a Morfio log record to a destination format
 type Transformer struct {
-	ExcludeIPList servicelog.ExcludeIPList
+	ExcludeIPList  servicelog.ExcludeIPList
+	AnonymousUsers []int
+}
+
+func (t *Transformer) AppType() string {
+	return servicelog.AppTypeKwords
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord *InputRecord,
-	recType string,
+	logRecord servicelog.InputRecord,
 	tzShiftMin int,
-	anonymousUsers []int,
-) (*OutputRecord, error) {
-
+) (servicelog.OutputRecord, error) {
+	tLogRecord, ok := logRecord.(*InputRecord)
+	if !ok {
+		panic(servicelog.ErrFailedTypeAssertion)
+	}
 	userID := -1
-	if logRecord.UserID != "-" && logRecord.UserID != "" {
-		uid, err := strconv.Atoi(logRecord.UserID)
+	if tLogRecord.UserID != "-" && tLogRecord.UserID != "" {
+		uid, err := strconv.Atoi(tLogRecord.UserID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to convert user ID [%s]", logRecord.UserID)
+			return nil, fmt.Errorf("failed to convert user ID [%s]", tLogRecord.UserID)
 		}
 		userID = uid
 	}
 
-	numFiles, err := strconv.Atoi(logRecord.NumFiles)
+	numFiles, err := strconv.Atoi(tLogRecord.NumFiles)
 	if err != nil {
 		return nil, err
 	}
-	targetLength, err := strconv.Atoi(logRecord.TargetLength)
+	targetLength, err := strconv.Atoi(tLogRecord.TargetLength)
 	if err != nil {
 		return nil, err
 	}
 
 	var refLength *int
-	if logRecord.RefLength != "-" {
-		rl, err := strconv.Atoi(logRecord.RefLength)
+	if tLogRecord.RefLength != "-" {
+		rl, err := strconv.Atoi(tLogRecord.RefLength)
 		if err != nil {
 			return nil, err
 		}
 		refLength = &rl
 	}
-	pronouns, err := servicelog.ImportBool(logRecord.Prep, "pronouns")
+	pronouns, err := servicelog.ImportBool(tLogRecord.Prep, "pronouns")
 	if err != nil {
 		return nil, err
 	}
-	prep, err := servicelog.ImportBool(logRecord.Prep, "prep")
+	prep, err := servicelog.ImportBool(tLogRecord.Prep, "prep")
 	if err != nil {
 		return nil, err
 	}
-	con, err := servicelog.ImportBool(logRecord.Prep, "con")
+	con, err := servicelog.ImportBool(tLogRecord.Prep, "con")
 	if err != nil {
 		return nil, err
 	}
-	num, err := servicelog.ImportBool(logRecord.Prep, "num")
+	num, err := servicelog.ImportBool(tLogRecord.Prep, "num")
 	if err != nil {
 		return nil, err
 	}
-	caseInsen, err := servicelog.ImportBool(logRecord.Prep, "caseInsensitive")
+	caseInsen, err := servicelog.ImportBool(tLogRecord.Prep, "caseInsensitive")
 	if err != nil {
 		return nil, err
 	}
@@ -87,16 +96,16 @@ func (t *Transformer) Transform(
 	ans := &OutputRecord{
 		// ID set later
 		Type:            "kwords",
-		time:            logRecord.GetTime(),
-		Datetime:        logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		IPAddress:       logRecord.IPAddress,
-		UserID:          logRecord.UserID,
-		IsAnonymous:     userID == -1 || servicelog.UserBelongsToList(userID, anonymousUsers),
+		time:            tLogRecord.GetTime(),
+		Datetime:        tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		IPAddress:       tLogRecord.IPAddress,
+		UserID:          tLogRecord.UserID,
+		IsAnonymous:     userID == -1 || servicelog.UserBelongsToList(userID, t.AnonymousUsers),
 		IsQuery:         true,
 		NumFiles:        numFiles,
-		TargetInputType: logRecord.TargetInputType,
+		TargetInputType: tLogRecord.TargetInputType,
 		TargetLength:    targetLength,
-		Corpus:          logRecord.Corpus,
+		Corpus:          tLogRecord.Corpus,
 		RefLength:       refLength,
 		Pronouns:        pronouns,
 		Prep:            prep,
@@ -108,6 +117,10 @@ func (t *Transformer) Transform(
 
 	ans.ID = createID(ans)
 	return ans, nil
+}
+
+func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

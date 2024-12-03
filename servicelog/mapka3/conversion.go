@@ -23,7 +23,10 @@ import (
 
 	"klogproc/analysis/clustering"
 	"klogproc/load"
+	"klogproc/scripting"
 	"klogproc/servicelog"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // createID creates an idempotent ID of rec based on its properties.
@@ -39,36 +42,46 @@ func createID(rec *OutputRecord, tzShiftMin int) string {
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	bufferConf    *load.BufferConf
-	analyzer      servicelog.Preprocessor
-	excludeIPList servicelog.ExcludeIPList
+	bufferConf     *load.BufferConf
+	analyzer       servicelog.Preprocessor
+	excludeIPList  servicelog.ExcludeIPList
+	anonymousUsers []int
+}
+
+func (t *Transformer) AppType() string {
+	return servicelog.AppTypeMapka
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord *InputRecord,
-	recType string,
+	logRecord servicelog.InputRecord,
 	tzShiftMin int,
-	anonymousUsers []int,
-) (*OutputRecord, error) {
-
+) (servicelog.OutputRecord, error) {
+	tLogRecord, ok := logRecord.(*InputRecord)
+	if !ok {
+		panic(servicelog.ErrFailedTypeAssertion)
+	}
 	r := &OutputRecord{
-		Type:      recType,
-		time:      logRecord.GetTime(),
-		Datetime:  logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		IPAddress: logRecord.GetClientIP().String(),
-		UserAgent: logRecord.GetUserAgent(),
-		IsAnonymous: logRecord.Extra.UserID == "" ||
-			servicelog.UserBelongsToList(logRecord.Extra.UserID, anonymousUsers),
+		Type:      t.AppType(),
+		time:      tLogRecord.GetTime(),
+		Datetime:  tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		IPAddress: tLogRecord.GetClientIP().String(),
+		UserAgent: tLogRecord.GetUserAgent(),
+		IsAnonymous: tLogRecord.Extra.UserID == "" ||
+			servicelog.UserBelongsToList(tLogRecord.Extra.UserID, t.anonymousUsers),
 		Action:      "interaction",
-		UserID:      logRecord.Extra.UserID,
-		ClusterSize: logRecord.clusterSize,
+		UserID:      tLogRecord.Extra.UserID,
+		ClusterSize: tLogRecord.clusterSize,
 	}
 	if r.ClusterSize > 0 {
 		r.IsQuery = true
 	}
 	r.ID = createID(r, tzShiftMin)
 	return r, nil
+}
+
+func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {
@@ -90,11 +103,13 @@ func (t *Transformer) Preprocess(
 func NewTransformer(
 	bufferConf *load.BufferConf,
 	excludeIPList servicelog.ExcludeIPList,
+	anonymousUsers []int,
 	realtimeClock bool,
 ) *Transformer {
 	return &Transformer{
-		bufferConf:    bufferConf,
-		excludeIPList: excludeIPList,
-		analyzer:      clustering.NewAnalyzer[*InputRecord]("mapka", bufferConf, realtimeClock),
+		bufferConf:     bufferConf,
+		excludeIPList:  excludeIPList,
+		anonymousUsers: anonymousUsers,
+		analyzer:       clustering.NewAnalyzer[*InputRecord]("mapka", bufferConf, realtimeClock),
 	}
 }

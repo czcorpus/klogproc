@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"klogproc/analysis"
 	"klogproc/config"
 	"klogproc/load/batch"
@@ -26,8 +27,9 @@ import (
 	"klogproc/save/elastic"
 	"klogproc/servicelog"
 	"klogproc/trfactory"
-	"klogproc/users"
+	"os/signal"
 	"reflect"
+	"syscall"
 	"time"
 
 	"github.com/czcorpus/cnc-gokit/collections"
@@ -35,28 +37,83 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// cnkLogProcessor imports parsed log records represented
+// as InputRecord instances
+type cnkLogProcessor struct {
+	appType        string
+	appVersion     string
+	anonymousUsers []int
+	geoIPDb        *geoip2.Reader
+	chunkSize      int
+	numNonLoggable int
+	skipAnalysis   bool
+	logTransformer servicelog.LogItemTransformer
+	logBuffer      servicelog.ServiceLogBuffer
+}
+
+func (clp *cnkLogProcessor) recordIsLoggable(logRec servicelog.InputRecord) bool {
+	return logRec.IsProcessable()
+}
+
+// ProcItem transforms input log record into an output format.
+// In case an unsupported record is encountered, nil is returned.
+func (clp *cnkLogProcessor) ProcItem(
+	logRec servicelog.InputRecord,
+	tzShiftMin int,
+) []servicelog.OutputRecord {
+	if clp.recordIsLoggable(logRec) {
+		ans := make([]servicelog.OutputRecord, 0, 2)
+		for _, precord := range clp.logTransformer.Preprocess(logRec, clp.logBuffer) {
+			clp.logBuffer.AddRecord(precord)
+			rec, err := clp.logTransformer.Transform(precord, tzShiftMin)
+			if err != nil {
+				log.Error().Err(err).Msgf("Failed to transform item %s", precord)
+				return []servicelog.OutputRecord{}
+			}
+			applyLocation(precord, clp.geoIPDb, rec)
+			ans = append(ans, rec)
+		}
+		return ans
+	}
+	clp.numNonLoggable++
+	return []servicelog.OutputRecord{}
+}
+
+// GetAppType returns a string idenfier unique for a concrete application we
+// want to archive logs for (e.g. 'kontext', 'syd', ...)
+func (clp *cnkLogProcessor) GetAppType() string {
+	return clp.appType
+}
+
+// GetAppVersion returns an application version (major and minor version info, e.g. 0.15, 1.7)
+func (clp *cnkLogProcessor) GetAppVersion() string {
+	return clp.appVersion
+}
+
 func runBatchAction(
 	conf *config.Main,
 	options *ProcessOptions,
 	geoDB *geoip2.Reader,
-	userMap *users.UserMap,
 	finishEvent chan<- bool,
 ) {
 	// For debugging e-mail notification, you can pass `conf.EmailNotification`
 	// as the first argument and use the "batch" mode to tune log processing.
 	nullMailNot, _ := notifications.NewNotifier(nil, conf.ConomiNotification, conf.TimezoneLocation())
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	lt, err := trfactory.GetLogTransformer(
-		conf.LogFiles.AppType,
-		conf.LogFiles.Version,
-		conf.LogFiles.Buffer,
-		userMap,
-		conf.LogFiles.ExcludeIPList,
+		conf.LogFiles,
+		conf.AnonymousUsers,
 		false,
 		nullMailNot,
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to run batch action")
+		return
 	}
+
 	var buffStorage servicelog.ServiceLogBuffer
 	var stateFactory func() logbuffer.SerializableState
 	if conf.LogFiles.Buffer != nil && conf.LogFiles.Buffer.BotDetection != nil {
@@ -93,7 +150,7 @@ func runBatchAction(
 		)
 	}
 
-	processor := &CNKLogProcessor{
+	processor := &cnkLogProcessor{
 		geoIPDb:        geoDB,
 		chunkSize:      conf.ElasticSearch.PushChunkSize,
 		appType:        conf.LogFiles.AppType,
@@ -137,7 +194,7 @@ func runBatchAction(
 			wait <- struct{}{}
 		}()
 	}
-	proc := batch.CreateLogFileProcFunc(processor, options.datetimeRange, channelWriteES)
+	proc := batch.CreateLogFileProcFunc(ctx, processor, options.datetimeRange, channelWriteES)
 	proc(conf.LogFiles, worklog.GetLastRecord())
 	<-wait
 	log.Info().Msgf("Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)

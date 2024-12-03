@@ -46,7 +46,7 @@ type OutputRecord struct {
 	Lang2               string                   `json:"lang2"`
 	Queries             []string                 `json:"queries"`
 	GeoIP               servicelog.GeoDataRecord `json:"geoip,omitempty"`
-	ProcTime            float32                  `json:"procTime"`
+	ProcTime            float64                  `json:"procTime"`
 }
 
 // SetLocation sets all the location related properties

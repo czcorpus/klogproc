@@ -38,7 +38,7 @@ type OutputRecord struct {
 	IsQuery     bool                     `json:"isQuery"`
 	Params      *RequestParams           `json:"params"`
 	GeoIP       servicelog.GeoDataRecord `json:"geoip,omitempty"`
-	ProcTime    float32                  `json:"procTime"`
+	ProcTime    float64                  `json:"procTime"`
 }
 
 // SetLocation sets all the location related properties

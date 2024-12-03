@@ -1,6 +1,7 @@
 // Copyright 2023 Institute of the Czech National Corpus,
 //                Faculty of Arts, Charles University
 // Copyright 2023 Martin Zimandl <martin.zimandl@gmail.com>
+// Copyright 2024 Tomas Machalek <tomas.machalek@gmail.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +18,7 @@
 package kontext018
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
 	"time"
@@ -24,9 +26,11 @@ import (
 	"klogproc/analysis"
 	"klogproc/load"
 	"klogproc/notifications"
+	"klogproc/scripting"
 	"klogproc/servicelog"
 
 	"github.com/rs/zerolog/log"
+	lua "github.com/yuin/gopher-lua"
 )
 
 func convertUrlValue(v string, tryBool bool) any {
@@ -55,6 +59,14 @@ func exportArgs(action string, data map[string]interface{}) map[string]interface
 				}
 			case []string:
 				ans[k] = v
+			case []any:
+				tmp := make([]any, 0, len(tv))
+				for _, x := range tv {
+					if tx, ok := x.(fmt.Stringer); ok {
+						tmp = append(tmp, tx.String())
+					}
+				}
+				ans[k] = tmp
 			default:
 				log.Error().
 					Str("attr", k).
@@ -74,32 +86,124 @@ func exportArgs(action string, data map[string]interface{}) map[string]interface
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	analyzer      *analysis.BotAnalyzer[*QueryInputRecord]
-	ExcludeIPList servicelog.ExcludeIPList
+	analyzer       *analysis.BotAnalyzer[*QueryInputRecord]
+	excludeIPList  servicelog.ExcludeIPList
+	anonymousUsers []int
+}
+
+func (t *Transformer) AppType() string {
+	return servicelog.AppTypeKontext
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
-func (t *Transformer) Transform(logRecord *QueryInputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
-	corpname := importCorpname(logRecord)
+func (t *Transformer) Transform(
+	logRecord servicelog.InputRecord,
+	tzShiftMin int,
+) (servicelog.OutputRecord, error) {
+	tLogRecord, ok := logRecord.(*QueryInputRecord)
+	if !ok {
+		panic(servicelog.ErrFailedTypeAssertion)
+	}
+	corpname := importCorpname(tLogRecord)
 	r := &OutputRecord{
-		Type:           recType,
-		Action:         logRecord.Action,
+		Type:           t.AppType(),
+		Action:         tLogRecord.Action,
 		Corpus:         corpname,
-		AlignedCorpora: logRecord.GetAlignedCorpora(),
-		Datetime:       logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		datetime:       logRecord.GetTime(),
-		IPAddress:      logRecord.GetClientIP().String(),
-		IsAnonymous:    servicelog.UserBelongsToList(logRecord.UserID, anonymousUsers),
-		IsQuery:        isEntryQuery(logRecord.Action) && !logRecord.IsIndirectCall,
-		ProcTime:       logRecord.ProcTime,
-		QueryType:      importQueryType(logRecord),
-		UserAgent:      logRecord.Request.HTTPUserAgent,
-		UserID:         strconv.Itoa(logRecord.UserID),
-		Error:          logRecord.Error.AsPointer(),
-		Args:           exportArgs(logRecord.Action, logRecord.Args),
+		AlignedCorpora: tLogRecord.GetAlignedCorpora(),
+		Datetime:       tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		datetime:       tLogRecord.GetTime(),
+		IPAddress:      servicelog.IPToOutString(tLogRecord.GetClientIP()),
+		IsAnonymous:    servicelog.UserBelongsToList(tLogRecord.UserID, t.anonymousUsers),
+		IsQuery:        isEntryQuery(tLogRecord.Action) && !tLogRecord.IsIndirectCall,
+		ProcTime:       tLogRecord.ProcTime,
+		QueryType:      importQueryType(tLogRecord),
+		UserAgent:      tLogRecord.Request.HTTPUserAgent,
+		UserID:         strconv.Itoa(tLogRecord.UserID),
+		Error:          tLogRecord.Error.AsPointer(),
+		Args:           exportArgs(tLogRecord.Action, tLogRecord.Args),
 	}
 	r.ID = createID(r)
 	return r, nil
+}
+
+func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+	tRec, ok := rec.(*OutputRecord)
+	if !ok {
+		return scripting.ErrFailedTypeAssertion
+	}
+	switch name {
+	case "Type":
+		if tValue, ok := value.(lua.LString); ok {
+			tRec.Type = string(tValue)
+			return nil
+		}
+	case "Action":
+		if tValue, ok := value.(lua.LString); ok {
+			tRec.Action = string(tValue)
+			return nil
+		}
+	case "Corpus":
+		if tValue, ok := value.(lua.LString); ok {
+			tRec.Corpus = string(tValue)
+			return nil
+		}
+	case "AlignedCorpora":
+		if tValue, ok := value.(*lua.LTable); ok {
+			var err error
+			tRec.AlignedCorpora, err = scripting.LuaTableToSliceOfStrings(tValue)
+			return err
+		}
+	case "Datetime":
+		if tValue, ok := value.(lua.LString); ok {
+			tRec.datetime = servicelog.ConvertDatetimeString(string(tValue))
+			tRec.Datetime = string(tValue)
+			return nil
+		}
+	case "IPAddress":
+		if tValue, ok := value.(lua.LString); ok {
+			tRec.IPAddress = string(tValue)
+			return nil
+		}
+	case "IsAnonymous":
+		tRec.IsAnonymous = value == lua.LTrue
+		return nil
+	case "IsQuery":
+		tRec.IsQuery = value == lua.LTrue
+		return nil
+	case "ProcTime":
+		if tValue, ok := value.(lua.LNumber); ok {
+			tRec.ProcTime = float64(tValue)
+			return nil
+		}
+	case "QueryType":
+		if tValue, ok := value.(lua.LString); ok {
+			tRec.QueryType = string(tValue)
+			return nil
+		}
+	case "UserAgent":
+		if tValue, ok := value.(lua.LString); ok {
+			tRec.UserAgent = string(tValue)
+			return nil
+		}
+	case "UserID":
+		if tValue, ok := value.(lua.LString); ok {
+			tRec.UserID = string(tValue)
+			return nil
+		}
+	case "Error":
+		if tValue, ok := value.(lua.LString); ok {
+			tRec.Error = &servicelog.ErrorRecord{
+				Name: string(tValue),
+			}
+			return nil
+		}
+	case "Args":
+		if tValue, ok := value.(*lua.LTable); ok {
+			tRec.Args = scripting.LuaTableToMap(tValue)
+			return nil
+		}
+	}
+	return scripting.InvalidAttrError{Attr: name}
 }
 
 func (t *Transformer) HistoryLookupItems() int {
@@ -109,7 +213,7 @@ func (t *Transformer) HistoryLookupItems() int {
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
 ) []servicelog.InputRecord {
-	if t.ExcludeIPList.Excludes(rec) {
+	if t.excludeIPList.Excludes(rec) {
 		return []servicelog.InputRecord{}
 	}
 	return []servicelog.InputRecord{rec}
@@ -120,10 +224,12 @@ func NewTransformer(
 	realtimeClock bool,
 	emailNotifier notifications.Notifier,
 	excludeIPList []string,
+	anonymousUsers []int,
 ) *Transformer {
 	analyzer := analysis.NewBotAnalyzer[*QueryInputRecord]("kontext", bufferConf, realtimeClock, emailNotifier)
 	return &Transformer{
-		analyzer:      analyzer,
-		ExcludeIPList: excludeIPList,
+		analyzer:       analyzer,
+		excludeIPList:  excludeIPList,
+		anonymousUsers: anonymousUsers,
 	}
 }

@@ -18,12 +18,12 @@ import (
 	"flag"
 	"fmt"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"os"
 
 	"github.com/czcorpus/cnc-gokit/logging"
+	"github.com/oschwald/geoip2-golang"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -107,8 +107,6 @@ func help(topic string) {
 		fmt.Println(helpTexts[0])
 	case config.ActionTail:
 		fmt.Println(helpTexts[1])
-	case config.ActionRedis:
-		fmt.Println(helpTexts[2])
 	case config.ActionDocupdate:
 		fmt.Println(helpTexts[3])
 	default:
@@ -129,33 +127,57 @@ func setup(confPath, action string) *config.Main {
 
 func main() {
 	procOpts := new(ProcessOptions)
-	flag.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
-	flag.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
-	fromTimestamp := flag.String("from-time", "", "Batch process only the records with datetime greater or equal to this time (UNIX timestamp, or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm)")
-	toTimestamp := flag.String("to-time", "", "Batch process only the records with datetime less or equal to this UNIX timestamp, or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm)")
-	flag.BoolVar(&procOpts.analysisOnly, "analysis-only", false, "In batch mode, analyze logs for bots etc.")
+
+	batchCmd := flag.NewFlagSet(config.ActionBatch, flag.ExitOnError)
+	batchCmd.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data anywhere, just print them")
+	batchCmd.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
+	fromTimestamp := batchCmd.String("from-time", "", "Batch process only the records with datetime greater or equal to this time (UNIX timestamp, or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm)")
+	toTimestamp := batchCmd.String("to-time", "", "Batch process only the records with datetime less or equal to this UNIX timestamp, or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm)")
+	batchCmd.StringVar(&procOpts.scriptPath, "script-path", "", "Set or override Lua script path for log processing")
+	noScript := batchCmd.Bool("no-script", false, "disables Lua script for log processing (overrides both cmd arg and json conf)")
+	batchCmd.BoolVar(&procOpts.analysisOnly, "analysis-only", false, "In batch mode, analyze logs for bots etc.")
+
+	tailCmd := flag.NewFlagSet(config.ActionTail, flag.ExitOnError)
+	tailCmd.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data anywhere, just print them")
+	tailCmd.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
+
+	docupdateCmd := flag.NewFlagSet(config.ActionDocupdate, flag.ExitOnError)
+	docupdateCmd.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
+	docupdateCmd.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
+
+	docremoveCmd := flag.NewFlagSet(config.ActionDocremove, flag.ExitOnError)
+	docremoveCmd.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
+	docremoveCmd.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
+
+	keyremoveCmd := flag.NewFlagSet(config.ActionKeyremove, flag.ExitOnError)
+	keyremoveCmd.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
+	keyremoveCmd.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
+
+	testnotifCmd := flag.NewFlagSet(config.ActionTestNotification, flag.ExitOnError)
+
+	mkscriptCmd := flag.NewFlagSet(config.ActionMkScript, flag.ExitOnError)
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Klogproc - an utility for parsing and sending CNC app logs to ElasticSearch\n\nUsage:\n\t%s [options] [action] [config.json]\n\nAavailable actions:\n\t%s\n\nOptions:\n",
-			filepath.Base(
-				os.Args[0]),
-			strings.Join([]string{
-				config.ActionBatch,
-				config.ActionTail,
-				config.ActionRedis,
-				config.ActionDocupdate,
-				config.ActionKeyremove,
-				config.ActionHelp,
-				config.ActionVersion,
-			}, ", "))
-		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "Klogproc - an utility for processing CNC application logs\n\n"+
+			"Usage:\n"+
+			"\t%s batch [options] [config.json]\n"+
+			"\t%s tail [options] [config.json]\n"+
+			"\t%s docupdate [options] [config.json]\n"+
+			"\t%s docremove [options] [config.json]\n"+
+			"\t%s keyremove [options] [config.json]\n"+
+			"\t%s test-nofification [options] [config.json]\n"+
+			"\t%s mkscript [options] [config.json]\n"+
+			"\t%s version\n",
+			filepath.Base(os.Args[0]), filepath.Base(os.Args[0]), filepath.Base(os.Args[0]),
+			filepath.Base(os.Args[0]), filepath.Base(os.Args[0]), filepath.Base(os.Args[0]),
+			filepath.Base(os.Args[0]), filepath.Base(os.Args[0]))
 	}
 	flag.Parse()
 
 	var err error
 	procOpts.datetimeRange, err = batch.NewDateTimeRange(fromTimestamp, toTimestamp)
 	if err != nil {
-		log.Fatal().Msgf("%s", err)
+		log.Fatal().Err(err).Msg("failed to parse command line date range")
 	}
 
 	var conf *config.Main
@@ -165,20 +187,45 @@ func main() {
 	case config.ActionHelp:
 		help(flag.Arg(1))
 	case config.ActionDocupdate:
-		conf = setup(flag.Arg(1), action)
+		docupdateCmd.Parse(os.Args[2:])
+		conf = setup(docupdateCmd.Arg(0), action)
 		updateRecords(conf, procOpts)
 	case config.ActionDocremove:
-		conf = setup(flag.Arg(1), action)
+		docremoveCmd.Parse(os.Args[2:])
+		conf = setup(docremoveCmd.Arg(0), action)
 		removeRecords(conf, procOpts)
 	case config.ActionKeyremove:
-		conf = setup(flag.Arg(1), action)
+		keyremoveCmd.Parse(os.Args[2:])
+		conf = setup(keyremoveCmd.Arg(0), action)
 		removeKeyFromRecords(conf, procOpts)
-	case config.ActionBatch, config.ActionTail, config.ActionRedis:
-		conf = setup(flag.Arg(1), action)
+	case config.ActionBatch:
+		batchCmd.Parse(os.Args[2:])
+		conf = setup(batchCmd.Arg(0), action)
+		if *noScript {
+			procOpts.scriptPath = ""
+			conf.LogFiles.ScriptPath = ""
+		}
+		geoDb, err := geoip2.Open(conf.GeoIPDbPath)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to open geo IP database")
+		}
+		defer geoDb.Close()
+		finish := make(chan bool)
+		go runBatchAction(conf, procOpts, geoDb, finish)
+		<-finish
+	case config.ActionTail:
+		tailCmd.Parse(os.Args[2:])
+		conf = setup(tailCmd.Arg(0), action)
 		log.Print(startingServiceMsg)
-		processLogs(conf, action, procOpts)
+		geoDb, err := geoip2.Open(conf.GeoIPDbPath)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to open geo IP database")
+		}
+		defer geoDb.Close()
+		runTailAction(conf, procOpts, geoDb)
 	case config.ActionTestNotification:
-		conf = setup(flag.Arg(1), action)
+		testnotifCmd.Parse(os.Args[2:])
+		conf = setup(testnotifCmd.Arg(0), action)
 		notifier, err := notifications.NewNotifier(
 			conf.EmailNotification, conf.ConomiNotification, conf.TimezoneLocation())
 		if err != nil {
@@ -190,6 +237,13 @@ func main() {
 			map[string]any{"app": "klogproc", "dt": time.Now().In(conf.TimezoneLocation())},
 			"This is just a testing notification triggered by running `klogproc test-notification`",
 		)
+	case config.ActionMkScript:
+		mkscriptCmd.Parse(os.Args[2:])
+		if err := generateLuaStub(mkscriptCmd.Arg(0), mkscriptCmd.Arg(1)); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
 	case config.ActionVersion:
 		fmt.Printf("Klogproc %s\nbuild date: %s\nlast commit: %s\n", version, build, gitCommit)
 	default:

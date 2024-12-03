@@ -54,7 +54,7 @@ type OutputRecord struct {
 	IsAnonymous bool                     `json:"isAnonymous"`
 	IsQuery     bool                     `json:"isQuery"`
 	GeoIP       servicelog.GeoDataRecord `json:"geoip,omitempty"`
-	ProcTime    float32                  `json:"procTime"`
+	ProcTime    float64                  `json:"procTime"`
 	// TODO
 }
 

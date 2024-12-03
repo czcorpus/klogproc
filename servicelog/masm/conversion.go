@@ -18,8 +18,11 @@
 package masm
 
 import (
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"time"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // Transformer converts a source log object into a destination one
@@ -27,23 +30,38 @@ type Transformer struct {
 	ExcludeIPList servicelog.ExcludeIPList
 }
 
-func (t *Transformer) Transform(logRecord *InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (*OutputRecord, error) {
+func (t *Transformer) AppType() string {
+	return servicelog.AppTypeMapka
+}
+
+func (t *Transformer) Transform(
+	logRecord servicelog.InputRecord,
+	tzShiftMin int,
+) (servicelog.OutputRecord, error) {
+	tLogRecord, ok := logRecord.(*InputRecord)
+	if !ok {
+		panic(servicelog.ErrFailedTypeAssertion)
+	}
 	rec := &OutputRecord{
-		time:           logRecord.GetTime(),
-		Datetime:       logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		Type:           recType,
-		Level:          logRecord.Level,
-		Message:        logRecord.Message,
-		IsQuery:        logRecord.IsQuery,
-		Corpus:         logRecord.Corpus,
-		AlignedCorpora: logRecord.AlignedCorpora,
-		IsAutocomplete: logRecord.IsAutocomplete,
-		IsCached:       logRecord.IsCached,
-		ProcTimeSecs:   logRecord.ProcTimeSecs,
-		Error:          logRecord.ExportError(),
+		time:           tLogRecord.GetTime(),
+		Datetime:       tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		Type:           t.AppType(),
+		Level:          tLogRecord.Level,
+		Message:        tLogRecord.Message,
+		IsQuery:        tLogRecord.IsQuery,
+		Corpus:         tLogRecord.Corpus,
+		AlignedCorpora: tLogRecord.AlignedCorpora,
+		IsAutocomplete: tLogRecord.IsAutocomplete,
+		IsCached:       tLogRecord.IsCached,
+		ProcTimeSecs:   tLogRecord.ProcTimeSecs,
+		Error:          tLogRecord.ExportError(),
 	}
 	rec.ID = CreateID(rec)
 	return rec, nil
+}
+
+func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

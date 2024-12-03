@@ -19,7 +19,9 @@ package servicelog
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"klogproc/load"
 	"klogproc/logbuffer"
 	"net"
 	"strconv"
@@ -28,6 +30,7 @@ import (
 	"github.com/czcorpus/cnc-gokit/collections"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
+	lua "github.com/yuin/gopher-lua"
 )
 
 const (
@@ -95,6 +98,21 @@ const (
 	// AppTypeVLO defines a universal storage identifier for CNC-VLO
 	AppTypeVLO = "vlo"
 )
+
+var (
+	ErrFailedTypeAssertion = errors.New("failed type assertion")
+)
+
+// LogProcConf is a minimal generalized service processing
+// configuration. It should cover any service for both
+// tail processing and batch processing.
+type LogProcConf interface {
+	GetAppType() string
+	GetVersion() string
+	GetBuffer() *load.BufferConf
+	GetExcludeIPList() ExcludeIPList
+	GetScriptPath() string
+}
 
 type ServiceLogBuffer logbuffer.AbstractRecentRecords[InputRecord, logbuffer.SerializableState]
 
@@ -262,9 +280,22 @@ type LogItemTransformer interface {
 	// x < 0: illegal value
 	HistoryLookupItems() int
 
+	AppType() string
+
 	Preprocess(rec InputRecord, prevRecs ServiceLogBuffer) []InputRecord
 
-	Transform(logRec InputRecord, recType string, tzShiftMin int, anonymousUsers []int) (OutputRecord, error)
+	// Transform converts an input log record into a normalized output
+	// record suitable for storing into a common log storage (currently: Elasticsearch)
+	Transform(logRec InputRecord, tzShiftMin int) (OutputRecord, error)
+
+	// SetOutputProperty is expected to set a property of provided output record.
+	// This is mostly meant for scripting environment allowing script developer
+	// to modify (or even create from scratch) an output record.
+	//
+	// Transformer implementations which do not plan to support scripting should
+	// return an error - preferably ErrScriptingNotSupported but any error will
+	// be reported giving admin a chance to fix things.
+	SetOutputProperty(rec OutputRecord, name string, value lua.LValue) error
 }
 
 // AppErrorRegister describes a type which reacts to logged errors
@@ -360,6 +391,15 @@ func (er *ErrorRecord) String() string {
 // (i.e. whether it is nil or has zero Name)
 func (er *ErrorRecord) IsEmpty() bool {
 	return er == nil || er.Name == ""
+}
+
+func (er *ErrorRecord) ToMap() map[string]string {
+	ans := make(map[string]string)
+	if !er.IsEmpty() {
+		ans["Name"] = er.Name
+		ans["Anchor"] = er.Anchor
+	}
+	return ans
 }
 
 // AsPointer returns nil in case the ErrorRecord is empty,

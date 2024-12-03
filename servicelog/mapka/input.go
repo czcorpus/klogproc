@@ -45,7 +45,7 @@ type InputRecord struct {
 	Datetime      string
 	Request       *Request
 	Params        *RequestParams `json:"params"`
-	ProcTime      float32
+	ProcTime      float64
 	isProcessable bool
 }
 

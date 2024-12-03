@@ -49,14 +49,6 @@ type ExceptionInfo struct {
 	Stack []string `json:"stack"`
 }
 
-type GeneralInputRecord struct {
-	Logger    string        `json:"logger"`
-	Level     string        `json:"level"`
-	Date      string        `json:"date"`
-	Message   string        `json:"message"`
-	Exception ExceptionInfo `json:"exception"`
-}
-
 // Request is a simple representation of
 // HTTP request metadata used in KonText logging
 type Request struct {
@@ -68,9 +60,13 @@ type Request struct {
 
 // QueryInputRecord represents Kontext query log
 type QueryInputRecord struct {
-	GeneralInputRecord
+	Logger         string                 `json:"logger"`
+	Level          string                 `json:"level"`
+	Date           string                 `json:"date"`
+	Message        string                 `json:"message"`
+	Exception      ExceptionInfo          `json:"exception"`
 	UserID         int                    `json:"user_id"`
-	ProcTime       float32                `json:"proc_time"`
+	ProcTime       float64                `json:"proc_time"`
 	Action         string                 `json:"action"`
 	IsIndirectCall bool                   `json:"is_indirect_call"`
 	Request        Request                `json:"request"`

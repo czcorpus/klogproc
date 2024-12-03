@@ -17,6 +17,7 @@
 package kwords2
 
 import (
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"math"
 	"strconv"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/czcorpus/cnc-gokit/collections"
 	"github.com/rs/zerolog/log"
+	lua "github.com/yuin/gopher-lua"
 )
 
 func convertMultitypeInt(v any) int {
@@ -45,7 +47,8 @@ func convertMultitypeInt(v any) int {
 // --
 
 type Transformer struct {
-	ExcludeIPList servicelog.ExcludeIPList
+	ExcludeIPList  servicelog.ExcludeIPList
+	AnonymousUsers []int
 }
 
 func (t *Transformer) HistoryLookupItems() int {
@@ -61,25 +64,31 @@ func (t *Transformer) Preprocess(
 	return []servicelog.InputRecord{rec}
 }
 
+func (t *Transformer) AppType() string {
+	return servicelog.AppTypeKwords
+}
+
 func (t *Transformer) Transform(
-	logRecord *InputRecord,
-	recType string,
+	logRecord servicelog.InputRecord,
 	tzShiftMin int,
-	anonymousUsers []int,
-) (*OutputRecord, error) {
+) (servicelog.OutputRecord, error) {
+	tLogRecord, ok := logRecord.(*InputRecord)
+	if !ok {
+		panic(servicelog.ErrFailedTypeAssertion)
+	}
 	var args *Args
-	if logRecord.Action == "keywords/POST" {
+	if tLogRecord.Action == "keywords/POST" {
 		args = &Args{
-			Attrs:        logRecord.Body.Attrs,
-			Level:        logRecord.Body.Level,
-			EffectMetric: logRecord.Body.EffectMetric,
-			MinFreq:      convertMultitypeInt(logRecord.Body.MinFreq),
-			Percent:      convertMultitypeInt(logRecord.Body.Percent),
+			Attrs:        tLogRecord.Body.Attrs,
+			Level:        tLogRecord.Body.Level,
+			EffectMetric: tLogRecord.Body.EffectMetric,
+			MinFreq:      convertMultitypeInt(tLogRecord.Body.MinFreq),
+			Percent:      convertMultitypeInt(tLogRecord.Body.Percent),
 		}
 	}
-	userID := logRecord.Headers.XUserID
+	userID := tLogRecord.Headers.XUserID
 	if userID == "" {
-		switch tUserID := logRecord.UserID.(type) {
+		switch tUserID := tLogRecord.UserID.(type) {
 		case int:
 			userID = strconv.Itoa(tUserID)
 		case string:
@@ -98,26 +107,30 @@ func (t *Transformer) Transform(
 			log.Error().Err(err).Str("value", userID).Msg("failed to parse user ID entry")
 
 		} else {
-			isAnonymous = collections.SliceContains(anonymousUsers, v)
+			isAnonymous = collections.SliceContains(t.AnonymousUsers, v)
 		}
 	}
 	r := &OutputRecord{
-		Type:          recType,
-		Action:        logRecord.Action,
-		Corpus:        logRecord.Body.RefCorpus,
-		TextCharCount: logRecord.Body.TextCharCount,
-		TextWordCount: logRecord.Body.TextWordCount,
-		TextLang:      logRecord.Body.Lang,
-		Datetime:      logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		IPAddress:     logRecord.GetClientIP().String(),
+		Type:          t.AppType(),
+		Action:        tLogRecord.Action,
+		Corpus:        tLogRecord.Body.RefCorpus,
+		TextCharCount: tLogRecord.Body.TextCharCount,
+		TextWordCount: tLogRecord.Body.TextWordCount,
+		TextLang:      tLogRecord.Body.Lang,
+		Datetime:      tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		IPAddress:     tLogRecord.GetClientIP().String(),
 		IsAnonymous:   isAnonymous,
-		IsQuery:       logRecord.IsQuery,
-		UserAgent:     logRecord.Headers.UserAgent,
+		IsQuery:       tLogRecord.IsQuery,
+		UserAgent:     tLogRecord.Headers.UserAgent,
 		UserID:        userIDAttr,
-		Error:         logRecord.ExportError(),
+		Error:         tLogRecord.ExportError(),
 		Args:          args,
 		Version:       "2",
 	}
 	r.ID = createID(r)
 	return r, nil
+}
+
+func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }

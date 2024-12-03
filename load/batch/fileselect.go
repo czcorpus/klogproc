@@ -22,6 +22,7 @@ package batch
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -54,6 +55,7 @@ type Conf struct {
 	AppType                string                   `json:"appType"`
 	Buffer                 *load.BufferConf         `json:"buffer"`
 	ExcludeIPList          servicelog.ExcludeIPList `json:"excludeIpList"`
+	ScriptPath             string                   `json:"scriptPath"`
 
 	// Version represents a major and minor version signature as used in semantic versioning
 	// (e.g. 0.15, 1.2)
@@ -61,6 +63,30 @@ type Conf struct {
 	NumErrorsAlarm int    `json:"numErrorsAlarm"`
 	TZShift        int    `json:"tzShift"`
 	SkipAnalysis   bool   `json:"skipAnalysis"`
+}
+
+func (c *Conf) GetAppType() string {
+	return c.AppType
+}
+
+func (c *Conf) GetVersion() string {
+	return c.Version
+}
+
+func (c *Conf) GetBuffer() *load.BufferConf {
+	return c.Buffer
+}
+
+func (c *Conf) GetExcludeIPList() servicelog.ExcludeIPList {
+	return c.ExcludeIPList
+}
+
+func (c *Conf) GetScriptPath() string {
+	return c.ScriptPath
+}
+
+func (c *Conf) GetPath() string {
+	return c.SrcPath
 }
 
 func (conf *Conf) Validate() error {
@@ -187,9 +213,12 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, tzShift
 	return []string{}
 }
 
-// LogItemProcessor is an object handling a specific log file with a specific format
-type LogItemProcessor interface {
-	ProcItem(logRec servicelog.InputRecord, tzShiftMin int) []servicelog.OutputRecord
+// logItemProcessor is an object handling a specific log file with a specific format
+type logItemProcessor interface {
+	ProcItem(
+		logRec servicelog.InputRecord,
+		tzShiftMin int,
+	) []servicelog.OutputRecord
 	GetAppType() string
 	GetAppVersion() string
 }
@@ -200,11 +229,17 @@ type LogFileProcFunc = func(conf *Conf, minTimestamp int64)
 // CreateLogFileProcFunc connects a defined log transformer with output channels and
 // returns a customized function for file/directory processing.
 func CreateLogFileProcFunc(
-	processor LogItemProcessor,
+	ctx context.Context,
+	processor logItemProcessor,
 	datetimeRange DatetimeRange,
 	destChans ...chan *servicelog.BoundOutputRecord,
 ) LogFileProcFunc {
 	return func(conf *Conf, minTimestamp int64) {
+		defer func() {
+			for _, ch := range destChans {
+				close(ch)
+			}
+		}()
 		var files []string
 		if fsop.IsDir(conf.SrcPath) {
 			files = getFilesInDir(conf.SrcPath, minTimestamp, !conf.PartiallyMatchingFiles, conf.TZShift)
@@ -223,12 +258,17 @@ func CreateLogFileProcFunc(
 		if conf.TZShift != 0 {
 			log.Info().Msgf("Found time-zone correction %d minutes", conf.TZShift)
 		}
-		for _, file := range files {
+		for i, file := range files {
 			p := newParser(file, conf.TZShift, processor.GetAppType(), processor.GetAppVersion(), procAlarm)
-			p.Parse(minTimestamp, processor, datetimeRange, destChans...)
-		}
-		for _, ch := range destChans {
-			close(ch)
+			p.Parse(ctx, minTimestamp, processor, datetimeRange, destChans...)
+			select {
+			case <-ctx.Done():
+				log.Warn().
+					Strs("rest", files[i:]).
+					Msg("won't process other files due to cancellation")
+				return
+			default:
+			}
 		}
 		procAlarm.Evaluate()
 		procAlarm.Reset()

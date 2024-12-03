@@ -41,18 +41,18 @@ func isCloseQuot(start, c byte) bool {
 	return start == '"' && c == '"' || start == '[' && c == ']'
 }
 
-func getProcTime(procTimeExpr string) (float32, error) {
+func getProcTime(procTimeExpr string) (float64, error) {
 	if procTimeExpr == "" {
 		return -1, nil
 	}
 	srch := strings.Index(procTimeExpr, "rt=")
 	if srch == 0 {
 		pts := strings.Trim(procTimeExpr[3:], "\"")
-		pt, err := strconv.ParseFloat(pts, 32)
+		pt, err := strconv.ParseFloat(pts, 64)
 		if err != nil {
 			return -1, fmt.Errorf("failed to parse proc. time %s: %s", procTimeExpr, err)
 		}
-		return float32(pt), nil
+		return float64(pt), nil
 	}
 	return -1, fmt.Errorf("failed to parse proc. time %s", procTimeExpr)
 }
@@ -132,7 +132,7 @@ type ParsedAccessLog struct {
 	URLArgs     url.Values
 	Referrer    string
 	UserAgent   string
-	ProcTime    float32
+	ProcTime    float64
 }
 
 // ParseLine parses a HTTP access log format line

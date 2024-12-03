@@ -17,14 +17,12 @@
 package tail
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 
 	"klogproc/load"
@@ -50,6 +48,31 @@ type FileConf struct {
 	TZShift       int                      `json:"tzShift"`
 	Buffer        *load.BufferConf         `json:"buffer"`
 	ExcludeIPList servicelog.ExcludeIPList `json:"excludeIpList"`
+	ScriptPath    string                   `json:"scriptPath"`
+}
+
+func (fc *FileConf) GetAppType() string {
+	return fc.AppType
+}
+
+func (fc *FileConf) GetVersion() string {
+	return fc.Version
+}
+
+func (fc *FileConf) GetBuffer() *load.BufferConf {
+	return fc.Buffer
+}
+
+func (fc *FileConf) GetExcludeIPList() servicelog.ExcludeIPList {
+	return fc.ExcludeIPList
+}
+
+func (fc *FileConf) GetScriptPath() string {
+	return fc.ScriptPath
+}
+
+func (fc *FileConf) GetPath() string {
+	return fc.Path
 }
 
 func (fc *FileConf) Validate() error {
@@ -60,14 +83,6 @@ func (fc *FileConf) Validate() error {
 		return fc.Buffer.Validate()
 	}
 	return nil
-}
-
-func (fc *FileConf) GetPath() string {
-	return fc.Path
-}
-
-func (fc *FileConf) GetAppType() string {
-	return fc.AppType
 }
 
 // Conf wraps all the configuration for the 'tail' function
@@ -125,7 +140,7 @@ func (conf *Conf) Validate() error {
 		return fmt.Errorf("logTail.worklogDir failed to validate: %w", err)
 	}
 	if !isd {
-		return fmt.Errorf("logTail.worklogPath does not refer to a file")
+		return fmt.Errorf("logTail.worklogDir does not refer to a file")
 	}
 	isd, err = fs.IsDir(conf.LogBufferStateDir)
 	if err != nil {
@@ -205,91 +220,104 @@ func initReaders(processors []FileTailProcessor, worklog *Worklog) ([]*FileTailR
 	return readers, nil
 }
 
-// Run starts the process of (multiple) log watching
-func Run(conf *Conf, processors []FileTailProcessor, finishEvent chan<- bool) {
-	tickerInterval := time.Duration(conf.IntervalSecs)
-	if tickerInterval == 0 {
-		log.Warn().Msgf("intervalSecs for tail mode not set, using default %ds", defaultTickerIntervalSecs)
-		tickerInterval = time.Duration(defaultTickerIntervalSecs)
+// GoRun starts the process of (multiple) log watching
+func GoRun(
+	ctx context.Context,
+	conf *Conf,
+	processors []FileTailProcessor,
+	worklogReset bool,
+) <-chan error {
+	errChan := make(chan error, 1)
+	go func() {
+		defer close(errChan)
+		tickerInterval := time.Duration(conf.IntervalSecs)
+		if tickerInterval == 0 {
+			log.Warn().Msgf("intervalSecs for tail mode not set, using default %ds", defaultTickerIntervalSecs)
+			tickerInterval = time.Duration(defaultTickerIntervalSecs)
 
-	} else {
-		log.Info().Msgf("configured to check for file changes every %d second(s)", tickerInterval)
-	}
-	ticker := time.NewTicker(tickerInterval * time.Second)
-	quitChan := make(chan bool, 10)
-	syscallChan := make(chan os.Signal, 10)
-	signal.Notify(syscallChan, os.Interrupt)
-	signal.Notify(syscallChan, syscall.SIGTERM)
-
-	sum := sha1.New()
-	for _, v := range conf.Files {
-		if _, err := sum.Write([]byte(v.Path)); err != nil {
-			log.Error().Err(err).Send()
-			quitChan <- true
-			break
+		} else {
+			log.Info().Msgf("configured to check for file changes every %d second(s)", tickerInterval)
 		}
-	}
-	worklog := NewWorklog(conf.WorklogDir, hex.EncodeToString(sum.Sum(nil)[:8]))
-	var readers []*FileTailReader
-	err := worklog.Init()
-	if err != nil {
-		log.Error().Err(err).Send()
-		quitChan <- true
+		ticker := time.NewTicker(tickerInterval * time.Second)
 
-	} else {
-		readers, err = initReaders(processors, worklog)
+		sum := sha1.New()
+		for _, v := range conf.Files {
+			if _, err := sum.Write([]byte(v.Path)); err != nil {
+				log.Error().Err(err).Send()
+				errChan <- err
+				break
+			}
+		}
+		worklog := NewWorklog(conf.WorklogDir, hex.EncodeToString(sum.Sum(nil)[:8]))
+		if worklogReset {
+			log.Warn().Str("worklogPath", worklog.storeFilePath).Msg("reset worklog")
+			err := worklog.Reset()
+			if err != nil {
+				log.Fatal().Msgf("unable to initialize worklog: %s", err)
+			}
+		}
+
+		var readers []*FileTailReader
+		err := worklog.Init(ctx)
 		if err != nil {
 			log.Error().Err(err).Send()
-			quitChan <- true
-		}
-	}
+			errChan <- err
 
-	for {
-		select {
-		case <-ticker.C:
-			var wg sync.WaitGroup
-			wg.Add(len(readers))
-			for _, reader := range readers {
-				go func(rdr *FileTailReader) {
-					actionChan, writer := rdr.Processor().OnCheckStart()
-					go func() {
-						for action := range actionChan {
-							switch action := action.(type) {
-							case save.ConfirmMsg:
-								if action.Error != nil {
-									log.Error().Err(action.Error).Msg("Failed to write data to one of target databases")
+		} else {
+			readers, err = initReaders(processors, worklog)
+			if err != nil {
+				log.Error().Err(err).Send()
+				errChan <- err
+			}
+		}
+
+		for {
+			select {
+			case <-ticker.C:
+				var wg sync.WaitGroup
+				wg.Add(len(readers))
+				for _, reader := range readers {
+					go func(ctx2 context.Context, rdr *FileTailReader) {
+						actionChan, writer := rdr.Processor().OnCheckStart()
+						go func(ctx3 context.Context) {
+							for {
+								select {
+								case action, ok := <-actionChan:
+									if !ok {
+										wg.Done()
+										return
+									}
+									switch tAction := action.(type) {
+									case save.ConfirmMsg:
+										if tAction.Error != nil {
+											log.Error().Err(tAction.Error).Msg("Failed to write data to one of target databases")
+										}
+										worklog.UpdateFileInfo(tAction.FilePath, tAction.Position)
+									case save.IgnoredItemMsg:
+										worklog.UpdateFileInfo(tAction.FilePath, tAction.Position)
+									}
+								case <-ctx.Done():
+									log.Warn().
+										Str("logPath", rdr.filePath).
+										Str("appType", rdr.AppType()).
+										Msg("stopped listening for data from a log")
+									wg.Done()
+									return
 								}
-								worklog.UpdateFileInfo(action.FilePath, action.Position)
-							case save.IgnoredItemMsg:
-								worklog.UpdateFileInfo(action.FilePath, action.Position)
 							}
-						}
-						wg.Done()
-					}()
-					prevPos := worklog.GetData(rdr.processor.FilePath())
-					rdr.ApplyNewContent(rdr.Processor(), writer, prevPos)
-					rdr.Processor().OnCheckStop(writer)
-				}(reader)
-			}
-			wg.Wait()
-
-		case quit := <-quitChan:
-			if quit {
-				ticker.Stop()
-				for _, processor := range processors {
-					processor.OnQuit()
+						}(ctx2)
+						prevPos := worklog.GetData(rdr.processor.FilePath())
+						rdr.ApplyNewContent(ctx2, rdr.Processor(), writer, prevPos)
+						rdr.Processor().OnCheckStop(writer)
+					}(ctx, reader)
 				}
-				worklog.Close()
-				finishEvent <- true
+				wg.Wait()
+
+			case <-ctx.Done():
+				log.Warn().Msg("tail processing cancelled due to a cancellation")
+				return
 			}
-		case <-syscallChan:
-			log.Warn().Msg("Caught signal, exiting...")
-			ticker.Stop()
-			for _, reader := range readers {
-				reader.Processor().OnQuit()
-			}
-			worklog.Close()
-			finishEvent <- true
 		}
-	}
+	}()
+	return errChan
 }

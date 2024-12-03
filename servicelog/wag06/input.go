@@ -41,7 +41,7 @@ type InputRecord struct {
 	Queries             []string
 	Datetime            string
 	Request             Request
-	ProcTime            float32
+	ProcTime            float64
 	isProcessable       bool
 	IsMobileClient      bool
 	HasPosSpecification bool

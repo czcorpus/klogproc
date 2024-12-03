@@ -20,9 +20,12 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"strconv"
 	"time"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 func createID(apgr *OutputRecord) string {
@@ -38,33 +41,43 @@ type Transformer struct {
 	ExcludeIPList servicelog.ExcludeIPList
 }
 
+func (t *Transformer) AppType() string {
+	return servicelog.AppTypeAPIGuard
+}
+
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord *InputRecord,
-	recType string,
+	logRecord servicelog.InputRecord,
 	tzShiftMin int,
-	anonymousUsers []int,
-) (*OutputRecord, error) {
+) (servicelog.OutputRecord, error) {
+	tLogRecord, ok := logRecord.(*InputRecord)
+	if !ok {
+		panic(servicelog.ErrFailedTypeAssertion)
+	}
 	var sUserID string
-	if logRecord.UserID != nil {
-		sUserID = strconv.Itoa(*logRecord.UserID)
+	if tLogRecord.UserID != nil {
+		sUserID = strconv.Itoa(*tLogRecord.UserID)
 	}
 	corrDT := logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin))
 	r := &OutputRecord{
-		Type:       logRecord.Type,
+		Type:       tLogRecord.Type,
 		IsQuery:    true,
-		Service:    logRecord.Service,
-		ProcTime:   logRecord.ProcTime,
-		IsCached:   logRecord.IsCached,
-		IsIndirect: logRecord.IsIndirect,
+		Service:    tLogRecord.Service,
+		ProcTime:   tLogRecord.ProcTime,
+		IsCached:   tLogRecord.IsCached,
+		IsIndirect: tLogRecord.IsIndirect,
 		UserID:     sUserID,
-		IPAddress:  logRecord.IPAddress,
-		UserAgent:  logRecord.UserAgent,
+		IPAddress:  tLogRecord.IPAddress,
+		UserAgent:  tLogRecord.UserAgent,
 		datetime:   corrDT,
 		Datetime:   corrDT.Format(time.RFC3339),
 	}
 	r.ID = createID(r)
 	return r, nil
+}
+
+func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

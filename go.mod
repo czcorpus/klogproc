@@ -12,6 +12,7 @@ require (
 	github.com/oschwald/geoip2-golang v1.8.0
 	github.com/rs/zerolog v1.31.0
 	github.com/stretchr/testify v1.8.4
+	github.com/yuin/gopher-lua v1.1.1
 )
 
 require (

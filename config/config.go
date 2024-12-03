@@ -16,7 +16,6 @@ package config
 
 import (
 	"encoding/json"
-	"flag"
 	"time"
 
 	"klogproc/common"
@@ -34,11 +33,11 @@ import (
 const (
 	ActionBatch            = "batch"
 	ActionTail             = "tail"
-	ActionRedis            = "redis"
 	ActionKeyremove        = "keyremove"
 	ActionDocupdate        = "docupdate"
 	ActionDocremove        = "docremove"
 	ActionHelp             = "help"
+	ActionMkScript         = "mkscript"
 	ActionVersion          = "version"
 	ActionTestNotification = "test-notification"
 
@@ -52,7 +51,6 @@ type Main struct {
 	GeoIPDbPath        string                         `json:"geoIpDbPath"`
 	AnonymousUsers     []int                          `json:"anonymousUsers"`
 	Logging            logging.LoggingConf            `json:"logging"`
-	CustomConfDir      string                         `json:"customConfDir"`
 	RecUpdate          elastic.DocUpdConf             `json:"recordUpdate"`
 	RecRemove          elastic.DocRemConf             `json:"recordRemove"`
 	ElasticSearch      elastic.ConnectionConf         `json:"elasticSearch"`
@@ -76,7 +74,7 @@ func Validate(conf *Main, action string) {
 	if conf.ElasticSearch.IsConfigured() {
 		err = conf.ElasticSearch.Validate()
 		if err != nil {
-			log.Fatal().Msgf("%s", err)
+			log.Fatal().Err(err).Msg("failed to validate Elasticsearch configuration")
 		}
 	}
 	if !fsop.IsFile(conf.GeoIPDbPath) {
@@ -108,14 +106,14 @@ func Validate(conf *Main, action string) {
 
 // Load loads main configuration (either from a local fs or via http(s))
 func Load(path string) *Main {
-	rawData, err := common.LoadSupportedResource(flag.Arg(1))
+	rawData, err := common.LoadSupportedResource(path)
 	if err != nil {
-		log.Fatal().Msgf("%s", err)
+		log.Fatal().Err(err).Str("confSrc", path).Msgf("failed to load configuration")
 	}
 	var conf Main
 	err = json.Unmarshal(rawData, &conf)
 	if err != nil {
-		log.Fatal().Msgf("%s", err)
+		log.Fatal().Err(err).Str("confSrc", path).Msgf("failed to unmarshal configuration")
 	}
 	return &conf
 }

@@ -39,7 +39,7 @@ type InputRecord struct {
 	Datetime      string
 	User          string
 	Request       Request
-	ProcTime      float32
+	ProcTime      float64
 	isProcessable bool
 	// TODO
 }

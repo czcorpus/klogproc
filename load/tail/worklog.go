@@ -17,6 +17,7 @@
 package tail
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -61,7 +62,7 @@ type Worklog struct {
 
 // Init initializes the worklog. It must be called before any other
 // operation.
-func (w *Worklog) Init() error {
+func (w *Worklog) Init(ctx context.Context) error {
 	if w.initialized {
 		panic("Worklog already initialized")
 	}
@@ -91,43 +92,62 @@ func (w *Worklog) Init() error {
 	}
 	w.updRequests = make(chan updateRequest)
 	w.initialized = true
-	w.goAutosave()
-	w.goReadRequests()
+	w.goAutosave(ctx)
+	w.goReadRequests(ctx)
 	return nil
 }
 
-func (w *Worklog) goAutosave() {
+func (w *Worklog) Reset() error {
+	return os.Truncate(w.storeFilePath, 0)
+}
+
+func (w *Worklog) goAutosave(ctx context.Context) {
 	ticker := time.NewTicker(worklogAutosaveInterval)
 	go func() {
-		for range ticker.C {
-			if err := w.save(); err != nil {
-				log.Error().Err(err).Msg("failed to autosave worklog")
+		for {
+			select {
+			case <-ticker.C:
+				if err := w.save(); err != nil {
+					log.Error().Err(err).Msg("failed to autosave worklog")
+				}
+			case <-ctx.Done():
+				log.Warn().Msg("worklog saving and closing due to cancellation")
+				if err := w.save(); err != nil {
+					log.Error().Err(err).Msg("failed to save worklog")
+				}
+				return
 			}
 		}
 	}()
 }
 
-func (w *Worklog) goReadRequests() {
+func (w *Worklog) goReadRequests(ctx context.Context) {
 	go func() {
-		for req := range w.updRequests {
-			curr := w.rec.Get(req.FilePath)
-			if curr.Inode != req.Value.Inode {
-				log.Warn().Msgf("inode for %s has changed from %d to %d", req.FilePath, curr.Inode, req.Value.Inode)
-			}
-			// rules for worklog update:
-			// 1) if inodes differ then write the new record
-			// 2) non-written incoming item always overwrites a written one (to make sure we try again from its position)
-			// 3) non-written incoming rewrites the current written no matter how old it is
-			// 4) written incoming item can fix current non-written if its older or of the same age
-			// 5) if both are written then only more recent (higher seek) can overwrite the current one
-			if curr.Inode != req.Value.Inode ||
-				!curr.Written && curr.SeekStart >= req.Value.SeekStart ||
-				curr.Written && req.Value.SeekEnd >= curr.SeekEnd ||
-				!req.Value.Written && (curr.Written || req.Value.SeekEnd < curr.SeekEnd) {
-				w.rec.Set(req.FilePath, req.Value)
+		for {
+			select {
+			case req := <-w.updRequests:
+				curr := w.rec.Get(req.FilePath)
+				if curr.Inode != req.Value.Inode {
+					log.Warn().Msgf("inode for %s has changed from %d to %d", req.FilePath, curr.Inode, req.Value.Inode)
+				}
+				// rules for worklog update:
+				// 1) if inodes differ then write the new record
+				// 2) non-written incoming item always overwrites a written one (to make sure we try again from its position)
+				// 3) non-written incoming rewrites the current written no matter how old it is
+				// 4) written incoming item can fix current non-written if its older or of the same age
+				// 5) if both are written then only more recent (higher seek) can overwrite the current one
+				if curr.Inode != req.Value.Inode ||
+					!curr.Written && curr.SeekStart >= req.Value.SeekStart ||
+					curr.Written && req.Value.SeekEnd >= curr.SeekEnd ||
+					!req.Value.Written && (curr.Written || req.Value.SeekEnd < curr.SeekEnd) {
+					w.rec.Set(req.FilePath, req.Value)
 
-			} else {
-				log.Warn().Msgf("worklog[%s] item %v won't be saved due to the current %v", req.FilePath, req.Value, curr)
+				} else {
+					log.Warn().Msgf("worklog[%s] item %v won't be saved due to the current %v", req.FilePath, req.Value, curr)
+				}
+			case <-ctx.Done():
+				log.Warn().Msg("worklog stopping to listen for updates due to cancellation")
+				return
 			}
 		}
 	}()
