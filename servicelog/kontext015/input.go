@@ -21,8 +21,11 @@ import (
 	"fmt"
 	"klogproc/servicelog"
 	"net"
+	"reflect"
 	"regexp"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -34,7 +37,7 @@ func importDatetimeString(dateStr string) (string, error) {
 	if len(srch) > 0 {
 		return fmt.Sprintf("%sT%s", srch[1], srch[3]), nil
 	}
-	return "", fmt.Errorf("Failed to import datetime \"%s\"", dateStr)
+	return "", fmt.Errorf("failed to import datetime \"%s\"", dateStr)
 }
 
 // ImportJSONLog parses original JSON record with some
@@ -52,16 +55,22 @@ func ImportJSONLog(jsonLine []byte) (*InputRecord, error) {
 	record.Date = dt
 
 	v := record.Args["uses_context"]
-	if vt, ok := v.(float64); ok {
-		if vt > 0 {
-			record.Args["uses_context"] = true
-
-		} else {
-			record.Args["uses_context"] = false
-		}
-
-	} else if vt, ok := v.(bool); ok {
+	switch vt := v.(type) {
+	case float64:
+		record.Args["uses_context"] = vt > 0
+	case float32:
+		record.Args["uses_context"] = vt > 0
+	case int:
+		record.Args["uses_context"] = vt > 0
+	case bool:
 		record.Args["uses_context"] = vt
+	default:
+		log.Error().
+			Str("appType", "kontext").
+			Str("version", "0.15").
+			Str("type", reflect.TypeOf(v).String()).
+			Msg("failed to process args.uses_context - unsupported type (removing from result)")
+		delete(record.Args, "uses_context")
 	}
 
 	return &record, nil
