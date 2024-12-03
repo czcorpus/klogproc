@@ -44,7 +44,7 @@ func convertUrlValue(v string, tryBool bool) any {
 	return ans
 }
 
-func exportArgs(action string, data map[string]interface{}) map[string]interface{} {
+func exportArgs(action string, data map[string]any) map[string]any {
 	ans := make(map[string]interface{})
 	switch action {
 	case "/user/ajax_query_history":
@@ -80,6 +80,19 @@ func exportArgs(action string, data map[string]interface{}) map[string]interface
 				ans[k] = v
 			}
 		}
+	}
+	// normalize 'uses_context' arg to comply with Elasticsearch doc specification
+	v := data["uses_context"]
+	switch vt := v.(type) {
+	case float64:
+		if vt > 0 {
+			ans["uses_context"] = true
+
+		} else {
+			ans["uses_context"] = false
+		}
+	case bool:
+		ans["uses_context"] = vt
 	}
 	return ans
 }
