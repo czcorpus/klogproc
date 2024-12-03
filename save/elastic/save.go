@@ -19,6 +19,7 @@ package elastic
 import (
 	"bytes"
 	"fmt"
+	"time"
 
 	"klogproc/save"
 	"klogproc/servicelog"
@@ -54,6 +55,32 @@ func BulkWriteRequest(data [][]byte, appType string, esconf *ConnectionConf) err
 	}
 	log.Debug().Msgf("Inserted chunk of %d items to ElasticSearch", (len(data)-1)/2)
 	return nil
+}
+
+// WriteBulkWithError is used for data where at least one error is expected.
+// It splits data into two halfs and tries to insert them independently.
+// Then it works recursively until chunks are inserted all small enough to
+// stop. This allows for not dropping a whole chunk because of a single error
+// (or few errors). The action itself is not recoverable so in case it fails
+// from any reason, the items we wanted to write are definitely lost.
+func WriteBulkWithError(data [][]byte, appType string, esconf *ConnectionConf) {
+	if len(data) <= 10 {
+		if err := BulkWriteRequest(data, appType, esconf); err != nil {
+			log.Error().Err(err).Int("chunkSize", len(data)).Msg("failed to insert exploded chunk")
+
+		} else {
+			log.Info().Int("chunkSize", len(data)).Msg("successfully inserted exploded chunk ")
+		}
+
+	} else {
+		split := len(data) / 2
+		data1 := data[:split]
+		time.Sleep(2 * time.Second)
+		WriteBulkWithError(data1, appType, esconf)
+		data2 := data[split:]
+		time.Sleep(2 * time.Second)
+		WriteBulkWithError(data2, appType, esconf)
+	}
 }
 
 // ----
@@ -104,7 +131,15 @@ func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan 
 				if i == conf.PushChunkSize*2 {
 					data[i] = []byte("\n")
 					esErr = BulkWriteRequest(data[:i+1], appType, conf)
-					chunkPosition.Written = esErr == nil
+					chunkPosition.Written = true
+					if esErr != nil {
+						dataCopy := make([][]byte, len(data[:i+1]))
+						go func() {
+							log.Warn().Err(esErr).Msg("due to inserting error, klogproc will try to insert smaller chunks")
+							copy(dataCopy, data[:i+1])
+							WriteBulkWithError(dataCopy, appType, conf)
+						}()
+					}
 					confirmMsg := save.ConfirmMsg{
 						FilePath: rec.FilePath,
 						Position: *chunkPosition,
