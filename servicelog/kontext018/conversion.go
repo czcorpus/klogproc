@@ -59,7 +59,7 @@ func exportArgs(action string, data map[string]any) map[string]any {
 				}
 			case []string:
 				ans[k] = v
-			case []any:
+			case []interface{}:
 				tmp := make([]any, 0, len(tv))
 				for _, x := range tv {
 					if tx, ok := x.(fmt.Stringer); ok {
