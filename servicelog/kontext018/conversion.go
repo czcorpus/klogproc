@@ -82,17 +82,21 @@ func exportArgs(action string, data map[string]any) map[string]any {
 		}
 	}
 	// normalize 'uses_context' arg to comply with Elasticsearch doc specification
+	delete(ans, "uses_context")
 	v := data["uses_context"]
 	switch vt := v.(type) {
 	case float64:
-		if vt > 0 {
-			ans["uses_context"] = true
-
-		} else {
-			ans["uses_context"] = false
-		}
+		ans["uses_context"] = vt > 0
+	case float32:
+		ans["uses_context"] = vt > 0
+	case int:
+		ans["uses_context"] = vt > 0
 	case bool:
 		ans["uses_context"] = vt
+	default:
+		log.Error().
+			Str("type", reflect.TypeOf(v).String()).
+			Msg("failed to process args.uses_context - unsupported type")
 	}
 	return ans
 }
