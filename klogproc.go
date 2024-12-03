@@ -129,7 +129,7 @@ func main() {
 	procOpts := new(ProcessOptions)
 
 	batchCmd := flag.NewFlagSet(config.ActionBatch, flag.ExitOnError)
-	batchCmd.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
+	batchCmd.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data anywhere, just print them")
 	batchCmd.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
 	fromTimestamp := batchCmd.String("from-time", "", "Batch process only the records with datetime greater or equal to this time (UNIX timestamp, or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm)")
 	toTimestamp := batchCmd.String("to-time", "", "Batch process only the records with datetime less or equal to this UNIX timestamp, or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm)")
@@ -138,6 +138,7 @@ func main() {
 	batchCmd.BoolVar(&procOpts.analysisOnly, "analysis-only", false, "In batch mode, analyze logs for bots etc.")
 
 	tailCmd := flag.NewFlagSet(config.ActionTail, flag.ExitOnError)
+	tailCmd.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data anywhere, just print them")
 	tailCmd.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
 
 	docupdateCmd := flag.NewFlagSet(config.ActionDocupdate, flag.ExitOnError)

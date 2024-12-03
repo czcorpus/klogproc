@@ -18,6 +18,7 @@
 package kontext018
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
 	"time"
@@ -58,6 +59,14 @@ func exportArgs(action string, data map[string]interface{}) map[string]interface
 				}
 			case []string:
 				ans[k] = v
+			case []any:
+				tmp := make([]any, 0, len(tv))
+				for _, x := range tv {
+					if tx, ok := x.(fmt.Stringer); ok {
+						tmp = append(tmp, tx.String())
+					}
+				}
+				ans[k] = tmp
 			default:
 				log.Error().
 					Str("attr", k).
@@ -103,7 +112,7 @@ func (t *Transformer) Transform(
 		AlignedCorpora: tLogRecord.GetAlignedCorpora(),
 		Datetime:       tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
 		datetime:       tLogRecord.GetTime(),
-		IPAddress:      tLogRecord.GetClientIP().String(),
+		IPAddress:      servicelog.IPToOutString(tLogRecord.GetClientIP()),
 		IsAnonymous:    servicelog.UserBelongsToList(tLogRecord.UserID, t.anonymousUsers),
 		IsQuery:        isEntryQuery(tLogRecord.Action) && !tLogRecord.IsIndirectCall,
 		ProcTime:       tLogRecord.ProcTime,

@@ -18,6 +18,7 @@ package servicelog
 
 import (
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -98,7 +99,16 @@ func ConvertDatetimeStringNoTZ(datetime string) time.Time {
 	return time.Time{}
 }
 
+// ConvertDatetimeStringWithMillisNoTZconverts datetime
+// format 2006-01-02T15:04:05.000000 into time.Time.
+// In case the fractional part is longer than 6 positions, the
+// rest is dropped without rounding (which is still way too precise
+// for our purposes).
 func ConvertDatetimeStringWithMillisNoTZ(datetime string) time.Time {
+	tmp := strings.Split(datetime, ".")
+	if len(tmp) == 2 && len(tmp[1]) > 6 {
+		datetime = tmp[0] + "." + tmp[1][:6]
+	}
 	t, err := time.Parse("2006-01-02T15:04:05.000000", datetime)
 	if err == nil {
 		return t
@@ -114,4 +124,14 @@ func ConvertAccessLogDatetimeString(datetime string) time.Time {
 	}
 	log.Error().Err(err).Str("value", datetime).Msgf("failed to convert datetime string (access log format)")
 	return time.Time{}
+}
+
+// IPToOutString makes safer conversion (for our purposes)
+// than default String() of net.IP. In case of empty or
+// nil value, it returns an empty string.
+func IPToOutString(ip net.IP) string {
+	if len(ip) == 0 || ip.IsUnspecified() {
+		return ""
+	}
+	return ip.String()
 }

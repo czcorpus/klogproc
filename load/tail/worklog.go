@@ -96,6 +96,10 @@ func (w *Worklog) Init() error {
 	return nil
 }
 
+func (w *Worklog) Reset() error {
+	return os.Truncate(w.storeFilePath, 0)
+}
+
 func (w *Worklog) goAutosave() {
 	ticker := time.NewTicker(worklogAutosaveInterval)
 	go func() {

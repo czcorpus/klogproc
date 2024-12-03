@@ -70,11 +70,45 @@ func importField(L *lua.LState, field reflect.Value) lua.LValue {
 
 func getIRecProp(L *lua.LState, inputRec servicelog.InputRecord, name string) lua.LValue {
 	val := reflect.ValueOf(inputRec).Elem()
-	field := val.FieldByName(name)
-	if !field.IsValid() {
-		return lua.LNil
+	if field := val.FieldByName(name); field.IsValid() {
+		return importField(L, field)
 	}
-	return importField(L, field)
+	switch name {
+	case "IsProcessable":
+		return L.NewFunction(func(l *lua.LState) int {
+			ans := inputRec.IsProcessable()
+			if ans {
+				L.Push(lua.LTrue)
+
+			} else {
+				L.Push(lua.LFalse)
+			}
+			return 1
+		})
+	case "ClusterSize":
+		return L.NewFunction(func(l *lua.LState) int {
+			ans := inputRec.ClusterSize()
+			L.Push(lua.LNumber(ans))
+			return 1
+		})
+	case "ClusteringClientID":
+		return L.NewFunction(func(l *lua.LState) int {
+			ans := inputRec.ClusteringClientID()
+			L.Push(lua.LString(ans))
+			return 1
+		})
+	case "IsSuspicious":
+		return L.NewFunction(func(l *lua.LState) int {
+			ans := inputRec.IsSuspicious()
+			if ans {
+				L.Push(lua.LTrue)
+			} else {
+				L.Push(lua.LFalse)
+			}
+			return 1
+		})
+	}
+	return lua.LNil
 }
 
 func get(L *lua.LState) int {

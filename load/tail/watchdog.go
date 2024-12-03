@@ -142,7 +142,7 @@ func (conf *Conf) Validate() error {
 		return fmt.Errorf("logTail.worklogDir failed to validate: %w", err)
 	}
 	if !isd {
-		return fmt.Errorf("logTail.worklogPath does not refer to a file")
+		return fmt.Errorf("logTail.worklogDir does not refer to a file")
 	}
 	isd, err = fs.IsDir(conf.LogBufferStateDir)
 	if err != nil {
@@ -223,7 +223,7 @@ func initReaders(processors []FileTailProcessor, worklog *Worklog) ([]*FileTailR
 }
 
 // Run starts the process of (multiple) log watching
-func Run(conf *Conf, processors []FileTailProcessor, finishEvent chan<- bool) {
+func Run(conf *Conf, processors []FileTailProcessor, worklogReset bool, finishEvent chan<- bool) {
 	tickerInterval := time.Duration(conf.IntervalSecs)
 	if tickerInterval == 0 {
 		log.Warn().Msgf("intervalSecs for tail mode not set, using default %ds", defaultTickerIntervalSecs)
@@ -247,6 +247,14 @@ func Run(conf *Conf, processors []FileTailProcessor, finishEvent chan<- bool) {
 		}
 	}
 	worklog := NewWorklog(conf.WorklogDir, hex.EncodeToString(sum.Sum(nil)[:8]))
+	if worklogReset {
+		log.Warn().Str("worklogPath", worklog.storeFilePath).Msg("reset worklog")
+		err := worklog.Reset()
+		if err != nil {
+			log.Fatal().Msgf("unable to initialize worklog: %s", err)
+		}
+	}
+
 	var readers []*FileTailReader
 	err := worklog.Init()
 	if err != nil {

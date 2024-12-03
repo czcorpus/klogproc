@@ -35,7 +35,6 @@ import (
 	"github.com/czcorpus/cnc-gokit/collections"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/rs/zerolog/log"
-	lua "github.com/yuin/gopher-lua"
 )
 
 // -----
@@ -57,7 +56,6 @@ type tailProcessor struct {
 	analysis          chan<- servicelog.InputRecord
 	logBuffer         servicelog.ServiceLogBuffer
 	dryRun            bool
-	luaEnv            *lua.LState
 }
 
 func (tp *tailProcessor) OnCheckStart() (tail.LineProcConfirmChan, *tail.LogDataWriter) {
@@ -71,7 +69,7 @@ func (tp *tailProcessor) OnCheckStart() (tail.LineProcConfirmChan, *tail.LogData
 		var waitMergeEnd sync.WaitGroup
 		waitMergeEnd.Add(2)
 		if tp.dryRun {
-			confirmChan := save.RunWriteConsumer(dataWriter.Elastic, false)
+			confirmChan := save.RunWriteConsumer(dataWriter.Elastic, true)
 			go func() {
 				for item := range confirmChan {
 					itemConfirm <- item
@@ -222,8 +220,8 @@ func newTailProcessor(
 		log.Fatal().Msgf("Failed to initialize transformer: %s", err)
 	}
 	log.Info().Msgf(
-		"Creating tail processor for %s, app type: %s, app version: %s, tzShift: %d",
-		filepath.Clean(tailConf.Path), tailConf.AppType, tailConf.Version, tailConf.TZShift)
+		"Creating tail processor for %s, type: %s (v%s), tzShift: %d, script: %s",
+		filepath.Clean(tailConf.Path), tailConf.AppType, tailConf.Version, tailConf.TZShift, tailConf.ScriptPath)
 
 	var buffStorage analysis.BufferedRecords
 	if tailConf.Buffer != nil {
@@ -334,5 +332,5 @@ func runTailAction(
 	go func() {
 		wg.Wait()
 	}()
-	go tail.Run(conf.LogTail, tailProcessors, finishEvt)
+	go tail.Run(conf.LogTail, tailProcessors, options.worklogReset, finishEvt)
 }

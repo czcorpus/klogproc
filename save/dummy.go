@@ -36,12 +36,10 @@ func RunWriteConsumer(incomingData <-chan *servicelog.BoundOutputRecord, printOu
 			chunkPosition.SeekEnd = item.FilePos.SeekEnd
 			out, jsonError := item.ToJSON()
 			if jsonError != nil {
-				log.Error().Err(jsonError).Msg("")
+				log.Error().Err(jsonError).Send()
 
-			} else {
-				if printOut {
-					fmt.Println(string(out))
-				}
+			} else if printOut {
+				fmt.Println(string(out))
 			}
 			chunkPosition.Written = true
 			confirmMsg := ConfirmMsg{
