@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"klogproc/analysis"
 	"klogproc/config"
 	"klogproc/load/batch"
@@ -26,7 +27,9 @@ import (
 	"klogproc/save/elastic"
 	"klogproc/servicelog"
 	"klogproc/trfactory"
+	"os/signal"
 	"reflect"
+	"syscall"
 	"time"
 
 	"github.com/czcorpus/cnc-gokit/collections"
@@ -96,6 +99,9 @@ func runBatchAction(
 	// For debugging e-mail notification, you can pass `conf.EmailNotification`
 	// as the first argument and use the "batch" mode to tune log processing.
 	nullMailNot, _ := notifications.NewNotifier(nil, conf.ConomiNotification, conf.TimezoneLocation())
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 	lt, err := trfactory.GetLogTransformer(
 		conf.LogFiles,
@@ -188,7 +194,7 @@ func runBatchAction(
 			wait <- struct{}{}
 		}()
 	}
-	proc := batch.CreateLogFileProcFunc(processor, options.datetimeRange, channelWriteES)
+	proc := batch.CreateLogFileProcFunc(ctx, processor, options.datetimeRange, channelWriteES)
 	proc(conf.LogFiles, worklog.GetLastRecord())
 	<-wait
 	log.Info().Msgf("Ignored %d non-loggable entries (bots, static files etc.)", processor.numNonLoggable)

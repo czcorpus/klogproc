@@ -18,6 +18,7 @@ package tail
 
 import (
 	"bufio"
+	"context"
 	"io"
 	"os"
 
@@ -55,6 +56,7 @@ func (ftw *FileTailReader) Processor() FileTailProcessor {
 
 // ApplyNewContent calls a provided function to newly added lines
 func (ftw *FileTailReader) ApplyNewContent(
+	ctx context.Context,
 	processor FileTailProcessor,
 	dataWriter *LogDataWriter,
 	prevPosition servicelog.LogRange,
@@ -105,6 +107,12 @@ func (ftw *FileTailReader) ApplyNewContent(
 		newPosition.SeekEnd = newPosition.SeekStart + int64(len(rawLine))
 		ftw.internalSeek = newPosition.SeekEnd
 		processor.OnEntry(dataWriter, string(rawLine[:len(rawLine)-1]), newPosition)
+		select {
+		case <-ctx.Done():
+			log.Warn().Str("appType", processor.AppType()).Msg("closing FileTailReader")
+			return nil
+		default:
+		}
 	}
 	if i == ftw.processor.MaxLinesPerCheck() {
 		log.Warn().

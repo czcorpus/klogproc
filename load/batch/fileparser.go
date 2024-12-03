@@ -23,6 +23,7 @@ package batch
 
 import (
 	"bufio"
+	"context"
 	"klogproc/servicelog"
 	"os"
 	"path/filepath"
@@ -71,8 +72,20 @@ type Parser struct {
 // Parse runs the parsing process based on provided minimum accepted record
 // time, record type (which is just passed to ElasticSearch) and a
 // provided LogInterceptor).
-func (p *Parser) Parse(fromTimestamp int64, proc logItemProcessor, datetimeRange DatetimeRange, outputs ...chan *servicelog.BoundOutputRecord) {
+func (p *Parser) Parse(
+	ctx context.Context,
+	fromTimestamp int64,
+	proc logItemProcessor,
+	datetimeRange DatetimeRange,
+	outputs ...chan *servicelog.BoundOutputRecord,
+) {
 	for i := int64(0); p.fr.Scan(); i++ {
+		select {
+		case <-ctx.Done():
+			log.Warn().Msg("batch file parser stopping due to cancellation")
+			return
+		default:
+		}
 		rec, err := p.lineParser.ParseLine(p.fr.Text(), i)
 		if err == nil {
 			recTime := rec.GetTime()
@@ -97,9 +110,9 @@ func (p *Parser) Parse(fromTimestamp int64, proc logItemProcessor, datetimeRange
 		} else {
 			switch tErr := err.(type) {
 			case servicelog.LineParsingError:
-				log.Info().Msgf("file %s, %s", p.fileName, tErr)
+				log.Info().Err(tErr).Str("file", p.fileName).Msg("file parsing error")
 			default:
-				log.Error().Msgf("%s", tErr)
+				log.Info().Err(tErr).Str("file", p.fileName).Msg("other file processing error")
 			}
 
 		}

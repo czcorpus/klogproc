@@ -17,8 +17,12 @@
 package main
 
 import (
+	"context"
+	"fmt"
+	"os/signal"
 	"path/filepath"
 	"sync"
+	"syscall"
 
 	"klogproc/analysis"
 	"klogproc/config"
@@ -219,9 +223,13 @@ func newTailProcessor(
 	if err != nil {
 		log.Fatal().Msgf("Failed to initialize transformer: %s", err)
 	}
-	log.Info().Msgf(
-		"Creating tail processor for %s, type: %s (v%s), tzShift: %d, script: %s",
-		filepath.Clean(tailConf.Path), tailConf.AppType, tailConf.Version, tailConf.TZShift, tailConf.ScriptPath)
+	log.Info().
+		Str("logPath", filepath.Clean(tailConf.Path)).
+		Str("appType", tailConf.AppType).
+		Str("version", tailConf.Version).
+		Int("tzShift", tailConf.TZShift).
+		Str("script", tailConf.ScriptPath).
+		Msg("Creating tail log processor")
 
 	var buffStorage analysis.BufferedRecords
 	if tailConf.Buffer != nil {
@@ -312,8 +320,14 @@ func runTailAction(
 	conf *config.Main,
 	options *ProcessOptions,
 	geoDB *geoip2.Reader,
-	finishEvt chan bool,
-) {
+) error {
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	tailProcessors := make([]tail.FileTailProcessor, len(conf.LogTail.Files))
 	var wg sync.WaitGroup
 	wg.Add(len(conf.LogTail.Files))
@@ -321,9 +335,7 @@ func runTailAction(
 	logBuffers := make(map[string]servicelog.ServiceLogBuffer)
 	fullFiles, err := conf.LogTail.FullFiles()
 	if err != nil {
-		log.Error().Err(err).Msg("failed to initialize files configuration")
-		finishEvt <- true
-		return
+		return fmt.Errorf("runTailAction failed to initialize files configuration: %w", err)
 	}
 
 	for i, f := range fullFiles {
@@ -332,5 +344,12 @@ func runTailAction(
 	go func() {
 		wg.Wait()
 	}()
-	go tail.Run(conf.LogTail, tailProcessors, options.worklogReset, finishEvt)
+
+	errChan := tail.GoRun(ctx, conf.LogTail, tailProcessors, options.worklogReset)
+	err = <-errChan
+	if err != nil {
+		cancel()
+		return fmt.Errorf("runTailAction ended by: %w", err)
+	}
+	return nil
 }

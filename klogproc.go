@@ -222,9 +222,7 @@ func main() {
 			log.Fatal().Err(err).Msg("failed to open geo IP database")
 		}
 		defer geoDb.Close()
-		finish := make(chan bool)
-		go runTailAction(conf, procOpts, geoDb, finish)
-		<-finish
+		runTailAction(conf, procOpts, geoDb)
 	case config.ActionTestNotification:
 		testnotifCmd.Parse(os.Args[2:])
 		conf = setup(testnotifCmd.Arg(0), action)

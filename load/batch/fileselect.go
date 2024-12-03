@@ -22,6 +22,7 @@ package batch
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -228,11 +229,17 @@ type LogFileProcFunc = func(conf *Conf, minTimestamp int64)
 // CreateLogFileProcFunc connects a defined log transformer with output channels and
 // returns a customized function for file/directory processing.
 func CreateLogFileProcFunc(
+	ctx context.Context,
 	processor logItemProcessor,
 	datetimeRange DatetimeRange,
 	destChans ...chan *servicelog.BoundOutputRecord,
 ) LogFileProcFunc {
 	return func(conf *Conf, minTimestamp int64) {
+		defer func() {
+			for _, ch := range destChans {
+				close(ch)
+			}
+		}()
 		var files []string
 		if fsop.IsDir(conf.SrcPath) {
 			files = getFilesInDir(conf.SrcPath, minTimestamp, !conf.PartiallyMatchingFiles, conf.TZShift)
@@ -251,12 +258,17 @@ func CreateLogFileProcFunc(
 		if conf.TZShift != 0 {
 			log.Info().Msgf("Found time-zone correction %d minutes", conf.TZShift)
 		}
-		for _, file := range files {
+		for i, file := range files {
 			p := newParser(file, conf.TZShift, processor.GetAppType(), processor.GetAppVersion(), procAlarm)
-			p.Parse(minTimestamp, processor, datetimeRange, destChans...)
-		}
-		for _, ch := range destChans {
-			close(ch)
+			p.Parse(ctx, minTimestamp, processor, datetimeRange, destChans...)
+			select {
+			case <-ctx.Done():
+				log.Warn().
+					Strs("rest", files[i:]).
+					Msg("won't process other files due to cancellation")
+				return
+			default:
+			}
 		}
 		procAlarm.Evaluate()
 		procAlarm.Reset()
