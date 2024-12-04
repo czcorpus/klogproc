@@ -126,24 +126,33 @@ func (w *Worklog) goReadRequests(ctx context.Context) {
 		for {
 			select {
 			case req := <-w.updRequests:
+				// Here we process information about inserted log rows.
 				curr := w.rec.Get(req.FilePath)
 				if curr.Inode != req.Value.Inode {
-					log.Warn().Msgf("inode for %s has changed from %d to %d", req.FilePath, curr.Inode, req.Value.Inode)
+					log.Warn().
+						Str("file", req.FilePath).
+						Int64("currInode", curr.Inode).
+						Int64("newInode", req.Value.Inode).
+						Msgf("inode of a processed log file has changed - switching")
 				}
+				// In general, the order of inserted chunks (represented by the `curr` variable here)
+				// can be different from their original position in a log file, we cannot just write
+				// any file seek position we get - we must always compare with the farthest written
+				// position.
 				// rules for worklog update:
 				// 1) if inodes differ then write the new record
-				// 2) non-written incoming item always overwrites a written one (to make sure we try again from its position)
+				// 2) non-written incoming item always overwrites a written one (to make sure we try
+				//    again from its position)
 				// 3) non-written incoming rewrites the current written no matter how old it is
-				// 4) written incoming item can fix current non-written if its older or of the same age
-				// 5) if both are written then only more recent (higher seek) can overwrite the current one
+				// 4) written incoming item can fix current non-written if its older or of the
+				//    same age
+				// 5) if both are written then only more recent (higher seek) can overwrite
+				//    the current one
 				if curr.Inode != req.Value.Inode ||
 					!curr.Written && curr.SeekStart >= req.Value.SeekStart ||
 					curr.Written && req.Value.SeekEnd >= curr.SeekEnd ||
 					!req.Value.Written && (curr.Written || req.Value.SeekEnd < curr.SeekEnd) {
 					w.rec.Set(req.FilePath, req.Value)
-
-				} else {
-					log.Warn().Msgf("worklog[%s] item %v won't be saved due to the current %v", req.FilePath, req.Value, curr)
 				}
 			case <-ctx.Done():
 				log.Warn().Msg("worklog stopping to listen for updates due to cancellation")
