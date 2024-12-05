@@ -17,12 +17,9 @@
 package mquerysru
 
 import (
-	"klogproc/scripting"
 	"klogproc/servicelog"
 	"strings"
 	"time"
-
-	lua "github.com/yuin/gopher-lua"
 )
 
 // Transformer converts a source log object into a destination one
@@ -74,12 +71,8 @@ func (t *Transformer) Transform(
 		IsQuery:   tLogRecord.IsQuery(),
 		Args:      tLogRecord.Args,
 	}
-	rec.ID = CreateID(rec)
+	rec.ID = rec.GenerateDeterministicID()
 	return rec, nil
-}
-
-func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
-	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

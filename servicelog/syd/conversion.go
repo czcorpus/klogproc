@@ -21,10 +21,7 @@ import (
 	"strconv"
 	"time"
 
-	"klogproc/scripting"
 	"klogproc/servicelog"
-
-	lua "github.com/yuin/gopher-lua"
 )
 
 // Transformer converts a SyD log record to a destination format
@@ -72,7 +69,7 @@ func (t *Transformer) Transform(
 		RunScript:   tLogRecord.RunScript,
 		IsQuery:     true,
 	}
-	r.ID = createID(r)
+	r.ID = r.GenerateDeterministicID()
 	if tLogRecord.Ltool == "S" {
 		r.Corpus = t.syncCorpora
 
@@ -81,11 +78,6 @@ func (t *Transformer) Transform(
 	}
 	return r, nil
 }
-
-func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
-	return scripting.ErrScriptingNotSupported
-}
-
 func (t *Transformer) HistoryLookupItems() int {
 	return 0
 }

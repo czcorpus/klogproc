@@ -37,6 +37,7 @@ import (
 	"klogproc/servicelog/ske"
 	"klogproc/servicelog/syd"
 	"klogproc/servicelog/treq"
+	"klogproc/servicelog/treqapi"
 	"klogproc/servicelog/vlo"
 	"klogproc/servicelog/wag06"
 	"klogproc/servicelog/wag07"
@@ -110,8 +111,12 @@ func GetStaticLogTransformer(
 	case servicelog.AppTypeSyd:
 		return syd.NewTransformer(version, excludeIpList, anonymousUsers), nil
 	case servicelog.AppTypeTreq:
-		return &treq.Transformer{
-			ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
+		switch version {
+		case "apiv1":
+			return &treqapi.Transformer{ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
+		default:
+			return &treq.Transformer{ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
+		}
 	case servicelog.AppTypeWag:
 		switch version {
 		case "0.6":

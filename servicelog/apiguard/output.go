@@ -17,9 +17,16 @@
 package apiguard
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"klogproc/scripting"
 	"klogproc/servicelog"
+	"strconv"
 	"time"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 type OutputRecord struct {
@@ -65,4 +72,16 @@ func (cnkr *OutputRecord) SetLocation(countryName string, latitude float32, long
 	cnkr.GeoIP.Location[0] = cnkr.GeoIP.Longitude
 	cnkr.GeoIP.Location[1] = cnkr.GeoIP.Latitude
 	cnkr.GeoIP.Timezone = timezone
+}
+
+func (cnkr *OutputRecord) LSetProperty(name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
+}
+
+func (apgr *OutputRecord) GenerateDeterministicID() string {
+	str := apgr.Datetime + strconv.FormatBool(apgr.IsQuery) + apgr.Service + apgr.Type +
+		apgr.IPAddress + apgr.UserAgent + fmt.Sprintf("%01.3f", apgr.ProcTime) +
+		strconv.FormatBool(apgr.IsCached) + strconv.FormatBool(apgr.IsIndirect)
+	sum := sha1.Sum([]byte(str))
+	return hex.EncodeToString(sum[:])
 }

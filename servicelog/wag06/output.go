@@ -20,10 +20,13 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"strconv"
 	"strings"
 	"time"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // OutputRecord represents a polished version of WaG's access log.
@@ -80,6 +83,17 @@ func (r *OutputRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (r *OutputRecord) LSetProperty(name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
+}
+
+func (r *OutputRecord) GenerateDeterministicID() string {
+	str := r.Type + r.Action + strconv.FormatBool(r.IsAnonymous) + r.Datetime + r.IPAddress +
+		r.UserID + r.QueryType + strings.Join(r.Queries, "--") + r.Lang1 + r.Lang2
+	sum := sha1.Sum([]byte(str))
+	return hex.EncodeToString(sum[:])
+}
+
 // NewTimedOutputRecord creates a general empty record with specified date and time
 func NewTimedOutputRecord(t time.Time, tzShiftMin int) *OutputRecord {
 	dt := t.Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339)
@@ -90,12 +104,4 @@ func NewTimedOutputRecord(t time.Time, tzShiftMin int) *OutputRecord {
 		time:     t,
 		Datetime: dt,
 	}
-}
-
-// CreateID creates an idempotent ID of rec based on its properties.
-func CreateID(rec *OutputRecord) string {
-	str := rec.Type + rec.Action + strconv.FormatBool(rec.IsAnonymous) + rec.Datetime + rec.IPAddress +
-		rec.UserID + rec.QueryType + strings.Join(rec.Queries, "--") + rec.Lang1 + rec.Lang2
-	sum := sha1.Sum([]byte(str))
-	return hex.EncodeToString(sum[:])
 }

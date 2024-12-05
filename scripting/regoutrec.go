@@ -38,4 +38,14 @@ func registerOutputRecord(env *lua.LState, outRecFact func() servicelog.OutputRe
 		env.Push(ud)
 		return 1
 	}))
+	env.SetGlobal("out_rec_deterministic_id", env.NewFunction(func(env *lua.LState) int {
+		ud := env.CheckUserData(1)
+		outRec, ok := ud.Value.(servicelog.OutputRecord)
+		if !ok {
+			env.ArgError(1, "out_rec_deterministic_id is not an OutputRecord")
+			return 0
+		}
+		env.Push(lua.LString(outRec.GenerateDeterministicID()))
+		return 1
+	}))
 }

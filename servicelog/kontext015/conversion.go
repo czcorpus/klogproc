@@ -20,10 +20,7 @@ import (
 	"strconv"
 	"time"
 
-	"klogproc/scripting"
 	"klogproc/servicelog"
-
-	lua "github.com/yuin/gopher-lua"
 )
 
 func exportArgs(data map[string]interface{}) map[string]interface{} {
@@ -73,12 +70,8 @@ func (t *Transformer) Transform(
 		Error:          tLogRecord.Error.AsPointer(),
 		Args:           exportArgs(tLogRecord.Args),
 	}
-	r.ID = createID(r)
+	r.ID = r.GenerateDeterministicID()
 	return r, nil
-}
-
-func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
-	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

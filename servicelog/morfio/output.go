@@ -20,18 +20,13 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"strconv"
 	"time"
-)
 
-func createID(rec *OutputRecord) string {
-	str := rec.Type + rec.Datetime + rec.IPAddress + rec.UserID + rec.KeyReq + rec.KeyUsed +
-		rec.Key + rec.RunScript + rec.Corpus + strconv.Itoa(rec.MinFreq) + rec.InputAttr + rec.OutputAttr +
-		strconv.FormatBool(rec.CaseInsensitive)
-	sum := sha1.Sum([]byte(str))
-	return hex.EncodeToString(sum[:])
-}
+	lua "github.com/yuin/gopher-lua"
+)
 
 // OutputRecord represents polished, export ready record from Morfio log
 type OutputRecord struct {
@@ -84,4 +79,16 @@ func (r *OutputRecord) GetType() string {
 // GetTime returns a creation time of the record
 func (r *OutputRecord) GetTime() time.Time {
 	return r.time
+}
+
+func (r *OutputRecord) GenerateDeterministicID() string {
+	str := r.Type + r.Datetime + r.IPAddress + r.UserID + r.KeyReq + r.KeyUsed +
+		r.Key + r.RunScript + r.Corpus + strconv.Itoa(r.MinFreq) + r.InputAttr + r.OutputAttr +
+		strconv.FormatBool(r.CaseInsensitive)
+	sum := sha1.Sum([]byte(str))
+	return hex.EncodeToString(sum[:])
+}
+
+func (r *OutputRecord) LSetProperty(name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }

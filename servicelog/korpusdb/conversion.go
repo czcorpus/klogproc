@@ -22,10 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"klogproc/scripting"
 	"klogproc/servicelog"
-
-	lua "github.com/yuin/gopher-lua"
 )
 
 func getQueryType(rec *InputRecord) string {
@@ -89,72 +86,8 @@ func (t *Transformer) Transform(
 		IsAPI:       testIsAPI(tLogRecord),
 		QueryType:   getQueryType(tLogRecord),
 	}
-	out.ID = createID(out)
+	out.ID = out.GenerateDeterministicID()
 	return out, nil
-}
-
-func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
-	tRec, ok := rec.(*OutputRecord)
-	if !ok {
-		return scripting.ErrFailedTypeAssertion
-	}
-	switch name {
-	case "Type":
-		if tValue, ok := value.(lua.LString); ok {
-			tRec.Type = string(tValue)
-			return nil
-		}
-	case "Datetime":
-		if tValue, ok := value.(lua.LString); ok {
-			tRec.time = servicelog.ConvertDatetimeString(string(tValue))
-			tRec.Datetime = string(tValue)
-			return nil
-		}
-	case "Path":
-		if tValue, ok := value.(lua.LString); ok {
-			tRec.Path = string(tValue)
-			return nil
-		}
-	case "Page":
-		if tValue, ok := value.(*lua.LTable); ok {
-			fromVal := tValue.RawGetString("From")
-			if tFromVal, ok := fromVal.(lua.LNumber); ok {
-				tRec.Page.From = int(tFromVal)
-			}
-			sizeVal := tValue.RawGetString("Size")
-			if tSizeVal, ok := sizeVal.(lua.LNumber); ok {
-				tRec.Page.Size = int(tSizeVal)
-			}
-			return nil
-		}
-	case "IPAddress":
-		if tValue, ok := value.(lua.LString); ok {
-			tRec.IPAddress = string(tValue)
-			return nil
-		}
-	case "UserID":
-		if tValue, ok := value.(lua.LString); ok {
-			tRec.UserID = string(tValue)
-			return nil
-		}
-	case "ClientFlag":
-		if tValue, ok := value.(lua.LString); ok {
-			tRec.ClientFlag = string(tValue)
-			return nil
-		}
-	case "IsAnonymous":
-		tRec.IsAnonymous = value == lua.LTrue
-		return nil
-	case "IsQuery":
-		tRec.IsQuery = value == lua.LTrue
-		return nil
-	case "QueryType":
-		if tValue, ok := value.(lua.LString); ok {
-			tRec.QueryType = string(tValue)
-			return nil
-		}
-	}
-	return scripting.InvalidAttrError{Attr: name}
 }
 
 func (t *Transformer) HistoryLookupItems() int {

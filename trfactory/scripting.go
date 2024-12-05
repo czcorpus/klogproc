@@ -22,6 +22,9 @@ import (
 	"klogproc/scripting"
 	"klogproc/servicelog"
 	"klogproc/servicelog/kontext018"
+	"klogproc/servicelog/korpusdb"
+	"klogproc/servicelog/ske"
+	"klogproc/servicelog/treq"
 )
 
 // GetLogTransformer creates a log transformer with optional support for Lua scripting.
@@ -38,9 +41,15 @@ func GetLogTransformer(
 	if err != nil {
 		return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)
 	}
+
+	if logConf.GetScriptPath() == "" {
+		return scripting.NewTransformer(nil, tr), nil
+	}
+
+	version := logConf.GetVersion()
 	switch logConf.GetAppType() {
 	case servicelog.AppTypeKontext, servicelog.AppTypeKontextAPI:
-		if logConf.GetScriptPath() != "" {
+		if version == "018" {
 			env, err := scripting.CreateEnvironment(
 				logConf, tr, func() servicelog.OutputRecord { return &kontext018.OutputRecord{} })
 			if err != nil {
@@ -48,7 +57,29 @@ func GetLogTransformer(
 			}
 			return scripting.NewTransformer(env, tr), nil
 		}
+	case servicelog.AppTypeKorpusDB:
+		env, err := scripting.CreateEnvironment(
+			logConf, tr, func() servicelog.OutputRecord { return &korpusdb.OutputRecord{} })
+		if err != nil {
+			return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)
+		}
+		return scripting.NewTransformer(env, tr), nil
+	case servicelog.AppTypeSke:
+		env, err := scripting.CreateEnvironment(
+			logConf, tr, func() servicelog.OutputRecord { return &ske.OutputRecord{} })
+		if err != nil {
+			return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)
+		}
+		return scripting.NewTransformer(env, tr), nil
+	case servicelog.AppTypeTreq:
+		env, err := scripting.CreateEnvironment(
+			logConf, tr, func() servicelog.OutputRecord { return &treq.OutputRecord{} })
+		if err != nil {
+			return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)
+		}
+		return scripting.NewTransformer(env, tr), nil
+
 	}
 
-	return scripting.NewTransformer(nil, tr), nil
+	return nil, fmt.Errorf("klogproc does not support scripting for %s logs", logConf.GetAppType())
 }

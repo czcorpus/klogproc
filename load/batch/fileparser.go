@@ -25,6 +25,7 @@ import (
 	"bufio"
 	"context"
 	"klogproc/servicelog"
+	"klogproc/trfactory"
 	"os"
 	"path/filepath"
 
@@ -39,7 +40,7 @@ func newParser(path string, tzShift int, appType string, version string, appErrR
 		panic(err)
 	}
 	sc := bufio.NewScanner(f)
-	lineParser, err := NewLineParser(appType, version, appErrRegister)
+	lineParser, err := trfactory.NewLineParser(appType, version, appErrRegister)
 	if err != nil {
 		panic(err) // TODO
 	}
@@ -52,12 +53,6 @@ func newParser(path string, tzShift int, appType string, version string, appErrR
 	}
 }
 
-// LineParser represents an object able to parse an individual
-// line from a specific application log.
-type LineParser interface {
-	ParseLine(s string, lineNum int64) (servicelog.InputRecord, error)
-}
-
 // Parser parses a single file represented by fr Scanner.
 // Because KonText does not log (at least currently) a timezone info,
 // this information is also required to process the log properly.
@@ -65,7 +60,7 @@ type Parser struct {
 	fr         *bufio.Scanner
 	fileName   string
 	tzShift    int
-	lineParser LineParser
+	lineParser servicelog.LineParser
 	recType    string
 }
 

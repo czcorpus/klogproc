@@ -17,7 +17,6 @@
 package kwords2
 
 import (
-	"klogproc/scripting"
 	"klogproc/servicelog"
 	"math"
 	"strconv"
@@ -25,7 +24,6 @@ import (
 
 	"github.com/czcorpus/cnc-gokit/collections"
 	"github.com/rs/zerolog/log"
-	lua "github.com/yuin/gopher-lua"
 )
 
 func convertMultitypeInt(v any) int {
@@ -127,10 +125,6 @@ func (t *Transformer) Transform(
 		Args:          args,
 		Version:       "2",
 	}
-	r.ID = createID(r)
+	r.ID = r.GenerateDeterministicID()
 	return r, nil
-}
-
-func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
-	return scripting.ErrScriptingNotSupported
 }

@@ -20,9 +20,12 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"net/url"
 	"time"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // importQueryType translates KonText/Bonito query type argument
@@ -101,7 +104,88 @@ func (cnkr *OutputRecord) SetLocation(countryName string, latitude float32, long
 	cnkr.GeoIP.Timezone = timezone
 }
 
-func createID(cnkr *OutputRecord) string {
+func (cnkr *OutputRecord) LSetProperty(name string, value lua.LValue) error {
+	switch name {
+	case "ID":
+		if tValue, ok := value.(lua.LString); ok {
+			cnkr.ID = string(tValue)
+			return nil
+		}
+	case "Type":
+		if tValue, ok := value.(lua.LString); ok {
+			cnkr.Type = string(tValue)
+			return nil
+		}
+	case "Action":
+		if tValue, ok := value.(lua.LString); ok {
+			cnkr.Action = string(tValue)
+			return nil
+		}
+	case "Corpus":
+		if tValue, ok := value.(lua.LString); ok {
+			cnkr.Corpus = string(tValue)
+			return nil
+		}
+	case "AlignedCorpora":
+		if tValue, ok := value.(*lua.LTable); ok {
+			var err error
+			cnkr.AlignedCorpora, err = scripting.LuaTableToSliceOfStrings(tValue)
+			return err
+		}
+	case "Datetime":
+		if tValue, ok := value.(lua.LString); ok {
+			cnkr.datetime = servicelog.ConvertDatetimeString(string(tValue))
+			cnkr.Datetime = string(tValue)
+			return nil
+		}
+	case "IPAddress":
+		if tValue, ok := value.(lua.LString); ok {
+			cnkr.IPAddress = string(tValue)
+			return nil
+		}
+	case "IsAnonymous":
+		cnkr.IsAnonymous = value == lua.LTrue
+		return nil
+	case "IsQuery":
+		cnkr.IsQuery = value == lua.LTrue
+		return nil
+	case "ProcTime":
+		if tValue, ok := value.(lua.LNumber); ok {
+			cnkr.ProcTime = float64(tValue)
+			return nil
+		}
+	case "QueryType":
+		if tValue, ok := value.(lua.LString); ok {
+			cnkr.QueryType = string(tValue)
+			return nil
+		}
+	case "UserAgent":
+		if tValue, ok := value.(lua.LString); ok {
+			cnkr.UserAgent = string(tValue)
+			return nil
+		}
+	case "UserID":
+		if tValue, ok := value.(lua.LString); ok {
+			cnkr.UserID = string(tValue)
+			return nil
+		}
+	case "Error":
+		if tValue, ok := value.(lua.LString); ok {
+			cnkr.Error = &servicelog.ErrorRecord{
+				Name: string(tValue),
+			}
+			return nil
+		}
+	case "Args":
+		if tValue, ok := value.(*lua.LTable); ok {
+			cnkr.Args = scripting.LuaTableToMap(tValue)
+			return nil
+		}
+	}
+	return scripting.InvalidAttrError{Attr: name}
+}
+
+func (cnkr *OutputRecord) GenerateDeterministicID() string {
 	str := cnkr.Action + cnkr.Corpus + cnkr.Datetime + cnkr.IPAddress +
 		cnkr.Type + cnkr.UserAgent + cnkr.UserID
 	sum := sha1.Sum([]byte(str))

@@ -224,12 +224,23 @@ type OutputRecord interface {
 	// log record.
 	GetID() string
 
+	// GenerateDeterministicID is expected to generate the same ID for the same
+	// record properties. This is essential for easier update in the Elasticsearch
+	// archive.
+	GenerateDeterministicID() string
+
 	// Return app type as defined by an external convention
 	// (e.g. for UCNK: kontext, syd, morfio, treq,...)
 	GetType() string
 
 	// Get time of the log record
 	GetTime() time.Time
+
+	// LSetProperty is used for dynamic property setting from within Lua environment.
+	// In case the output record does not (yet) support such property access, the
+	// method should return ErrScriptingNotSupported (but any returned error will
+	// prevent from finishing a respective script).
+	LSetProperty(name string, value lua.LValue) error
 }
 
 type LogRange struct {
@@ -266,6 +277,16 @@ func (r *BoundOutputRecord) GetType() string {
 	return r.Rec.GetType()
 }
 
+// ----------------------
+
+// LineParser represents an object able to parse an individual
+// line from a specific application log.
+type LineParser interface {
+	ParseLine(s string, lineNum int64) (InputRecord, error)
+}
+
+// ----------------------------
+
 // LogItemTransformer defines a general object able to transform
 // an input log record to an output one.
 type LogItemTransformer interface {
@@ -287,15 +308,6 @@ type LogItemTransformer interface {
 	// Transform converts an input log record into a normalized output
 	// record suitable for storing into a common log storage (currently: Elasticsearch)
 	Transform(logRec InputRecord, tzShiftMin int) (OutputRecord, error)
-
-	// SetOutputProperty is expected to set a property of provided output record.
-	// This is mostly meant for scripting environment allowing script developer
-	// to modify (or even create from scratch) an output record.
-	//
-	// Transformer implementations which do not plan to support scripting should
-	// return an error - preferably ErrScriptingNotSupported but any error will
-	// be reported giving admin a chance to fix things.
-	SetOutputProperty(rec OutputRecord, name string, value lua.LValue) error
 }
 
 // AppErrorRegister describes a type which reacts to logged errors

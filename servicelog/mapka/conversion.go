@@ -17,23 +17,11 @@
 package mapka
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
 	"strconv"
 	"time"
 
-	"klogproc/scripting"
 	"klogproc/servicelog"
-
-	lua "github.com/yuin/gopher-lua"
 )
-
-// createID creates an idempotent ID of rec based on its properties.
-func createID(rec *OutputRecord) string {
-	str := rec.Type + rec.Path + rec.Datetime + rec.IPAddress + rec.UserID
-	sum := sha1.Sum([]byte(str))
-	return hex.EncodeToString(sum[:])
-}
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
@@ -72,7 +60,7 @@ func (t *Transformer) Transform(
 		ProcTime:    tLogRecord.ProcTime,
 		Params:      tLogRecord.Params,
 	}
-	r.ID = createID(r)
+	r.ID = r.GenerateDeterministicID()
 	if t.prevReqs.ContainsSimilar(r) && r.Action == "overlay" ||
 		!t.prevReqs.ContainsSimilar(r) && r.Action == "text" {
 		r.IsQuery = true
@@ -92,10 +80,6 @@ func (t *Transformer) Preprocess(
 		return []servicelog.InputRecord{}
 	}
 	return []servicelog.InputRecord{rec}
-}
-
-func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
-	return scripting.ErrScriptingNotSupported
 }
 
 // NewTransformer is a default constructor for the Transformer.

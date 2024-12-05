@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package batch
+package trfactory
 
 import (
 	"fmt"
@@ -38,6 +38,7 @@ import (
 	"klogproc/servicelog/ske"
 	"klogproc/servicelog/syd"
 	"klogproc/servicelog/treq"
+	"klogproc/servicelog/treqapi"
 	"klogproc/servicelog/vlo"
 	"klogproc/servicelog/wag06"
 	"klogproc/servicelog/wag07"
@@ -207,6 +208,16 @@ func (parser *treqLineParser) ParseLine(s string, lineNum int64) (servicelog.Inp
 
 // ------------------------------------
 
+type treqAPILineParser struct {
+	lp *treqapi.LineParser
+}
+
+func (parser *treqAPILineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+	return parser.lp.ParseLine(s, lineNum)
+}
+
+// ------------------------------------
+
 type wag06LineParser struct {
 	lp *wag06.LineParser
 }
@@ -278,7 +289,7 @@ func (parser *VLOLineParser) ParseLine(s string, lineNum int64) (servicelog.Inpu
 // ------------------------------------
 
 // NewLineParser creates a parser for individual lines of a respective appType
-func NewLineParser(appType string, version string, appErrRegister servicelog.AppErrorRegister) (LineParser, error) {
+func NewLineParser(appType string, version string, appErrRegister servicelog.AppErrorRegister) (servicelog.LineParser, error) {
 	switch appType {
 	case servicelog.AppTypeAPIGuard:
 		return &apiguardLineParser{lp: &apiguard.LineParser{}}, nil
@@ -325,7 +336,14 @@ func NewLineParser(appType string, version string, appErrRegister servicelog.App
 	case servicelog.AppTypeSyd:
 		return &sydLineParser{lp: &syd.LineParser{}}, nil
 	case servicelog.AppTypeTreq:
-		return &treqLineParser{lp: &treq.LineParser{}}, nil
+		switch version {
+		case "apiv1":
+			return &treqAPILineParser{lp: &treqapi.LineParser{}}, nil
+		case "":
+			return &treqLineParser{lp: &treq.LineParser{}}, nil
+		default:
+			return nil, fmt.Errorf("cannot find parser - unsupported version of Treq specified: %s", version)
+		}
 	case servicelog.AppTypeWag:
 		switch version {
 		case "0.6":

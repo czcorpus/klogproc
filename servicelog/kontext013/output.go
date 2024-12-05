@@ -20,10 +20,13 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"net/url"
 	"strings"
 	"time"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // importQueryType translates KonText/Bonito query type argument
@@ -46,6 +49,11 @@ func importQueryType(record *InputRecord) string {
 	default:
 		return ""
 	}
+}
+
+type fullCorpname struct {
+	Corpname string
+	limited  bool
 }
 
 // importCorpname extracts actual corpus name from
@@ -121,16 +129,15 @@ func (cnkr *OutputRecord) SetLocation(countryName string, latitude float32, long
 	cnkr.GeoIP.Timezone = timezone
 }
 
-type fullCorpname struct {
-	Corpname string
-	limited  bool
-}
-
-func createID(cnkr *OutputRecord) string {
+func (cnkr *OutputRecord) GenerateDeterministicID() string {
 	str := cnkr.Action + cnkr.Corpus + cnkr.Datetime + cnkr.IPAddress +
 		cnkr.Type + cnkr.UserAgent + cnkr.UserID
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
+}
+
+func (cnkr *OutputRecord) LSetProperty(name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }
 
 func isEntryQuery(action string) bool {

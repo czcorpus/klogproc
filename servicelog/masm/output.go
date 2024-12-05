@@ -21,10 +21,13 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"strconv"
 	"strings"
 	"time"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // OutputRecord represents a polished version of WaG's access log.
@@ -69,8 +72,11 @@ func (r *OutputRecord) SetLocation(countryName string, latitude float32, longitu
 
 }
 
-// CreateID creates an idempotent ID of rec based on its properties.
-func CreateID(rec *OutputRecord) string {
+func (r *OutputRecord) LSetProperty(name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
+}
+
+func (rec *OutputRecord) GenerateDeterministicID() string {
 	str := rec.Level + rec.Datetime + rec.Message + strconv.FormatBool(rec.IsQuery) + rec.Corpus +
 		strings.Join(rec.AlignedCorpora, ", ") + strconv.FormatBool(rec.IsAutocomplete) + strconv.FormatBool(rec.IsCached) +
 		strconv.FormatFloat(rec.ProcTimeSecs, 'E', -1, 64) + rec.Error.String()

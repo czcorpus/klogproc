@@ -21,10 +21,7 @@ import (
 	"strconv"
 	"time"
 
-	"klogproc/scripting"
 	"klogproc/servicelog"
-
-	lua "github.com/yuin/gopher-lua"
 )
 
 // Transformer converts a Morfio log record to a destination format
@@ -85,12 +82,8 @@ func (t *Transformer) Transform(
 		CaseInsensitive: caseIns,
 	}
 
-	ans.ID = createID(ans)
+	ans.ID = ans.GenerateDeterministicID()
 	return ans, nil
-}
-
-func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
-	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

@@ -17,9 +17,14 @@
 package mapka2
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"time"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // OutputRecord represents a polished version of Mapka's access log stripped
@@ -69,4 +74,14 @@ func (r *OutputRecord) GetTime() time.Time {
 // ToJSON converts data to a JSON document (typically for ElasticSearch)
 func (r *OutputRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(r)
+}
+
+func (r *OutputRecord) GenerateDeterministicID() string {
+	str := r.Type + r.Path + r.Datetime + r.IPAddress + r.UserID
+	sum := sha1.Sum([]byte(str))
+	return hex.EncodeToString(sum[:])
+}
+
+func (r *OutputRecord) LSetProperty(name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }

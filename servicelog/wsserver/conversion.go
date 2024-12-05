@@ -17,23 +17,9 @@
 package wsserver
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
-	"klogproc/scripting"
 	"klogproc/servicelog"
 	"strings"
-	"time"
-
-	lua "github.com/yuin/gopher-lua"
 )
-
-// createID creates an idempotent ID of rec based on its properties.
-func createID(rec *OutputRecord) string {
-	str := rec.Type + rec.Action + rec.GetTime().Format(time.RFC3339) + rec.IPAddress + rec.UserID +
-		rec.Action + rec.Model + rec.Corpus
-	sum := sha1.Sum([]byte(str))
-	return hex.EncodeToString(sum[:])
-}
 
 func cleanIPInfo(ip string) string {
 	return strings.Split(ip, ",")[0]
@@ -69,12 +55,8 @@ func (t *Transformer) Transform(
 		UserID:    "-1",
 	}
 
-	ans.ID = createID(ans)
+	ans.ID = ans.GenerateDeterministicID()
 	return ans, nil
-}
-
-func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
-	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

@@ -20,19 +20,12 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"time"
-)
 
-func createID(rec *OutputRecord) string {
-	var uid string
-	if rec.UserID != nil {
-		uid = *rec.UserID
-	}
-	str := rec.Type + rec.Datetime + rec.Action + rec.IPAddress + uid + rec.Corpus
-	sum := sha1.Sum([]byte(str))
-	return hex.EncodeToString(sum[:])
-}
+	lua "github.com/yuin/gopher-lua"
+)
 
 type Args struct {
 	Attrs        []string `json:"attrs"`
@@ -93,4 +86,18 @@ func (r *OutputRecord) GetType() string {
 // GetTime returns a creation time of the record
 func (r *OutputRecord) GetTime() time.Time {
 	return r.time
+}
+
+func (r *OutputRecord) GenerateDeterministicID() string {
+	var uid string
+	if r.UserID != nil {
+		uid = *r.UserID
+	}
+	str := r.Type + r.Datetime + r.Action + r.IPAddress + uid + r.Corpus
+	sum := sha1.Sum([]byte(str))
+	return hex.EncodeToString(sum[:])
+}
+
+func (r *OutputRecord) LSetProperty(name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }

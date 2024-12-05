@@ -20,9 +20,12 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"strconv"
 	"time"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // OutputRecord represents a log format as written
@@ -78,9 +81,12 @@ func (r *OutputRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-// createID creates an idempotent ID of rec based on its properties.
-func createID(rec *OutputRecord) string {
-	str := rec.Type + strconv.Itoa(int(rec.time.Unix())) + rec.UserID + rec.IPAddress + rec.Lang + rec.UserAgent
+func (r *OutputRecord) LSetProperty(name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
+}
+
+func (r *OutputRecord) GenerateDeterministicID() string {
+	str := r.Type + strconv.Itoa(int(r.time.Unix())) + r.UserID + r.IPAddress + r.Lang + r.UserAgent
 	sum := sha1.Sum([]byte(str))
 	return hex.EncodeToString(sum[:])
 }
