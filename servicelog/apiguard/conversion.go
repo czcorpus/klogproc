@@ -17,24 +17,10 @@
 package apiguard
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
-	"fmt"
-	"klogproc/scripting"
 	"klogproc/servicelog"
 	"strconv"
 	"time"
-
-	lua "github.com/yuin/gopher-lua"
 )
-
-func createID(apgr *OutputRecord) string {
-	str := apgr.Datetime + strconv.FormatBool(apgr.IsQuery) + apgr.Service + apgr.Type +
-		apgr.IPAddress + apgr.UserAgent + fmt.Sprintf("%01.3f", apgr.ProcTime) +
-		strconv.FormatBool(apgr.IsCached) + strconv.FormatBool(apgr.IsIndirect)
-	sum := sha1.Sum([]byte(str))
-	return hex.EncodeToString(sum[:])
-}
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
@@ -72,12 +58,8 @@ func (t *Transformer) Transform(
 		datetime:   corrDT,
 		Datetime:   corrDT.Format(time.RFC3339),
 	}
-	r.ID = createID(r)
+	r.ID = r.GenerateDeterministicID()
 	return r, nil
-}
-
-func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
-	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

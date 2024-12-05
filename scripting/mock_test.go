@@ -105,6 +105,14 @@ func (r *dummyOutRec) GetTime() time.Time {
 	return r.time
 }
 
+func (r *dummyOutRec) LSetProperty(name string, value lua.LValue) error {
+	return ErrScriptingNotSupported
+}
+
+func (r *dummyOutRec) GenerateDeterministicID() string {
+	return "dummy-out-rec-01"
+}
+
 // --------
 
 type ltrans struct {
@@ -137,10 +145,6 @@ func (lt *ltrans) Transform(
 		IsAI:        false,
 		CustomField: "custom data for " + tLogRec.ID,
 	}, nil
-}
-
-func (lt *ltrans) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
-	return ErrScriptingNotSupported
 }
 
 // ------------------

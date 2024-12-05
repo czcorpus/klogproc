@@ -20,23 +20,14 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"strconv"
 	"strings"
 	"time"
-)
 
-func createID(rec *OutputRecord) string {
-	userID := "-"
-	if rec.UserID != nil {
-		userID = strconv.Itoa(*rec.UserID)
-	}
-	str := rec.Type + strings.Join(rec.Corpus, ":") + rec.Datetime + rec.IPAddress +
-		userID + rec.KeyReq + rec.KeyUsed + rec.Key + rec.Ltool + rec.RunScript +
-		strconv.FormatBool(rec.IsQuery)
-	sum := sha1.Sum([]byte(str))
-	return hex.EncodeToString(sum[:])
-}
+	lua "github.com/yuin/gopher-lua"
+)
 
 // OutputRecord represents a final format of log records for SyD as stored
 // for further analysis and archiving
@@ -88,4 +79,20 @@ func (r *OutputRecord) GetType() string {
 // GetTime returns a creation time of the record
 func (r *OutputRecord) GetTime() time.Time {
 	return r.time
+}
+
+func (r *OutputRecord) LSetProperty(name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
+}
+
+func (r *OutputRecord) GenerateDeterministicID() string {
+	userID := "-"
+	if r.UserID != nil {
+		userID = strconv.Itoa(*r.UserID)
+	}
+	str := r.Type + strings.Join(r.Corpus, ":") + r.Datetime + r.IPAddress +
+		userID + r.KeyReq + r.KeyUsed + r.Key + r.Ltool + r.RunScript +
+		strconv.FormatBool(r.IsQuery)
+	sum := sha1.Sum([]byte(str))
+	return hex.EncodeToString(sum[:])
 }

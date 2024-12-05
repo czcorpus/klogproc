@@ -17,13 +17,11 @@
 package wag06
 
 import (
-	"klogproc/scripting"
 	"klogproc/servicelog"
 	"net/url"
 	"time"
 
 	"github.com/rs/zerolog/log"
-	lua "github.com/yuin/gopher-lua"
 )
 
 func isQuery(action string) bool {
@@ -75,12 +73,8 @@ func (t *Transformer) Transform(
 		Action:              tLogRecord.Action,
 		ProcTime:            tLogRecord.ProcTime,
 	}
-	r.ID = CreateID(r)
+	r.ID = r.GenerateDeterministicID()
 	return r, nil
-}
-
-func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
-	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

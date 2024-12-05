@@ -201,10 +201,6 @@ func (t *Transformer) Transform(logRec servicelog.InputRecord, tzShiftMin int) (
 	return t.staticTransformer.Transform(logRec, tzShiftMin)
 }
 
-func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
-	return t.staticTransformer.SetOutputProperty(rec, name, value)
-}
-
 func (t *Transformer) Close() {
 	t.L.Close()
 }

@@ -204,6 +204,9 @@ func main() {
 		if *noScript {
 			procOpts.scriptPath = ""
 			conf.LogFiles.ScriptPath = ""
+
+		} else if procOpts.scriptPath != "" {
+			conf.LogFiles.ScriptPath = procOpts.scriptPath
 		}
 		geoDb, err := geoip2.Open(conf.GeoIPDbPath)
 		if err != nil {

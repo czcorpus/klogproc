@@ -25,25 +25,23 @@ import (
 )
 
 func TestSetPropsDatetime(t *testing.T) {
-	tr := Transformer{}
 	outRec := &OutputRecord{}
 	tz, _ := time.LoadLocation("Europe/Prague")
 	v := time.Date(2024, time.December, 2, 16, 51, 19, 0, tz)
 	lv := lua.LString(v.Format(time.RFC3339))
-	err := tr.SetOutputProperty(outRec, "Datetime", lv)
+	err := outRec.LSetProperty("Datetime", lv)
 	assert.NoError(t, err)
 	assert.Equal(t, "2024-12-02T16:51:19+01:00", outRec.Datetime)
 	assert.Equal(t, v.Unix(), outRec.GetTime().Unix())
 }
 
 func TestSetPropsPage(t *testing.T) {
-	tr := Transformer{}
 	outRec := &OutputRecord{}
 	L := lua.NewState()
 	tbl := L.NewTable()
 	tbl.RawSetString("From", lua.LNumber(13))
 	tbl.RawSetString("Size", lua.LNumber(20))
-	err := tr.SetOutputProperty(outRec, "Page", tbl)
+	err := outRec.LSetProperty("Page", tbl)
 	assert.NoError(t, err)
 	assert.Equal(t, 13, outRec.Page.From)
 	assert.Equal(t, 20, outRec.Page.Size)

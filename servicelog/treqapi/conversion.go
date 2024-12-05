@@ -1,5 +1,5 @@
-// Copyright 2019 Tomas Machalek <tomas.machalek@gmail.com>
-// Copyright 2019 Institute of the Czech National Corpus,
+// Copyright 2024 Tomas Machalek <tomas.machalek@gmail.com>
+// Copyright 2024 Institute of the Czech National Corpus,
 //                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,19 +14,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package treq
+package treqapi
 
 import (
 	"fmt"
-	"strconv"
-	"time"
-
+	"klogproc/scripting"
 	"klogproc/servicelog"
-)
+	"klogproc/servicelog/treq"
+	"strconv"
 
-const (
-	qTypeD = "D"
-	qTypeL = "L"
+	lua "github.com/yuin/gopher-lua"
 )
 
 // Transformer converts a Treq log record to a destination format
@@ -39,7 +36,6 @@ func (t *Transformer) AppType() string {
 	return servicelog.AppTypeTreq
 }
 
-// Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
 	logRecord servicelog.InputRecord,
 	tzShiftMin int,
@@ -48,56 +44,38 @@ func (t *Transformer) Transform(
 	if !ok {
 		panic(servicelog.ErrFailedTypeAssertion)
 	}
+
 	userID := -1
 	if tLogRecord.UserID != "-" {
-		uid, err := strconv.Atoi(tLogRecord.UserID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert user ID [%s]", tLogRecord.UserID)
+		if uid, err := strconv.Atoi(tLogRecord.UserID); err == nil {
+			userID = uid
+
+		} else {
+			return nil, fmt.Errorf(
+				"failed to convert user ID '%s': %w", tLogRecord.UserID, err)
 		}
-		userID = uid
 	}
 
-	isRegexp, err := servicelog.ImportBool(tLogRecord.IsRegexp, "isRegexp")
-	if err != nil {
-		return nil, err
-	}
-	isCaseInsen, err := servicelog.ImportBool(tLogRecord.IsCaseInsen, "isCaseInsen")
-	if err != nil {
-		return nil, err
-	}
-	isMultiWord, err := servicelog.ImportBool(tLogRecord.IsMultiWord, "isMultiWord")
-	if err != nil {
-		return nil, err
-	}
-	isLemma, err := servicelog.ImportBool(tLogRecord.IsMultiWord, "isLemma")
-	if err != nil {
-		return nil, err
-	}
-
-	out := &OutputRecord{
+	out := &treq.OutputRecord{
 		Type:        "treq",
-		time:        tLogRecord.GetTime(),
-		Datetime:    tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		QLang:       tLogRecord.QLang,
-		SecondLang:  tLogRecord.SecondLang,
-		IPAddress:   tLogRecord.IPAddress,
+		IsAPI:       true,
+		QLang:       tLogRecord.From,
+		SecondLang:  tLogRecord.To,
+		IPAddress:   tLogRecord.IP,
 		UserID:      tLogRecord.UserID,
 		IsAnonymous: userID == -1 || servicelog.UserBelongsToList(userID, t.AnonymousUsers),
-		// Corpus set later
-		Subcorpus: tLogRecord.Subcorpus,
-		// IsQuery set later
-		IsRegexp:    isRegexp,
-		IsCaseInsen: isCaseInsen,
-		IsMultiWord: isMultiWord,
-		IsLemma:     isLemma,
-		// GeoIP set elsewhere
+		IsRegexp:    tLogRecord.Regex,
+		IsCaseInsen: tLogRecord.CI,
+		IsMultiWord: tLogRecord.Multiword,
+		IsLemma:     tLogRecord.Lemma,
 	}
+	out.SetTime(tLogRecord.GetTime(), tzShiftMin)
 	out.ID = out.GenerateDeterministicID()
-	if tLogRecord.QType == qTypeD {
-		out.Corpus = fmt.Sprintf("intercorp_v8_%s", tLogRecord.QLang)
-		out.IsQuery = true
-	}
 	return out, nil
+}
+
+func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

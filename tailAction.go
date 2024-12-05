@@ -27,7 +27,6 @@ import (
 	"klogproc/analysis"
 	"klogproc/config"
 	"klogproc/load/alarm"
-	"klogproc/load/batch"
 	"klogproc/load/tail"
 	"klogproc/logbuffer"
 	"klogproc/notifications"
@@ -51,7 +50,7 @@ type tailProcessor struct {
 	checkIntervalSecs int
 	maxLinesPerCheck  int
 	conf              *config.Main
-	lineParser        batch.LineParser
+	lineParser        servicelog.LineParser
 	logTransformer    servicelog.LogItemTransformer
 	geoDB             *geoip2.Reader
 	anonymousUsers    []int
@@ -210,7 +209,7 @@ func newTailProcessor(
 	if err != nil {
 		log.Fatal().Msgf("Failed to initialize alarm: %s", err)
 	}
-	lineParser, err := batch.NewLineParser(tailConf.AppType, tailConf.Version, procAlarm)
+	lineParser, err := trfactory.NewLineParser(tailConf.AppType, tailConf.Version, procAlarm)
 	if err != nil {
 		log.Fatal().Msgf("Failed to initialize parser: %s", err)
 	}

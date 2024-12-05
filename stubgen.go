@@ -58,7 +58,6 @@ func getTypeString(t reflect.Type) string {
 
 func analyzeStruct(t reflect.Type, indent string) []FieldInfo {
 	fields := make([]FieldInfo, 0, t.NumField())
-
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 
@@ -166,6 +165,10 @@ For debugging, use:
 dump = require('dump')
 print(dump(my_value))
 
+To generate a deterministic ID:
+
+local id = out_rec_deterministic_id(out_rec)
+
 For logging:
 
 log.info("message", map_with_args)
@@ -179,7 +182,7 @@ The second arg. is optional
 function transform(input_rec)
     local out = transform_default(input_rec, 0)
 	-- setting an output field:
-	set_out(ans, "{{.FirstFieldName}}", string.format("%s[modified]", logRec.{{.FirstFieldName}}))
+	set_out_prop(ans, "{{.FirstFieldName}}", string.format("%s[modified]", input_rec.{{.FirstFieldName}}))
     -- TODO: Transform input record to output format
     -- Available fields and functions are documented above
     return ans

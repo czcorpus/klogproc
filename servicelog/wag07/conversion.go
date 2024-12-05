@@ -22,11 +22,8 @@ import (
 	"klogproc/analysis"
 	"klogproc/load"
 	"klogproc/notifications"
-	"klogproc/scripting"
 	"klogproc/servicelog"
 	"klogproc/servicelog/wag06"
-
-	lua "github.com/yuin/gopher-lua"
 )
 
 // Transformer converts a source log object into a destination one
@@ -64,12 +61,8 @@ func (t *Transformer) Transform(
 	rec.Lang2 = tLogRecord.Lang2
 	rec.Queries = []string{} // no more used?
 	rec.ProcTime = -1        // TODO not available; does it have a value
-	rec.ID = wag06.CreateID(rec)
+	rec.ID = rec.GenerateDeterministicID()
 	return rec, nil
-}
-
-func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
-	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

@@ -20,10 +20,7 @@ import (
 	"strconv"
 	"time"
 
-	"klogproc/scripting"
 	"klogproc/servicelog"
-
-	lua "github.com/yuin/gopher-lua"
 )
 
 // Transformer converts a source log object into a destination one
@@ -62,12 +59,8 @@ func (t *Transformer) Transform(
 		Lang:        tLogRecord.Lang,
 		UserAgent:   tLogRecord.UserAgent,
 	}
-	ans.ID = createID(ans)
+	ans.ID = ans.GenerateDeterministicID()
 	return ans, nil
-}
-
-func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
-	return scripting.ErrScriptingNotSupported
 }
 
 func (t *Transformer) HistoryLookupItems() int {

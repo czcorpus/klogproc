@@ -39,6 +39,7 @@ func RunWriteConsumer(incomingData <-chan *servicelog.BoundOutputRecord, printOu
 				log.Error().Err(jsonError).Send()
 
 			} else if printOut {
+				fmt.Printf("{\"id\": \"%s\"}\n", item.GetID())
 				fmt.Println(string(out))
 			}
 			chunkPosition.Written = true

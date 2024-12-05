@@ -20,23 +20,13 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"strconv"
 	"time"
-)
 
-func createID(rec *OutputRecord) string {
-	rls := ""
-	if rec.RefLength != nil {
-		rls = strconv.Itoa(*rec.RefLength)
-	}
-	str := rec.Type + rec.Datetime + rec.IPAddress + rec.UserID + strconv.Itoa(rec.NumFiles) +
-		rec.TargetInputType + strconv.Itoa(rec.TargetLength) + rec.Corpus + rls +
-		strconv.FormatBool(rec.Pronouns) + strconv.FormatBool(rec.Prep) + strconv.FormatBool(rec.Con) +
-		strconv.FormatBool(rec.Num) + strconv.FormatBool(rec.CaseInsensitive)
-	sum := sha1.Sum([]byte(str))
-	return hex.EncodeToString(sum[:])
-}
+	lua "github.com/yuin/gopher-lua"
+)
 
 // OutputRecord represents polished, export ready record from Kwords log
 type OutputRecord struct {
@@ -90,4 +80,21 @@ func (r *OutputRecord) GetType() string {
 // GetTime returns a creation time of the record
 func (r *OutputRecord) GetTime() time.Time {
 	return r.time
+}
+
+func (r *OutputRecord) GenerateDeterministicID() string {
+	rls := ""
+	if r.RefLength != nil {
+		rls = strconv.Itoa(*r.RefLength)
+	}
+	str := r.Type + r.Datetime + r.IPAddress + r.UserID + strconv.Itoa(r.NumFiles) +
+		r.TargetInputType + strconv.Itoa(r.TargetLength) + r.Corpus + rls +
+		strconv.FormatBool(r.Pronouns) + strconv.FormatBool(r.Prep) + strconv.FormatBool(r.Con) +
+		strconv.FormatBool(r.Num) + strconv.FormatBool(r.CaseInsensitive)
+	sum := sha1.Sum([]byte(str))
+	return hex.EncodeToString(sum[:])
+}
+
+func (r *OutputRecord) LSetProperty(name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
 }

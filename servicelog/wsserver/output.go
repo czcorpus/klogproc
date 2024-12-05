@@ -17,9 +17,14 @@
 package wsserver
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"time"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 type OutputRecord struct {
@@ -67,4 +72,15 @@ func (r *OutputRecord) GetTime() time.Time {
 // ToJSON converts data to a JSON document (typically for ElasticSearch)
 func (r *OutputRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(r)
+}
+
+func (r *OutputRecord) LSetProperty(name string, value lua.LValue) error {
+	return scripting.ErrScriptingNotSupported
+}
+
+func (r *OutputRecord) GenerateDeterministicID() string {
+	str := r.Type + r.Action + r.GetTime().Format(time.RFC3339) + r.IPAddress + r.UserID +
+		r.Action + r.Model + r.Corpus
+	sum := sha1.Sum([]byte(str))
+	return hex.EncodeToString(sum[:])
 }

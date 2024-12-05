@@ -51,7 +51,7 @@ func createRecord() *OutputRecord {
 
 func TestCreateID(t *testing.T) {
 	rec := createRecord()
-	if createID(rec) != "2452d6c39ddd4dfcba2df61e1115511e547c09af" {
+	if rec.GenerateDeterministicID() != "2452d6c39ddd4dfcba2df61e1115511e547c09af" {
 		t.Error("Hash match error")
 	}
 }

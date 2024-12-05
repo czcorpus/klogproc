@@ -20,17 +20,13 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"klogproc/scripting"
 	"klogproc/servicelog"
 	"strconv"
 	"time"
-)
 
-func createID(rec *OutputRecord) string {
-	str := rec.Type + rec.Path + rec.Datetime + rec.IPAddress + rec.UserID + rec.QueryType +
-		strconv.Itoa(rec.Page.From) + strconv.Itoa(rec.Page.Size)
-	sum := sha1.Sum([]byte(str))
-	return hex.EncodeToString(sum[:])
-}
+	lua "github.com/yuin/gopher-lua"
+)
 
 // OutputRecord represents polished, export ready record from KorpusDB log
 type OutputRecord struct {
@@ -79,4 +75,76 @@ func (r *OutputRecord) GetType() string {
 // GetTime returns a creation time of the record
 func (r *OutputRecord) GetTime() time.Time {
 	return r.time
+}
+
+func (rec *OutputRecord) GenerateDeterministicID() string {
+	str := rec.Type + rec.Path + rec.Datetime + rec.IPAddress + rec.UserID + rec.QueryType +
+		strconv.Itoa(rec.Page.From) + strconv.Itoa(rec.Page.Size)
+	sum := sha1.Sum([]byte(str))
+	return hex.EncodeToString(sum[:])
+}
+
+func (r *OutputRecord) LSetProperty(name string, value lua.LValue) error {
+	switch name {
+	case "ID":
+		if tValue, ok := value.(lua.LString); ok {
+			r.ID = string(tValue)
+			return nil
+		}
+	case "Type":
+		if tValue, ok := value.(lua.LString); ok {
+			r.Type = string(tValue)
+			return nil
+		}
+	case "Datetime":
+		if tValue, ok := value.(lua.LString); ok {
+			r.time = servicelog.ConvertDatetimeString(string(tValue))
+			r.Datetime = string(tValue)
+			return nil
+		}
+	case "Path":
+		if tValue, ok := value.(lua.LString); ok {
+			r.Path = string(tValue)
+			return nil
+		}
+	case "Page":
+		if tValue, ok := value.(*lua.LTable); ok {
+			fromVal := tValue.RawGetString("From")
+			if tFromVal, ok := fromVal.(lua.LNumber); ok {
+				r.Page.From = int(tFromVal)
+			}
+			sizeVal := tValue.RawGetString("Size")
+			if tSizeVal, ok := sizeVal.(lua.LNumber); ok {
+				r.Page.Size = int(tSizeVal)
+			}
+			return nil
+		}
+	case "IPAddress":
+		if tValue, ok := value.(lua.LString); ok {
+			r.IPAddress = string(tValue)
+			return nil
+		}
+	case "UserID":
+		if tValue, ok := value.(lua.LString); ok {
+			r.UserID = string(tValue)
+			return nil
+		}
+	case "ClientFlag":
+		if tValue, ok := value.(lua.LString); ok {
+			r.ClientFlag = string(tValue)
+			return nil
+		}
+	case "IsAnonymous":
+		r.IsAnonymous = value == lua.LTrue
+		return nil
+	case "IsQuery":
+		r.IsQuery = value == lua.LTrue
+		return nil
+	case "QueryType":
+		if tValue, ok := value.(lua.LString); ok {
+			r.QueryType = string(tValue)
+			return nil
+		}
+	}
+	return scripting.InvalidAttrError{Attr: name}
 }

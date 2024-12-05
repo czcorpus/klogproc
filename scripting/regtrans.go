@@ -46,9 +46,9 @@ func registerStaticTransformer[T servicelog.LogItemTransformer](env *lua.LState,
 		orec := checkOutputRecord(env, 1)
 		key := env.CheckString(2)
 		val := env.CheckAny(3)
-		if err := transformer.SetOutputProperty(orec, key, val); err != nil {
+		if err := orec.LSetProperty(key, val); err != nil {
 			// TODO
-			log.Error().Err(err).Msg("failed to set output property")
+			log.Error().Err(err).Str("recType", orec.GetType()).Msg("failed to set output property")
 		}
 		return 0
 	}))
