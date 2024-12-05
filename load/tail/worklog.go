@@ -98,7 +98,14 @@ func (w *Worklog) Init(ctx context.Context) error {
 }
 
 func (w *Worklog) Reset() error {
-	return os.Truncate(w.storeFilePath, 0)
+	ex, err := fs.IsFile(w.storeFilePath)
+	if err != nil {
+		return fmt.Errorf("cannot reset worklog: %w", err)
+	}
+	if ex {
+		return os.Truncate(w.storeFilePath, 0)
+	}
+	return nil
 }
 
 func (w *Worklog) goAutosave(ctx context.Context) {
