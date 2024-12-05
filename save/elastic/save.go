@@ -65,6 +65,7 @@ func BulkWriteRequest(data [][]byte, appType string, esconf *ConnectionConf) err
 // from any reason, the items we wanted to write are definitely lost.
 func WriteBulkWithError(data [][]byte, appType string, esconf *ConnectionConf) {
 	if len(data) <= 10 {
+		data = append(data, []byte("\n"))
 		if err := BulkWriteRequest(data, appType, esconf); err != nil {
 			log.Error().Err(err).Int("chunkSize", len(data)).Msg("failed to insert exploded chunk")
 
@@ -73,6 +74,9 @@ func WriteBulkWithError(data [][]byte, appType string, esconf *ConnectionConf) {
 		}
 
 	} else {
+		if len(data)%2 == 1 { // => original chunk with newline at the end
+			data = data[:len(data)-1]
+		}
 		split := len(data) / 2
 		data1 := data[:split]
 		time.Sleep(2 * time.Second)
