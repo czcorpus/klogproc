@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-	"time"
 
 	"klogproc/analysis"
 	"klogproc/load"
 	"klogproc/notifications"
 	"klogproc/servicelog"
+	k015 "klogproc/servicelog/kontext015"
 
 	"github.com/rs/zerolog/log"
 )
@@ -102,7 +102,7 @@ func exportArgs(action string, data map[string]any) map[string]any {
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	analyzer       *analysis.BotAnalyzer[*QueryInputRecord]
+	analyzer       *analysis.BotAnalyzer[*InputRecord]
 	excludeIPList  servicelog.ExcludeIPList
 	anonymousUsers []int
 }
@@ -116,28 +116,27 @@ func (t *Transformer) Transform(
 	logRecord servicelog.InputRecord,
 	tzShiftMin int,
 ) (servicelog.OutputRecord, error) {
-	tLogRecord, ok := logRecord.(*QueryInputRecord)
+	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
 		panic(servicelog.ErrFailedTypeAssertion)
 	}
-	corpname := importCorpname(tLogRecord)
-	r := &OutputRecord{
+	corpname := k015.ImportCorpname(tLogRecord)
+	r := &k015.OutputRecord{
 		Type:           t.AppType(),
 		Action:         tLogRecord.Action,
 		Corpus:         corpname,
 		AlignedCorpora: tLogRecord.GetAlignedCorpora(),
-		Datetime:       tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		datetime:       tLogRecord.GetTime(),
 		IPAddress:      servicelog.IPToOutString(tLogRecord.GetClientIP()),
 		IsAnonymous:    servicelog.UserBelongsToList(tLogRecord.UserID, t.anonymousUsers),
-		IsQuery:        isEntryQuery(tLogRecord.Action) && !tLogRecord.IsIndirectCall,
+		IsQuery:        k015.IsEntryQuery(tLogRecord.Action) && !tLogRecord.IsIndirectCall,
 		ProcTime:       tLogRecord.ProcTime,
-		QueryType:      importQueryType(tLogRecord),
+		QueryType:      k015.ImportQueryType(tLogRecord),
 		UserAgent:      tLogRecord.Request.HTTPUserAgent,
 		UserID:         strconv.Itoa(tLogRecord.UserID),
 		Error:          tLogRecord.Error.AsPointer(),
 		Args:           exportArgs(tLogRecord.Action, tLogRecord.Args),
 	}
+	r.SetTime(tLogRecord.GetTime(), tzShiftMin)
 	r.ID = r.GenerateDeterministicID()
 	return r, nil
 }
@@ -162,7 +161,7 @@ func NewTransformer(
 	excludeIPList []string,
 	anonymousUsers []int,
 ) *Transformer {
-	analyzer := analysis.NewBotAnalyzer[*QueryInputRecord]("kontext", bufferConf, realtimeClock, emailNotifier)
+	analyzer := analysis.NewBotAnalyzer[*InputRecord]("kontext", bufferConf, realtimeClock, emailNotifier)
 	return &Transformer{
 		analyzer:       analyzer,
 		excludeIPList:  excludeIPList,

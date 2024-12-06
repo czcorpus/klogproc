@@ -60,6 +60,6 @@ func TestImportCorpname(t *testing.T) {
 	p := make(map[string]interface{})
 	p["corpname"] = "foobar7"
 	r := &InputRecord{Args: p}
-	c := importCorpname(r)
+	c := ImportCorpname(r)
 	assert.Equal(t, "foobar7", c)
 }

@@ -18,7 +18,6 @@ package kontext015
 
 import (
 	"strconv"
-	"time"
 
 	"klogproc/servicelog"
 )
@@ -37,6 +36,7 @@ func exportArgs(data map[string]interface{}) map[string]interface{} {
 type Transformer struct {
 	ExcludeIPList  servicelog.ExcludeIPList
 	AnonymousUsers []int
+	IsAPI          bool
 }
 
 func (t *Transformer) AppType() string {
@@ -52,24 +52,23 @@ func (t *Transformer) Transform(
 	if !ok {
 		panic(servicelog.ErrFailedTypeAssertion)
 	}
-	corpname := importCorpname(tLogRecord)
+	corpname := ImportCorpname(tLogRecord)
 	r := &OutputRecord{
 		Type:           t.AppType(),
 		Action:         tLogRecord.Action,
 		Corpus:         corpname,
 		AlignedCorpora: tLogRecord.GetAlignedCorpora(),
-		Datetime:       tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		datetime:       tLogRecord.GetTime(),
 		IPAddress:      tLogRecord.GetClientIP().String(),
 		IsAnonymous:    servicelog.UserBelongsToList(tLogRecord.UserID, t.AnonymousUsers),
-		IsQuery:        isEntryQuery(tLogRecord.Action) && !tLogRecord.IsIndirectCall,
+		IsQuery:        IsEntryQuery(tLogRecord.Action) && !tLogRecord.IsIndirectCall,
 		ProcTime:       tLogRecord.ProcTime,
-		QueryType:      importQueryType(tLogRecord),
+		QueryType:      ImportQueryType(tLogRecord),
 		UserAgent:      tLogRecord.Request.HTTPUserAgent,
 		UserID:         strconv.Itoa(tLogRecord.UserID),
 		Error:          tLogRecord.Error.AsPointer(),
 		Args:           exportArgs(tLogRecord.Args),
 	}
+	r.SetTime(tLogRecord.GetTime(), tzShiftMin)
 	r.ID = r.GenerateDeterministicID()
 	return r, nil
 }

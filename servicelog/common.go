@@ -50,8 +50,13 @@ const (
 	// AppTypeKontext defines a universal storage identifier for KonText
 	AppTypeKontext = "kontext"
 
-	// AppTypeKontextAPI defines a universal storage identifier for KonText API instance
-	AppTypeKontextAPI = "kontext-api"
+	AppVersionKontext013    = "0.13"
+	AppVersionKontext014    = "0.14"
+	AppVersionKontext015    = "0.15"
+	AppVersionKontext016    = "0.16"
+	AppVersionKontext017    = "0.17"
+	AppVersionKontext017API = "0.17-api"
+	AppVersionKontext018    = "0.18"
 
 	// AppTypeKorpusDB defines a universal storage identifier for KorpusDB
 	AppTypeKorpusDB = "korpus-db"
@@ -59,11 +64,18 @@ const (
 	// AppTypeKwords defines a universal storage identifier for Kwords
 	AppTypeKwords = "kwords"
 
+	AppVersionKwords1 = "1"
+	AppVersionKwords2 = "2"
+
 	// AppTypeLists defines a universal storage identifier for Lists
 	AppTypeLists = "lists"
 
 	// AppTypeMapka defines a universal storage identifier for Mapka
 	AppTypeMapka = "mapka"
+
+	AppVersionMapka1 = "1"
+	AppVersionMapka2 = "2"
+	AppVersionMapka3 = "3"
 
 	// AppTypeMorfio defines a universal storage identifier for Morfio
 	AppTypeMorfio = "morfio"
@@ -80,8 +92,13 @@ const (
 	// AppTypeTreq defines a universal storage identifier for Treq
 	AppTypeTreq = "treq"
 
+	AppVersionTreq1API = "v1-api"
+
 	// AppTypeWag defines a universal storage identifier for Word at a Glance
 	AppTypeWag = "wag"
+
+	AppVersionWag06 = "0.6"
+	AppVersionWag07 = "0.7"
 
 	// AppTypeWsserver defines a universal storage identifier for Word-Sim-Server
 	AppTypeWsserver = "wsserver"

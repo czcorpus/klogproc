@@ -296,22 +296,25 @@ func NewLineParser(appType string, version string, appErrRegister servicelog.App
 	case servicelog.AppTypeAkalex, servicelog.AppTypeCalc, servicelog.AppTypeLists,
 		servicelog.AppTypeQuitaUp, servicelog.AppTypeGramatikat:
 		return &shinyLineParser{lp: &shiny.LineParser{}}, nil
-	case servicelog.AppTypeKontext, servicelog.AppTypeKontextAPI:
+	case servicelog.AppTypeKontext:
 		switch version {
-		case "0.13", "0.14":
+		case servicelog.AppVersionKontext013,
+			servicelog.AppVersionKontext014:
 			return &kontext013LineParser{lp: kontext013.NewLineParser(appErrRegister)}, nil
-		case "0.15", "0.16", "0.17":
+		case servicelog.AppVersionKontext015,
+			servicelog.AppVersionKontext016,
+			servicelog.AppVersionKontext017:
 			return &kontext015LineParser{lp: kontext015.NewLineParser(appErrRegister)}, nil
-		case "0.18":
+		case servicelog.AppVersionKontext018:
 			return &kontext018LineParser{lp: kontext018.NewLineParser()}, nil
 		default:
 			return nil, fmt.Errorf("cannot find parser - unsupported version of KonText specified: %s", version)
 		}
 	case servicelog.AppTypeKwords:
 		switch version {
-		case "1":
+		case servicelog.AppVersionKwords1:
 			return &kwordsLineParser{lp: &kwords.LineParser{}}, nil
-		case "2":
+		case servicelog.AppVersionKwords2:
 			return &kwords2LineParser{lp: &kwords2.LineParser{}}, nil
 		default:
 			return nil, fmt.Errorf("cannot find parser - unsupported version of KWords specified: %s", version)
@@ -320,11 +323,11 @@ func NewLineParser(appType string, version string, appErrRegister servicelog.App
 		return &korpusDBLineParser{lp: &korpusdb.LineParser{}}, nil
 	case servicelog.AppTypeMapka:
 		switch version {
-		case "1":
+		case servicelog.AppVersionMapka1:
 			return &mapkaLineParser{lp: &mapka.LineParser{}}, nil
-		case "2":
+		case servicelog.AppVersionMapka2:
 			return &mapka2LineParser{lp: &mapka2.LineParser{}}, nil
-		case "3":
+		case servicelog.AppVersionMapka3:
 			return &mapka3LineParser{lp: &mapka3.LineParser{}}, nil
 		default:
 			return nil, fmt.Errorf("cannot find parser - unsupported version of Mapka specified: %s", version)
@@ -337,7 +340,7 @@ func NewLineParser(appType string, version string, appErrRegister servicelog.App
 		return &sydLineParser{lp: &syd.LineParser{}}, nil
 	case servicelog.AppTypeTreq:
 		switch version {
-		case "apiv1":
+		case servicelog.AppVersionTreq1API:
 			return &treqAPILineParser{lp: &treqapi.LineParser{}}, nil
 		case "":
 			return &treqLineParser{lp: &treq.LineParser{}}, nil

@@ -27,8 +27,8 @@ type LineParser struct {
 
 // ParseLine parses a query log line - i.e. it expects
 // that the line contains user interaction log
-func (lp *LineParser) ParseLine(s string, lineNum int64) (*QueryInputRecord, error) {
-	var record QueryInputRecord
+func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
+	var record InputRecord
 	err := json.Unmarshal([]byte(s), &record)
 	if err != nil {
 		return nil, servicelog.NewStreamedLineParsingError(s, "json Unmarshal error [kontext]")

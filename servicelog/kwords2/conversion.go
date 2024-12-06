@@ -84,7 +84,7 @@ func (t *Transformer) Transform(
 			Percent:      convertMultitypeInt(tLogRecord.Body.Percent),
 		}
 	}
-	userID := tLogRecord.Headers.XUserID
+	userID := tLogRecord.Headers.XUserID()
 	if userID == "" {
 		switch tUserID := tLogRecord.UserID.(type) {
 		case int:
@@ -119,11 +119,11 @@ func (t *Transformer) Transform(
 		IPAddress:     tLogRecord.GetClientIP().String(),
 		IsAnonymous:   isAnonymous,
 		IsQuery:       tLogRecord.IsQuery,
-		UserAgent:     tLogRecord.Headers.UserAgent,
+		UserAgent:     tLogRecord.Headers.UserAgent(),
 		UserID:        userIDAttr,
 		Error:         tLogRecord.ExportError(),
 		Args:          args,
-		Version:       "2",
+		Version:       servicelog.AppVersionKwords2,
 	}
 	r.ID = r.GenerateDeterministicID()
 	return r, nil

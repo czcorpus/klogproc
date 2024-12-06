@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	datetimeRegexp = regexp.MustCompile("^(\\d{4}-\\d{2}-\\d{2})(\\s|T)([012]\\d:[0-5]\\d:[0-5]\\d(\\.\\d+))")
+	datetimeRegexp = regexp.MustCompile(`^(\d{4}-\d{2}-\d{2})(\s|T)([012]\d:[0-5]\d:[0-5]\d(\.\d+))`)
 )
 
 func importDatetimeString(dateStr string) (string, error) {
@@ -111,10 +111,23 @@ type Request struct {
 
 // ------------------------------------------------------------
 
+// KonTextInputRecord is an extension of input records used
+// for different KonText versions so we can share functions
+// between them
+type KonTextInputRecord interface {
+	servicelog.InputRecord
+	GetStringArg(names ...string) string
+	HasArg(name string) bool
+	GetIntArg(name string) int
+	AllArgs() map[string]any
+}
+
+// ------------------------------------------------------------
+
 // InputRecord represents a parsed KonText record
 type InputRecord struct {
 	UserID         int                    `json:"user_id"`
-	ProcTime       float32                `json:"proc_time"`
+	ProcTime       float64                `json:"proc_time"`
 	Date           string                 `json:"date"`
 	Action         string                 `json:"action"`
 	IsIndirectCall bool                   `json:"is_indirect_call"`
@@ -203,6 +216,10 @@ func (rec *InputRecord) GetIntArg(name string) int {
 		return v
 	}
 	return -1
+}
+
+func (rec *InputRecord) AllArgs() map[string]any {
+	return rec.Args
 }
 
 // GetAlignedCorpora returns a list of aligned corpora

@@ -21,8 +21,9 @@ import (
 	"klogproc/notifications"
 	"klogproc/scripting"
 	"klogproc/servicelog"
-	"klogproc/servicelog/kontext018"
+	"klogproc/servicelog/kontext015"
 	"klogproc/servicelog/korpusdb"
+	"klogproc/servicelog/kwords2"
 	"klogproc/servicelog/ske"
 	"klogproc/servicelog/treq"
 )
@@ -48,10 +49,14 @@ func GetLogTransformer(
 
 	version := logConf.GetVersion()
 	switch logConf.GetAppType() {
-	case servicelog.AppTypeKontext, servicelog.AppTypeKontextAPI:
-		if version == "018" {
+	case servicelog.AppTypeKontext:
+		if version == servicelog.AppVersionKontext018 ||
+			version == servicelog.AppVersionKontext017 ||
+			version == servicelog.AppVersionKontext017API ||
+			version == servicelog.AppVersionKontext016 ||
+			version == servicelog.AppVersionKontext015 {
 			env, err := scripting.CreateEnvironment(
-				logConf, tr, func() servicelog.OutputRecord { return &kontext018.OutputRecord{} })
+				logConf, tr, func() servicelog.OutputRecord { return &kontext015.OutputRecord{} })
 			if err != nil {
 				return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)
 			}
@@ -64,6 +69,15 @@ func GetLogTransformer(
 			return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)
 		}
 		return scripting.NewTransformer(env, tr), nil
+	case servicelog.AppTypeKwords:
+		if version == servicelog.AppVersionKwords2 {
+			env, err := scripting.CreateEnvironment(
+				logConf, tr, func() servicelog.OutputRecord { return &kwords2.OutputRecord{} })
+			if err != nil {
+				return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)
+			}
+			return scripting.NewTransformer(env, tr), nil
+		}
 	case servicelog.AppTypeSke:
 		env, err := scripting.CreateEnvironment(
 			logConf, tr, func() servicelog.OutputRecord { return &ske.OutputRecord{} })
