@@ -68,6 +68,9 @@ func importField(L *lua.LState, field reflect.Value) lua.LValue {
 	return lua.LNil
 }
 
+// getIRecProp
+// TODO: this is not very effective for repeated calls on the same
+// input report as each time, it creates a LFunction instance to be called
 func getIRecProp(L *lua.LState, inputRec servicelog.InputRecord, name string) lua.LValue {
 	val := reflect.ValueOf(inputRec).Elem()
 	if field := val.FieldByName(name); field.IsValid() {
@@ -105,6 +108,11 @@ func getIRecProp(L *lua.LState, inputRec servicelog.InputRecord, name string) lu
 			} else {
 				L.Push(lua.LFalse)
 			}
+			return 1
+		})
+	case "GetTime":
+		return L.NewFunction(func(l *lua.LState) int {
+			L.Push(lua.LString(inputRec.GetTime().Format(time.RFC3339)))
 			return 1
 		})
 	}

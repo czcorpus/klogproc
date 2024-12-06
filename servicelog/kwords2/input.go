@@ -19,6 +19,7 @@ package kwords2
 import (
 	"klogproc/servicelog"
 	"net"
+	"strings"
 	"time"
 )
 
@@ -83,10 +84,27 @@ type Body struct {
 	TextWordCount int    `json:"textWordCount"`
 }
 
-type Headers struct {
-	UserAgent     string `json:"user-agent"`
-	XForwardedFor string `json:"x-forwarded-for"`
-	XUserID       string `json:"x-user-id"`
+type Headers map[string]string
+
+func (h Headers) getHeader(name string) string {
+	for k, v := range h {
+		if strings.ToLower(k) == strings.ToLower(name) {
+			return v
+		}
+	}
+	return ""
+}
+
+func (h Headers) UserAgent() string {
+	return h.getHeader("user-agent")
+}
+
+func (h Headers) XForwardedFor() string {
+	return h.getHeader("x-forwarded-for")
+}
+
+func (h Headers) XUserID() string {
+	return h.getHeader("x-user-id")
 }
 
 // InputRecord is a Kwords parsed log record

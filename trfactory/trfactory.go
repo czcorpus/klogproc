@@ -63,13 +63,22 @@ func GetStaticLogTransformer(
 	case servicelog.AppTypeAkalex, servicelog.AppTypeCalc, servicelog.AppTypeLists,
 		servicelog.AppTypeQuitaUp, servicelog.AppTypeGramatikat:
 		return shiny.NewTransformer(appType, excludeIpList, anonymousUsers), nil
-	case servicelog.AppTypeKontext, servicelog.AppTypeKontextAPI:
+	case servicelog.AppTypeKontext:
 		switch version {
-		case "0.13", "0.14":
-			return &kontext013.Transformer{ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
-		case "0.15", "0.16", "0.17":
+		case servicelog.AppVersionKontext013, servicelog.AppVersionKontext014:
+			return &kontext013.Transformer{
+				ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
+		case servicelog.AppVersionKontext015,
+			servicelog.AppVersionKontext016,
+			servicelog.AppVersionKontext017:
+			return &kontext015.Transformer{
+				ExcludeIPList:  excludeIpList,
+				AnonymousUsers: anonymousUsers,
+				IsAPI:          true,
+			}, nil
+		case servicelog.AppVersionKontext017API:
 			return &kontext015.Transformer{ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
-		case "0.18":
+		case servicelog.AppVersionKontext018:
 			return kontext018.NewTransformer(
 				bufferConf,
 				realtimeClock,
@@ -82,9 +91,9 @@ func GetStaticLogTransformer(
 		}
 	case servicelog.AppTypeKwords:
 		switch version {
-		case "1":
+		case servicelog.AppVersionKwords1:
 			return &kwords.Transformer{ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
-		case "2":
+		case servicelog.AppVersionKwords2:
 			return &kwords2.Transformer{ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported KWords version: %s", version)
@@ -94,11 +103,11 @@ func GetStaticLogTransformer(
 		return korpusdb.NewTransformer(excludeIpList), nil
 	case servicelog.AppTypeMapka:
 		switch version {
-		case "1":
+		case servicelog.AppVersionMapka1:
 			return mapka.NewTransformer(excludeIpList, anonymousUsers), nil
-		case "2":
+		case servicelog.AppVersionMapka2:
 			return mapka2.NewTransformer(excludeIpList, anonymousUsers), nil
-		case "3":
+		case servicelog.AppVersionMapka3:
 			return mapka3.NewTransformer(bufferConf, excludeIpList, anonymousUsers, realtimeClock), nil
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported Mapka version: %s", version)
@@ -112,16 +121,16 @@ func GetStaticLogTransformer(
 		return syd.NewTransformer(version, excludeIpList, anonymousUsers), nil
 	case servicelog.AppTypeTreq:
 		switch version {
-		case "apiv1":
+		case servicelog.AppVersionTreq1API:
 			return &treqapi.Transformer{ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
 		default:
 			return &treq.Transformer{ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
 		}
 	case servicelog.AppTypeWag:
 		switch version {
-		case "0.6":
+		case servicelog.AppVersionWag06:
 			return &wag06.Transformer{ExcludeIPList: excludeIpList}, nil
-		case "0.7":
+		case servicelog.AppVersionWag07:
 			return wag07.NewTransformer(bufferConf, excludeIpList, anonymousUsers, realtimeClock, emailNotifier), nil
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported WaG version: %s", version)

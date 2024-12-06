@@ -137,6 +137,10 @@ Input record:
 {{.Indent}}{{.Name}} {{.Type}} {{if .IsContainer}}of {{.ContentType}}{{end}}{{if .Nested}}{{range .Nested}}
 {{.Indent}}  {{.Name}} {{.Type}} {{if .IsContainer}}of {{.ContentType}}{{end}}{{end}}{{end}}{{end}}
 
+To get a record time in a normalized (RFC3339) format:
+
+input_rec.GetTime()
+
 Output record:
 {{range .Fields2}}
 {{.Indent}}{{.Name}} {{.Type}} {{if .IsContainer}}of {{.ContentType}}{{end}}{{if .Nested}}{{range .Nested}}
@@ -182,10 +186,10 @@ The second arg. is optional
 function transform(input_rec)
     local out = transform_default(input_rec, 0)
 	-- setting an output field:
-	set_out_prop(ans, "{{.FirstFieldName}}", string.format("%s[modified]", input_rec.{{.FirstFieldName}}))
+	set_out_prop(out, "{{.FirstFieldName}}", string.format("%s[modified]", input_rec.{{.FirstFieldName}}))
     -- TODO: Transform input record to output format
     -- Available fields and functions are documented above
-    return ans
+    return out
 end
 `
 
@@ -235,14 +239,12 @@ func generateLuaStub(appType, version string) error {
 		case "013":
 			src, err = generateLuaStubForType(&kontext013.InputRecord{}, &kontext013.OutputRecord{})
 		case "015":
-			src, err = generateLuaStubForType(&kontext015.InputRecord{}, &kontext013.OutputRecord{})
+			src, err = generateLuaStubForType(&kontext015.InputRecord{}, &kontext015.OutputRecord{})
 		case "018":
-			src, err = generateLuaStubForType(&kontext018.QueryInputRecord{}, &kontext018.OutputRecord{})
+			src, err = generateLuaStubForType(&kontext018.InputRecord{}, &kontext015.OutputRecord{})
 		default:
 			return fmt.Errorf("failed to create Lua script stub for 'kontext': unknown version '%s'", version)
 		}
-	case servicelog.AppTypeKontextAPI:
-		// TODO
 	case servicelog.AppTypeKorpusDB:
 		src, err = generateLuaStubForType(&korpusdb.InputRecord{}, &korpusdb.OutputRecord{})
 	case servicelog.AppTypeKwords:

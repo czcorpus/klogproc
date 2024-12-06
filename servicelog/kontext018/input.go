@@ -58,8 +58,8 @@ type Request struct {
 	RemoteAddr       string `json:"REMOTE_ADDR"`
 }
 
-// QueryInputRecord represents Kontext query log
-type QueryInputRecord struct {
+// InputRecord represents Kontext query log
+type InputRecord struct {
 	Logger         string                 `json:"logger"`
 	Level          string                 `json:"level"`
 	Date           string                 `json:"date"`
@@ -78,7 +78,7 @@ type QueryInputRecord struct {
 // GetTime returns record's time as a Golang's Time
 // instance. Please note that the value is truncated
 // to seconds.
-func (rec *QueryInputRecord) GetTime() time.Time {
+func (rec *InputRecord) GetTime() time.Time {
 	if rec.isProcessable {
 		if rec.Date[len(rec.Date)-1] == 'Z' {
 			return servicelog.ConvertDatetimeStringWithMillisNoTZ(rec.Date[:len(rec.Date)-1] + "000")
@@ -91,7 +91,7 @@ func (rec *QueryInputRecord) GetTime() time.Time {
 // GetClientIP returns a client IP no matter in which
 // part of the record it was found
 // (e.g. REMOTE_ADDR vs. HTTP_REMOTE_ADDR vs. HTTP_FORWARDED_FOR)
-func (rec *QueryInputRecord) GetClientIP() net.IP {
+func (rec *InputRecord) GetClientIP() net.IP {
 	if rec.Request.HTTPForwardedFor != "" {
 		return net.ParseIP(rec.Request.HTTPForwardedFor)
 
@@ -104,30 +104,30 @@ func (rec *QueryInputRecord) GetClientIP() net.IP {
 	return nil
 }
 
-func (rec *QueryInputRecord) ShouldBeAnalyzed() bool {
+func (rec *InputRecord) ShouldBeAnalyzed() bool {
 	return rec.Action == "query_submit" || rec.Action == "create_view" ||
 		rec.Action == "create_lazy_view" || rec.Action == "wordlist/submit"
 	// TODO the list of actions is incomplete
 }
 
-func (rec *QueryInputRecord) ClusteringClientID() string {
+func (rec *InputRecord) ClusteringClientID() string {
 	return servicelog.GenerateRandomClusteringID()
 }
 
-func (rec *QueryInputRecord) ClusterSize() int {
+func (rec *InputRecord) ClusterSize() int {
 	return 0
 }
 
-func (rec *QueryInputRecord) SetCluster(size int) {
+func (rec *InputRecord) SetCluster(size int) {
 }
 
 // GetUserAgent returns a raw HTTP user agent info as provided by the client
-func (rec *QueryInputRecord) GetUserAgent() string {
+func (rec *InputRecord) GetUserAgent() string {
 	return rec.Request.HTTPUserAgent
 }
 
 // IsProcessable returns true if there was no error in reading the record
-func (rec *QueryInputRecord) IsProcessable() bool {
+func (rec *InputRecord) IsProcessable() bool {
 	return rec.isProcessable
 }
 
@@ -135,7 +135,7 @@ func (rec *QueryInputRecord) IsProcessable() bool {
 // a special "args" sub-object. The function supports
 // nested keys - e.g. {"foo": {"bar": "test"}} can be
 // accessed via GetStringArg("foo", "bar")
-func (rec *QueryInputRecord) GetStringArg(names ...string) string {
+func (rec *InputRecord) GetStringArg(names ...string) string {
 	var val interface{}
 	val = rec.Args
 	for _, name := range names {
@@ -154,14 +154,14 @@ func (rec *QueryInputRecord) GetStringArg(names ...string) string {
 
 // HasArg tests whether there is a top-level key matching
 // a provided name
-func (rec *QueryInputRecord) HasArg(name string) bool {
+func (rec *InputRecord) HasArg(name string) bool {
 	_, ok := rec.Args[name]
 	return ok
 }
 
 // GetIntArg fetches an integer parameter from
 // a special "params" sub-object
-func (rec *QueryInputRecord) GetIntArg(name string) int {
+func (rec *InputRecord) GetIntArg(name string) int {
 	switch v := rec.Args[name].(type) {
 	case int:
 		return v
@@ -169,10 +169,14 @@ func (rec *QueryInputRecord) GetIntArg(name string) int {
 	return -1
 }
 
+func (rec *InputRecord) AllArgs() map[string]any {
+	return rec.Args
+}
+
 // GetAlignedCorpora returns a list of aligned corpora
 // (i.e. not the first corpus but possible other corpora aligned
 // with the main one)
-func (rec *QueryInputRecord) GetAlignedCorpora() []string {
+func (rec *InputRecord) GetAlignedCorpora() []string {
 	corpora, _ := getSliceOfStrings(rec.Args, "corpora")
 	if len(corpora) > 0 {
 		return corpora[1:]
@@ -180,6 +184,6 @@ func (rec *QueryInputRecord) GetAlignedCorpora() []string {
 	return []string{}
 }
 
-func (rec *QueryInputRecord) IsSuspicious() bool {
+func (rec *InputRecord) IsSuspicious() bool {
 	return false
 }
