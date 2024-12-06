@@ -29,7 +29,7 @@ func TestFieldAccess(t *testing.T) {
 	lt := new(ltrans)
 	exe, err := CreateCustomTransformer(
 		"function transform (rec)\n"+
-			"  return {rec.ClientIP, rec.Time}\n"+
+			"  return {rec.ClientIP, rec.Time, rec.Args.Name}\n"+
 			"end\n",
 		lt,
 		func(env *lua.LState) {},
@@ -43,6 +43,13 @@ func TestFieldAccess(t *testing.T) {
 			ID:       "foobar",
 			Time:     time.Date(2024, time.December, 1, 10, 28, 13, 0, tz),
 			ClientIP: net.IPv4(192, 168, 1, 10),
+			Args: struct {
+				Name     string
+				Position int
+			}{
+				Name:     "arg1",
+				Position: 1000,
+			},
 		}
 
 		L.Push(L.GetGlobal("transform"))
@@ -53,6 +60,8 @@ func TestFieldAccess(t *testing.T) {
 		L.Pop(1)
 		tRet, ok := ret.(*lua.LTable)
 		assert.True(t, ok)
+		assert.Equal(t, 3, tRet.Len())
+
 		rawRes := tRet.RawGetInt(1)
 		v1, ok := rawRes.(lua.LString)
 		assert.True(t, ok)

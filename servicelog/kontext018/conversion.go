@@ -129,6 +129,7 @@ func (t *Transformer) Transform(
 		IPAddress:      servicelog.IPToOutString(tLogRecord.GetClientIP()),
 		IsAnonymous:    servicelog.UserBelongsToList(tLogRecord.UserID, t.anonymousUsers),
 		IsQuery:        k015.IsEntryQuery(tLogRecord.Action) && !tLogRecord.IsIndirectCall,
+		IsAPI:          tLogRecord.IsAPI,
 		ProcTime:       tLogRecord.ProcTime,
 		QueryType:      k015.ImportQueryType(tLogRecord),
 		UserAgent:      tLogRecord.Request.HTTPUserAgent,

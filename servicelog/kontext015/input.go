@@ -106,7 +106,11 @@ type Request struct {
 	HTTPForwardedFor string `json:"HTTP_X_FORWARDED_FOR"`
 	HTTPUserAgent    string `json:"HTTP_USER_AGENT"`
 	HTTPRemoteAddr   string `json:"HTTP_REMOTE_ADDR"`
-	RemoteAddr       string `json:"REMOTE_ADDR"`
+	// HTTPIsWebApp specifies whether the request (even API one)
+	// is from CNC's web application and thus not considered
+	// true "API use"
+	HTTPIsWebApp string `json:"HTTP_X_IS_WEB_APP"`
+	RemoteAddr   string `json:"REMOTE_ADDR"`
 }
 
 // ------------------------------------------------------------
@@ -131,8 +135,9 @@ type InputRecord struct {
 	Date           string                 `json:"date"`
 	Action         string                 `json:"action"`
 	IsIndirectCall bool                   `json:"is_indirect_call"`
+	IsAPI          bool                   `json:"is_api"`
 	Request        Request                `json:"request"`
-	Args           map[string]interface{} `json:"args"`
+	Args           map[string]any         `json:"args"`
 	Error          servicelog.ErrorRecord `json:"error"`
 }
 

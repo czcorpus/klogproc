@@ -56,6 +56,10 @@ type Request struct {
 	HTTPUserAgent    string `json:"HTTP_USER_AGENT"`
 	HTTPRemoteAddr   string `json:"HTTP_REMOTE_ADDR"`
 	RemoteAddr       string `json:"REMOTE_ADDR"`
+	// HTTPIsWebApp specifies whether the request (even API one)
+	// is from CNC's web application and thus not considered
+	// true "API use"
+	HTTPIsWebApp string `json:"HTTP_X_IS_WEB_APP"`
 }
 
 // InputRecord represents Kontext query log
@@ -69,6 +73,7 @@ type InputRecord struct {
 	ProcTime       float64                `json:"proc_time"`
 	Action         string                 `json:"action"`
 	IsIndirectCall bool                   `json:"is_indirect_call"`
+	IsAPI          bool                   `json:"is_api"`
 	Request        Request                `json:"request"`
 	Args           map[string]interface{} `json:"args"`
 	Error          servicelog.ErrorRecord `json:"error"`

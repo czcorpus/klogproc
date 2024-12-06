@@ -32,6 +32,10 @@ type dummyInputRec struct {
 	UserAgent           string
 	_ClusteringClientID string
 	_ClusterSize        int
+	Args                struct {
+		Name     string
+		Position int
+	}
 }
 
 func (r *dummyInputRec) GetTime() time.Time {
