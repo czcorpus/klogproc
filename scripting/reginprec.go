@@ -17,6 +17,7 @@
 package scripting
 
 import (
+	"fmt"
 	"klogproc/servicelog"
 	"net"
 	"reflect"
@@ -59,10 +60,16 @@ func importField(L *lua.LState, field reflect.Value) lua.LValue {
 			L.RawSet(tbl, lua.LString(key.String()), value)
 		}
 		return tbl
-	default:
+	case reflect.Struct:
 		switch tVal := field.Interface().(type) {
 		case time.Time:
 			return lua.LString(tVal.Format(time.RFC3339))
+		default:
+			value, err := StructToLua(L, field)
+			if err != nil {
+				L.RaiseError(fmt.Sprintf("failed to import struct: %s", err))
+			}
+			return value
 		}
 	}
 	return lua.LNil

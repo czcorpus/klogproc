@@ -59,7 +59,8 @@ func TestImportJSONLog(t *testing.T) {
 	"qmcase": false, "extended_query": false, "uses_context": 0, "uses_tt": false},
 	"date": "2021-01-03 01:28:46.153734", "action": "query_submit", "user_id": 19185,
 	"proc_time": 0.5779, "request": {"HTTP_X_FORWARDED_FOR": "89.176.43.98",
-	"HTTP_USER_AGENT": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:67.0) Gecko/20100101 Firefox/67.0"}}`
+	"HTTP_USER_AGENT": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:67.0) Gecko/20100101 Firefox/67.0",
+	"HTTP_X_IS_WEB_APP": "1"}}`
 
 	rec, err := ImportJSONLog([]byte(jsonLog))
 	assert.Nil(t, err)
@@ -67,6 +68,7 @@ func TestImportJSONLog(t *testing.T) {
 	assert.InDelta(t, 0.5779, rec.ProcTime, 0.0001)
 	assert.Equal(t, "89.176.43.98", rec.Request.HTTPForwardedFor)
 	assert.Equal(t, "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:67.0) Gecko/20100101 Firefox/67.0", rec.Request.HTTPUserAgent)
+	assert.Equal(t, "1", rec.Request.HTTPIsWebApp)
 	assert.Equal(t, "query_submit", rec.Action)
 	assert.Equal(t, "2021-01-03T01:28:46.153734", rec.Date)
 	args := map[string]interface{}{

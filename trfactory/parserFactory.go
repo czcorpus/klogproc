@@ -303,7 +303,8 @@ func NewLineParser(appType string, version string, appErrRegister servicelog.App
 			return &kontext013LineParser{lp: kontext013.NewLineParser(appErrRegister)}, nil
 		case servicelog.AppVersionKontext015,
 			servicelog.AppVersionKontext016,
-			servicelog.AppVersionKontext017:
+			servicelog.AppVersionKontext017,
+			servicelog.AppVersionKontext017API:
 			return &kontext015LineParser{lp: kontext015.NewLineParser(appErrRegister)}, nil
 		case servicelog.AppVersionKontext018:
 			return &kontext018LineParser{lp: kontext018.NewLineParser()}, nil

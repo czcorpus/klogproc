@@ -236,9 +236,14 @@ func generateLuaStub(appType, version string) error {
 		src, err = generateLuaStubForType(&shiny.InputRecord{}, &shiny.OutputRecord{})
 	case servicelog.AppTypeKontext:
 		switch version {
-		case "013":
+		case servicelog.AppVersionKontext013,
+			servicelog.AppVersionKontext014:
 			src, err = generateLuaStubForType(&kontext013.InputRecord{}, &kontext013.OutputRecord{})
-		case "015":
+		case servicelog.AppVersionKontext015,
+			servicelog.AppVersionKontext016,
+			servicelog.AppVersionKontext017,
+			servicelog.AppVersionKontext017API,
+			servicelog.AppVersionKontext018:
 			src, err = generateLuaStubForType(&kontext015.InputRecord{}, &kontext015.OutputRecord{})
 		case "018":
 			src, err = generateLuaStubForType(&kontext018.InputRecord{}, &kontext015.OutputRecord{})

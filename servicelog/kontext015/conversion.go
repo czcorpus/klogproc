@@ -60,6 +60,7 @@ func (t *Transformer) Transform(
 		AlignedCorpora: tLogRecord.GetAlignedCorpora(),
 		IPAddress:      tLogRecord.GetClientIP().String(),
 		IsAnonymous:    servicelog.UserBelongsToList(tLogRecord.UserID, t.AnonymousUsers),
+		IsAPI:          tLogRecord.IsAPI,
 		IsQuery:        IsEntryQuery(tLogRecord.Action) && !tLogRecord.IsIndirectCall,
 		ProcTime:       tLogRecord.ProcTime,
 		QueryType:      ImportQueryType(tLogRecord),
