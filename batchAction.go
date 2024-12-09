@@ -63,11 +63,22 @@ func (clp *cnkLogProcessor) ProcItem(
 ) []servicelog.OutputRecord {
 	if clp.recordIsLoggable(logRec) {
 		ans := make([]servicelog.OutputRecord, 0, 2)
-		for _, precord := range clp.logTransformer.Preprocess(logRec, clp.logBuffer) {
+		prepInp, err := clp.logTransformer.Preprocess(logRec, clp.logBuffer)
+		if err != nil {
+			log.Error().
+				Str("appType", clp.appType).
+				Str("appVersion", clp.appVersion).
+				Err(err).Msgf("Failed to transform item %s", logRec)
+			return []servicelog.OutputRecord{}
+		}
+		for _, precord := range prepInp {
 			clp.logBuffer.AddRecord(precord)
 			rec, err := clp.logTransformer.Transform(precord, tzShiftMin)
 			if err != nil {
-				log.Error().Err(err).Msgf("Failed to transform item %s", precord)
+				log.Error().
+					Str("appType", clp.appType).
+					Str("appVersion", clp.appVersion).
+					Err(err).Msgf("Failed to transform item %s", logRec)
 				return []servicelog.OutputRecord{}
 			}
 			applyLocation(precord, clp.geoIPDb, rec)

@@ -103,7 +103,6 @@ func exportArgs(action string, data map[string]any) map[string]any {
 // Transformer converts a source log object into a destination one
 type Transformer struct {
 	analyzer       *analysis.BotAnalyzer[*InputRecord]
-	excludeIPList  servicelog.ExcludeIPList
 	anonymousUsers []int
 }
 
@@ -148,24 +147,19 @@ func (t *Transformer) HistoryLookupItems() int {
 
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) []servicelog.InputRecord {
-	if t.excludeIPList.Excludes(rec) {
-		return []servicelog.InputRecord{}
-	}
-	return []servicelog.InputRecord{rec}
+) ([]servicelog.InputRecord, error) {
+	return []servicelog.InputRecord{rec}, nil
 }
 
 func NewTransformer(
 	bufferConf *load.BufferConf,
 	realtimeClock bool,
 	emailNotifier notifications.Notifier,
-	excludeIPList []string,
 	anonymousUsers []int,
 ) *Transformer {
 	analyzer := analysis.NewBotAnalyzer[*InputRecord]("kontext", bufferConf, realtimeClock, emailNotifier)
 	return &Transformer{
 		analyzer:       analyzer,
-		excludeIPList:  excludeIPList,
 		anonymousUsers: anonymousUsers,
 	}
 }

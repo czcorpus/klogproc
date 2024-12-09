@@ -36,6 +36,22 @@ func LuaTableToSliceOfStrings(val *lua.LTable) ([]string, error) {
 	return ans, nil
 }
 
+func LuaTableToSliceOfUserData[T any](val *lua.LTable) ([]T, error) {
+	tableSize := val.Len()
+	ans := make([]T, tableSize)
+	for i := 1; i <= tableSize; i++ { // note: Lua tables are 1-based
+		v := val.RawGetInt(i)
+		if ud, ok := v.(*lua.LUserData); ok {
+			if typedItem, ok := ud.Value.(T); ok {
+				ans[i-1] = typedItem
+				continue
+			}
+		}
+		return ans, ErrFailedTypeAssertion
+	}
+	return ans, nil
+}
+
 func LuaTableToMap(val *lua.LTable) map[string]any {
 	ans := make(map[string]any)
 	val.ForEach(func(key, val lua.LValue) {
@@ -95,6 +111,77 @@ func LuaTableToSliceOfBools(val *lua.LTable) ([]bool, error) {
 	return ans, nil
 }
 
+func ValueToLua(L *lua.LState, val reflect.Value) (lua.LValue, error) {
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+	// Convert the field value to a Lua value
+	var lValue lua.LValue
+	switch val.Kind() {
+	case reflect.String:
+		lValue = lua.LString(val.String())
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		lValue = lua.LNumber(val.Int())
+	case reflect.Float32, reflect.Float64:
+		lValue = lua.LNumber(val.Float())
+	case reflect.Bool:
+		lValue = lua.LBool(val.Bool())
+	case reflect.Slice, reflect.Array:
+		sliceTable := L.NewTable()
+		for j := 0; j < val.Len(); j++ {
+			elem := val.Index(j)
+			if elem.Kind() == reflect.Struct {
+				nestedStruct, err := StructToLua(L, elem)
+				if err != nil {
+					return lua.LNil, fmt.Errorf("failed to convert struct to Lua: %w", err)
+				}
+				L.SetTable(sliceTable, lua.LNumber(j+1), nestedStruct)
+			} else {
+				// Handle primitive types in slices, everything else will be LUserData
+				switch elem.Kind() {
+				case reflect.String:
+					L.SetTable(sliceTable, lua.LNumber(j+1), lua.LString(elem.String()))
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+					L.SetTable(sliceTable, lua.LNumber(j+1), lua.LNumber(elem.Int()))
+				case reflect.Float32, reflect.Float64:
+					L.SetTable(sliceTable, lua.LNumber(j+1), lua.LNumber(elem.Float()))
+				case reflect.Bool:
+					L.SetTable(sliceTable, lua.LNumber(j+1), lua.LBool(elem.Bool()))
+				default:
+					ud := L.NewUserData()
+					ud.Value = elem.Interface()
+					L.SetTable(sliceTable, lua.LNumber(j+1), ud)
+				}
+			}
+		}
+		lValue = sliceTable
+	case reflect.Struct:
+		var err error
+		lValue, err = StructToLua(L, val)
+		if err != nil {
+			return lua.LNil, err
+		}
+	default:
+		lValue = lua.LNil
+	}
+	return lValue, nil
+}
+
+func StructPropToLua(L *lua.LState, val reflect.Value, propName string) (lua.LValue, error) {
+	// go from pointer to the original value
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+	if val.Kind() != reflect.Struct {
+		return lua.LNil, ErrFailedTypeAssertion
+	}
+	fld := val.FieldByName(propName)
+	if fld.IsValid() {
+		return ValueToLua(L, fld)
+	}
+	return lua.LNil, fmt.Errorf("invalid property %s of object %s", propName, val.Type().Name())
+}
+
 func StructToLua(L *lua.LState, val reflect.Value) (*lua.LTable, error) {
 	table := L.NewTable()
 
@@ -115,50 +202,10 @@ func StructToLua(L *lua.LState, val reflect.Value) (*lua.LTable, error) {
 			continue
 		}
 
-		// Convert the field value to a Lua value
-		var lValue lua.LValue
-		switch field.Kind() {
-		case reflect.String:
-			lValue = lua.LString(field.String())
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			lValue = lua.LNumber(field.Int())
-		case reflect.Float32, reflect.Float64:
-			lValue = lua.LNumber(field.Float())
-		case reflect.Bool:
-			lValue = lua.LBool(field.Bool())
-		case reflect.Slice, reflect.Array:
-			sliceTable := L.NewTable()
-			for j := 0; j < field.Len(); j++ {
-				elem := field.Index(j)
-				if elem.Kind() == reflect.Struct {
-					nestedStruct, err := StructToLua(L, elem)
-					if err != nil {
-						return nil, fmt.Errorf("failed to convert struct to Lua: %w", err)
-					}
-					L.SetTable(sliceTable, lua.LNumber(j+1), nestedStruct)
-				} else {
-					// Handle primitive types in slices
-					switch elem.Kind() {
-					case reflect.String:
-						L.SetTable(sliceTable, lua.LNumber(j+1), lua.LString(elem.String()))
-					case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-						L.SetTable(sliceTable, lua.LNumber(j+1), lua.LNumber(elem.Int()))
-					case reflect.Float32, reflect.Float64:
-						L.SetTable(sliceTable, lua.LNumber(j+1), lua.LNumber(elem.Float()))
-					case reflect.Bool:
-						L.SetTable(sliceTable, lua.LNumber(j+1), lua.LBool(elem.Bool()))
-					}
-				}
-			}
-			lValue = sliceTable
-		case reflect.Struct:
-			var err error
-			lValue, err = StructToLua(L, field)
-			if err != nil {
-				return nil, err
-			}
-		default:
-			continue
+		lValue, err := ValueToLua(L, field)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"failed to convert struct of type %s to Lua: %w", val.Type().Name(), err)
 		}
 		L.SetTable(table, lua.LString(fieldType.Name), lValue)
 	}

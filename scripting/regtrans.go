@@ -18,6 +18,7 @@ package scripting
 
 import (
 	"klogproc/servicelog"
+	"reflect"
 
 	"github.com/rs/zerolog/log"
 	lua "github.com/yuin/gopher-lua"
@@ -42,6 +43,31 @@ func registerStaticTransformer[T servicelog.LogItemTransformer](env *lua.LState,
 		return 1
 	}))
 
+	env.SetGlobal("preprocess_default", env.NewFunction(func(L *lua.LState) int {
+		lrec := L.CheckUserData(1)
+		tLrec, ok := lrec.Value.(servicelog.InputRecord)
+		if !ok {
+			L.ArgError(1, "expected InputRecord")
+			return 1
+		}
+		logBuffer := L.CheckUserData(2)
+		tLogBuffer, ok := logBuffer.Value.(servicelog.ServiceLogBuffer)
+		if !ok {
+			L.ArgError(1, "expected InputRecord")
+			return 1
+		}
+		ans, err := transformer.Preprocess(tLrec, tLogBuffer)
+		if err != nil {
+			L.RaiseError("failed to preprocess(): %s", err)
+		}
+		lv, err := ValueToLua(L, reflect.ValueOf(ans))
+		if err != nil {
+			L.RaiseError("failed to run preprocess(): %s", err)
+		}
+		L.Push(lv)
+		return 1
+	}))
+
 	env.SetGlobal("set_out_prop", env.NewFunction(func(e *lua.LState) int {
 		orec := checkOutputRecord(env, 1)
 		key := env.CheckString(2)
@@ -51,6 +77,18 @@ func registerStaticTransformer[T servicelog.LogItemTransformer](env *lua.LState,
 			log.Error().Err(err).Str("recType", orec.GetType()).Msg("failed to set output property")
 		}
 		return 0
+	}))
+
+	env.SetGlobal("get_out_prop", env.NewFunction(func(e *lua.LState) int {
+		orec := checkOutputRecord(env, 1)
+		key := env.CheckString(2)
+		val, err := StructPropToLua(env, reflect.ValueOf(orec), key)
+		if err != nil {
+			env.RaiseError("failed to get property: %s", err)
+			return 0
+		}
+		env.Push(val)
+		return 1
 	}))
 
 	return nil

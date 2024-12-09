@@ -180,7 +180,25 @@ log.info("message", map_with_args)
 (also: warn, debug, error)
 The second arg. is optional
 
+Global variables:
+
+app_type, app_version, anonymous_users
+
 ]]--
+
+-- preprocess function gives a way how to
+-- decide whether the input_rec should be processed
+-- (just return {} to ignore the record) or it can
+-- be transformed into a set of records with help of
+-- the buffer (this is e.g. used with mapka3 to generate
+-- "fake" records representing clusters of user activity).
+function preprocess(input_rec, buffer)
+	-- if you want to make sure a possible hardcoded
+    -- preprocess is always applied, use:
+	-- local out = preprocess_default(input_rec, buffer)
+	-- otherwise just return a table of size 1 with the orig. record:
+    return {input_rec}
+end
 
 -- transform function processes the input record and returns an output record
 function transform(input_rec)

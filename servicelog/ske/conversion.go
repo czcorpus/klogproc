@@ -28,7 +28,6 @@ import (
 // Transformer converts a source log object into a destination one
 type Transformer struct {
 	userMap        *users.UserMap
-	excludeIPList  servicelog.ExcludeIPList
 	anonymousUsers []int
 }
 
@@ -80,11 +79,8 @@ func (t *Transformer) HistoryLookupItems() int {
 
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) []servicelog.InputRecord {
-	if t.excludeIPList.Excludes(rec) {
-		return []servicelog.InputRecord{}
-	}
-	return []servicelog.InputRecord{rec}
+) ([]servicelog.InputRecord, error) {
+	return []servicelog.InputRecord{rec}, nil
 }
 
 // NewTransformer is a default constructor for the Transformer.
@@ -94,12 +90,10 @@ func (t *Transformer) Preprocess(
 // be needed in the future, a custom Lua script should be used
 // for this (users.UserMap has a Lua interface).
 func NewTransformer(
-	excludeIPList servicelog.ExcludeIPList,
 	anonymousUsers []int,
 ) *Transformer {
 	return &Transformer{
 		userMap:        users.EmptyUserMap(),
-		excludeIPList:  excludeIPList,
 		anonymousUsers: anonymousUsers,
 	}
 }

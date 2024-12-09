@@ -31,7 +31,6 @@ const (
 
 // Transformer converts a Treq log record to a destination format
 type Transformer struct {
-	ExcludeIPList  servicelog.ExcludeIPList
 	AnonymousUsers []int
 }
 
@@ -106,9 +105,6 @@ func (t *Transformer) HistoryLookupItems() int {
 
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) []servicelog.InputRecord {
-	if t.ExcludeIPList.Excludes(rec) {
-		return []servicelog.InputRecord{}
-	}
-	return []servicelog.InputRecord{rec}
+) ([]servicelog.InputRecord, error) {
+	return []servicelog.InputRecord{rec}, nil
 }

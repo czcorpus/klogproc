@@ -121,11 +121,25 @@ func (tp *tailProcessor) OnEntry(
 		return
 	}
 	if parsed.IsProcessable() {
-		for _, precord := range tp.logTransformer.Preprocess(parsed, tp.logBuffer) {
+		prepInp, err := tp.logTransformer.Preprocess(parsed, tp.logBuffer)
+		if err != nil {
+			log.Error().
+				Str("appType", tp.appType).
+				Str("appVersion", tp.version).
+				Err(err).
+				Msgf("Failed to transform item %s", parsed)
+			dataWriter.Ignored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
+			return
+		}
+		for _, precord := range prepInp {
 			tp.logBuffer.AddRecord(precord)
 			outRec, err := tp.logTransformer.Transform(precord, tp.tzShift)
 			if err != nil {
-				log.Error().Err(err).Msg("Failed to transform processable record")
+				log.Error().
+					Str("appType", tp.appType).
+					Str("appVersion", tp.version).
+					Err(err).
+					Msgf("Failed to transform item %s", precord)
 				dataWriter.Ignored <- save.NewIgnoredItemMsg(tp.filePath, logPosition)
 				return
 			}

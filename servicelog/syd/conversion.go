@@ -29,7 +29,6 @@ type Transformer struct {
 	version        string
 	syncCorpora    []string
 	diaCorpora     []string
-	excludeIPList  servicelog.ExcludeIPList
 	anonymousUsers []int
 }
 
@@ -84,18 +83,14 @@ func (t *Transformer) HistoryLookupItems() int {
 
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) []servicelog.InputRecord {
-	if t.excludeIPList.Excludes(rec) {
-		return []servicelog.InputRecord{}
-	}
-	return []servicelog.InputRecord{rec}
+) ([]servicelog.InputRecord, error) {
+	return []servicelog.InputRecord{rec}, nil
 }
 
 // NewTransformer is a recommended factory for new Transformer instances
 // to reflect the version properly
 func NewTransformer(
 	version string,
-	excludeIPList servicelog.ExcludeIPList,
 	anonymousUsers []int,
 ) *Transformer {
 	switch version {
@@ -104,7 +99,6 @@ func NewTransformer(
 			version:        version,
 			syncCorpora:    []string{"syn2010", "oral_v2", "ksk-dopisy"},
 			diaCorpora:     []string{"diakon"},
-			excludeIPList:  excludeIPList,
 			anonymousUsers: anonymousUsers,
 		}
 	default:

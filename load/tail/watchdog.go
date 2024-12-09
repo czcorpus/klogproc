@@ -44,11 +44,10 @@ type FileConf struct {
 	AppType string `json:"appType"`
 	// Version represents a major and minor version signature as used in semantic versioning
 	// (e.g. 0.15, 1.2)
-	Version       string                   `json:"version"`
-	TZShift       int                      `json:"tzShift"`
-	Buffer        *load.BufferConf         `json:"buffer"`
-	ExcludeIPList servicelog.ExcludeIPList `json:"excludeIpList"`
-	ScriptPath    string                   `json:"scriptPath"`
+	Version    string           `json:"version"`
+	TZShift    int              `json:"tzShift"`
+	Buffer     *load.BufferConf `json:"buffer"`
+	ScriptPath string           `json:"scriptPath"`
 }
 
 func (fc *FileConf) GetAppType() string {
@@ -61,10 +60,6 @@ func (fc *FileConf) GetVersion() string {
 
 func (fc *FileConf) GetBuffer() *load.BufferConf {
 	return fc.Buffer
-}
-
-func (fc *FileConf) GetExcludeIPList() servicelog.ExcludeIPList {
-	return fc.ExcludeIPList
 }
 
 func (fc *FileConf) GetScriptPath() string {

@@ -25,7 +25,6 @@ import (
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	excludeIPList  servicelog.ExcludeIPList
 	appType        string
 	anonymousUsers []int
 }
@@ -69,16 +68,12 @@ func (t *Transformer) HistoryLookupItems() int {
 
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) []servicelog.InputRecord {
-	if t.excludeIPList.Excludes(rec) {
-		return []servicelog.InputRecord{}
-	}
-	return []servicelog.InputRecord{rec}
+) ([]servicelog.InputRecord, error) {
+	return []servicelog.InputRecord{rec}, nil
 }
 
 func NewTransformer(
 	appType string,
-	excludeIPList servicelog.ExcludeIPList,
 	anonymousUsers []int,
 ) *Transformer {
 	if appType != servicelog.AppTypeAkalex && appType != servicelog.AppTypeCalc &&
@@ -88,7 +83,6 @@ func NewTransformer(
 	}
 	return &Transformer{
 		appType:        appType,
-		excludeIPList:  excludeIPList,
 		anonymousUsers: anonymousUsers,
 	}
 }
