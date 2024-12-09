@@ -29,7 +29,6 @@ import (
 // Transformer converts a source log object into a destination one
 type Transformer struct {
 	analyzer       servicelog.Preprocessor
-	excludeIPList  servicelog.ExcludeIPList
 	anonymousUsers []int
 }
 
@@ -71,16 +70,12 @@ func (t *Transformer) HistoryLookupItems() int {
 
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) []servicelog.InputRecord {
-	if t.excludeIPList.Excludes(rec) {
-		return []servicelog.InputRecord{}
-	}
-	return t.analyzer.Preprocess(rec, prevRecs)
+) ([]servicelog.InputRecord, error) {
+	return t.analyzer.Preprocess(rec, prevRecs), nil
 }
 
 func NewTransformer(
 	bufferConf *load.BufferConf,
-	excludeIPList []string,
 	anonymousUsers []int,
 	realtimeClock bool,
 	emailNotifier notifications.Notifier,
@@ -94,7 +89,6 @@ func NewTransformer(
 	}
 	return &Transformer{
 		analyzer:       analyzer,
-		excludeIPList:  excludeIPList,
 		anonymousUsers: anonymousUsers,
 	}
 }

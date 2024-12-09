@@ -42,6 +42,7 @@ type InputRecord struct {
 	Multiword bool     `json:"multiword"`
 	CI        bool     `json:"ci"`
 	Order     string   `json:"order"`
+	IsWebApp  bool     `json:"is_web_app"`
 	Pkgs      []string `json:"pkgs"`
 }
 

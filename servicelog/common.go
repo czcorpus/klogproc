@@ -127,7 +127,6 @@ type LogProcConf interface {
 	GetAppType() string
 	GetVersion() string
 	GetBuffer() *load.BufferConf
-	GetExcludeIPList() ExcludeIPList
 	GetScriptPath() string
 }
 
@@ -320,7 +319,7 @@ type LogItemTransformer interface {
 
 	AppType() string
 
-	Preprocess(rec InputRecord, prevRecs ServiceLogBuffer) []InputRecord
+	Preprocess(rec InputRecord, prevRecs ServiceLogBuffer) ([]InputRecord, error)
 
 	// Transform converts an input log record into a normalized output
 	// record suitable for storing into a common log storage (currently: Elasticsearch)

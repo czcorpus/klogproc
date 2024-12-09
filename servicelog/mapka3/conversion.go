@@ -28,7 +28,6 @@ import (
 type Transformer struct {
 	bufferConf     *load.BufferConf
 	analyzer       servicelog.Preprocessor
-	excludeIPList  servicelog.ExcludeIPList
 	anonymousUsers []int
 }
 
@@ -71,24 +70,19 @@ func (t *Transformer) HistoryLookupItems() int {
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord,
 	prevRecs servicelog.ServiceLogBuffer,
-) []servicelog.InputRecord {
-	if t.excludeIPList.Excludes(rec) {
-		return []servicelog.InputRecord{}
-	}
-	return t.analyzer.Preprocess(rec, prevRecs)
+) ([]servicelog.InputRecord, error) {
+	return t.analyzer.Preprocess(rec, prevRecs), nil
 }
 
 // NewTransformer is a default constructor for the Transformer.
 // It also loads user ID map from a configured file (if exists).
 func NewTransformer(
 	bufferConf *load.BufferConf,
-	excludeIPList servicelog.ExcludeIPList,
 	anonymousUsers []int,
 	realtimeClock bool,
 ) *Transformer {
 	return &Transformer{
 		bufferConf:     bufferConf,
-		excludeIPList:  excludeIPList,
 		anonymousUsers: anonymousUsers,
 		analyzer:       clustering.NewAnalyzer[*InputRecord]("mapka", bufferConf, realtimeClock),
 	}

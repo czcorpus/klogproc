@@ -48,14 +48,13 @@ var (
 // Conf represents a configuration for a single batch task. Currently it is not
 // possible to have configured multiple tasks in a single file. (TODO)
 type Conf struct {
-	SrcPath                string                   `json:"srcPath"`
-	PartiallyMatchingFiles bool                     `json:"partiallyMatchingFiles"`
-	WorklogPath            string                   `json:"worklogPath"`
-	LogBufferStateDir      string                   `json:"logBufferStateDir"`
-	AppType                string                   `json:"appType"`
-	Buffer                 *load.BufferConf         `json:"buffer"`
-	ExcludeIPList          servicelog.ExcludeIPList `json:"excludeIpList"`
-	ScriptPath             string                   `json:"scriptPath"`
+	SrcPath                string           `json:"srcPath"`
+	PartiallyMatchingFiles bool             `json:"partiallyMatchingFiles"`
+	WorklogPath            string           `json:"worklogPath"`
+	LogBufferStateDir      string           `json:"logBufferStateDir"`
+	AppType                string           `json:"appType"`
+	Buffer                 *load.BufferConf `json:"buffer"`
+	ScriptPath             string           `json:"scriptPath"`
 
 	// Version represents a major and minor version signature as used in semantic versioning
 	// (e.g. 0.15, 1.2)
@@ -75,10 +74,6 @@ func (c *Conf) GetVersion() string {
 
 func (c *Conf) GetBuffer() *load.BufferConf {
 	return c.Buffer
-}
-
-func (c *Conf) GetExcludeIPList() servicelog.ExcludeIPList {
-	return c.ExcludeIPList
 }
 
 func (c *Conf) GetScriptPath() string {

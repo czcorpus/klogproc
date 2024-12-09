@@ -26,8 +26,6 @@ import (
 // Transformer converts a source log object into a destination one
 type Transformer struct {
 	prevReqs       *PrevReqPool
-	numSimilar     int // TODO is this still useful?
-	excludeIPList  servicelog.ExcludeIPList
 	anonymousUsers []int
 }
 
@@ -75,21 +73,16 @@ func (t *Transformer) HistoryLookupItems() int {
 
 func (t *Transformer) Preprocess(
 	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) []servicelog.InputRecord {
-	if t.excludeIPList.Excludes(rec) {
-		return []servicelog.InputRecord{}
-	}
-	return []servicelog.InputRecord{rec}
+) ([]servicelog.InputRecord, error) {
+	return []servicelog.InputRecord{rec}, nil
 }
 
 // NewTransformer is a default constructor for the Transformer.
 // It also loads user ID map from a configured file (if exists).
 func NewTransformer(
-	excludeIPList servicelog.ExcludeIPList,
 	anonymousUsers []int,
 ) *Transformer {
 	return &Transformer{
-		excludeIPList:  excludeIPList,
 		anonymousUsers: anonymousUsers,
 		prevReqs:       NewPrevReqPool(5),
 	}

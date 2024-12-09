@@ -131,8 +131,8 @@ func (lt *ltrans) HistoryLookupItems() int { return 0 }
 func (lt *ltrans) Preprocess(
 	rec servicelog.InputRecord,
 	prevRecs servicelog.ServiceLogBuffer,
-) []servicelog.InputRecord {
-	return []servicelog.InputRecord{rec}
+) ([]servicelog.InputRecord, error) {
+	return []servicelog.InputRecord{rec}, nil
 }
 
 func (lt *ltrans) Transform(
@@ -154,10 +154,10 @@ func (lt *ltrans) Transform(
 // ------------------
 
 type dummyConf struct {
-	AppType    string
-	Version    string
-	ExclIPList []string
-	ScriptPath string
+	AppType        string
+	Version        string
+	AnonymousUsers []int
+	ScriptPath     string
 }
 
 func (c *dummyConf) GetAppType() string {
@@ -170,10 +170,6 @@ func (c *dummyConf) GetVersion() string {
 
 func (c *dummyConf) GetBuffer() *load.BufferConf {
 	return &load.BufferConf{}
-}
-
-func (c *dummyConf) GetExcludeIPList() servicelog.ExcludeIPList {
-	return servicelog.ExcludeIPList(c.ExclIPList)
 }
 
 func (c *dummyConf) GetScriptPath() string {

@@ -17,15 +17,13 @@
 package syd
 
 import (
-	"klogproc/logbuffer"
-	"klogproc/servicelog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTransformDia(t *testing.T) {
-	tmr := NewTransformer("0.1", servicelog.ExcludeIPList{}, []int{0, 1})
+	tmr := NewTransformer("0.1", []int{0, 1})
 	rec := &InputRecord{
 		UserID: "30",
 		Ltool:  "D",
@@ -39,7 +37,7 @@ func TestTransformDia(t *testing.T) {
 }
 
 func TestTransformSync(t *testing.T) {
-	tmr := NewTransformer("0.1", servicelog.ExcludeIPList{}, []int{0, 1})
+	tmr := NewTransformer("0.1", []int{0, 1})
 	rec := &InputRecord{
 		UserID: "30",
 		Ltool:  "S",
@@ -55,7 +53,7 @@ func TestTransformSync(t *testing.T) {
 }
 
 func TestAcceptsDashAsUserID(t *testing.T) {
-	tmr := NewTransformer("0.1", servicelog.ExcludeIPList{}, []int{0, 1})
+	tmr := NewTransformer("0.1", []int{0, 1})
 	rec := &InputRecord{
 		UserID: "-",
 	}
@@ -67,7 +65,7 @@ func TestAcceptsDashAsUserID(t *testing.T) {
 }
 
 func TestAnonymousUserDetection(t *testing.T) {
-	tmr := NewTransformer("0.1", servicelog.ExcludeIPList{}, []int{26, 27})
+	tmr := NewTransformer("0.1", []int{26, 27})
 
 	rec := &InputRecord{
 		UserID: "27",
@@ -86,15 +84,4 @@ func TestAnonymousUserDetection(t *testing.T) {
 	tOutRec, ok = outRec.(*OutputRecord)
 	assert.True(t, ok)
 	assert.False(t, tOutRec.IsAnonymous)
-}
-
-func TestExcludesIP(t *testing.T) {
-	tmr := NewTransformer("0.1", servicelog.ExcludeIPList{"192.168.1.123"}, []int{})
-	rec := &InputRecord{
-		UserID:    "27",
-		IPAddress: "192.168.1.123",
-	}
-	buff := new(logbuffer.DummyRecentRecords[servicelog.InputRecord, logbuffer.SerializableState])
-	recs := tmr.Preprocess(rec, buff)
-	assert.Len(t, recs, 0)
 }

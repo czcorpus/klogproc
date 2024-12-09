@@ -26,6 +26,10 @@ Error (table (struct))
 
 dmp = require('dump')
 
+function preprocess (log_rec, buffer)
+    return {log_rec}
+end
+
 function transform (log_rec, tz_shift_min)
     local out = new_out_rec()
     --local out = transform_default(log_rec, tz_shift_min)

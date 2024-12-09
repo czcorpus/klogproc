@@ -53,37 +53,34 @@ func GetStaticLogTransformer(
 ) (servicelog.LogItemTransformer, error) {
 
 	appType := logConf.GetAppType()
-	excludeIpList := logConf.GetExcludeIPList()
 	version := logConf.GetVersion()
 	bufferConf := logConf.GetBuffer()
 
 	switch appType {
 	case servicelog.AppTypeAPIGuard:
-		return &apiguard.Transformer{ExcludeIPList: excludeIpList}, nil
+		return &apiguard.Transformer{}, nil
 	case servicelog.AppTypeAkalex, servicelog.AppTypeCalc, servicelog.AppTypeLists,
 		servicelog.AppTypeQuitaUp, servicelog.AppTypeGramatikat:
-		return shiny.NewTransformer(appType, excludeIpList, anonymousUsers), nil
+		return shiny.NewTransformer(appType, anonymousUsers), nil
 	case servicelog.AppTypeKontext:
 		switch version {
 		case servicelog.AppVersionKontext013, servicelog.AppVersionKontext014:
 			return &kontext013.Transformer{
-				ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
+				AnonymousUsers: anonymousUsers}, nil
 		case servicelog.AppVersionKontext015,
 			servicelog.AppVersionKontext016,
 			servicelog.AppVersionKontext017:
 			return &kontext015.Transformer{
-				ExcludeIPList:  excludeIpList,
 				AnonymousUsers: anonymousUsers,
 				IsAPI:          true,
 			}, nil
 		case servicelog.AppVersionKontext017API:
-			return &kontext015.Transformer{ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
+			return &kontext015.Transformer{AnonymousUsers: anonymousUsers}, nil
 		case servicelog.AppVersionKontext018:
 			return kontext018.NewTransformer(
 				bufferConf,
 				realtimeClock,
 				emailNotifier,
-				excludeIpList,
 				anonymousUsers,
 			), nil
 		default:
@@ -92,61 +89,59 @@ func GetStaticLogTransformer(
 	case servicelog.AppTypeKwords:
 		switch version {
 		case servicelog.AppVersionKwords1:
-			return &kwords.Transformer{ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
+			return &kwords.Transformer{AnonymousUsers: anonymousUsers}, nil
 		case servicelog.AppVersionKwords2:
-			return &kwords2.Transformer{ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
+			return &kwords2.Transformer{AnonymousUsers: anonymousUsers}, nil
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported KWords version: %s", version)
 		}
 
 	case servicelog.AppTypeKorpusDB:
-		return korpusdb.NewTransformer(excludeIpList), nil
+		return korpusdb.NewTransformer(), nil
 	case servicelog.AppTypeMapka:
 		switch version {
 		case servicelog.AppVersionMapka1:
-			return mapka.NewTransformer(excludeIpList, anonymousUsers), nil
+			return mapka.NewTransformer(anonymousUsers), nil
 		case servicelog.AppVersionMapka2:
-			return mapka2.NewTransformer(excludeIpList, anonymousUsers), nil
+			return mapka2.NewTransformer(anonymousUsers), nil
 		case servicelog.AppVersionMapka3:
-			return mapka3.NewTransformer(bufferConf, excludeIpList, anonymousUsers, realtimeClock), nil
+			return mapka3.NewTransformer(bufferConf, anonymousUsers, realtimeClock), nil
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported Mapka version: %s", version)
 		}
 	case servicelog.AppTypeMorfio:
 		return &morfio.Transformer{
-			ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
+			AnonymousUsers: anonymousUsers}, nil
 	case servicelog.AppTypeSke:
-		return ske.NewTransformer(excludeIpList, anonymousUsers), nil
+		return ske.NewTransformer(anonymousUsers), nil
 	case servicelog.AppTypeSyd:
-		return syd.NewTransformer(version, excludeIpList, anonymousUsers), nil
+		return syd.NewTransformer(version, anonymousUsers), nil
 	case servicelog.AppTypeTreq:
 		switch version {
 		case servicelog.AppVersionTreq1API:
-			return &treqapi.Transformer{ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
+			return &treqapi.Transformer{AnonymousUsers: anonymousUsers}, nil
 		default:
-			return &treq.Transformer{ExcludeIPList: excludeIpList, AnonymousUsers: anonymousUsers}, nil
+			return &treq.Transformer{AnonymousUsers: anonymousUsers}, nil
 		}
 	case servicelog.AppTypeWag:
 		switch version {
 		case servicelog.AppVersionWag06:
-			return &wag06.Transformer{ExcludeIPList: excludeIpList}, nil
+			return &wag06.Transformer{}, nil
 		case servicelog.AppVersionWag07:
-			return wag07.NewTransformer(bufferConf, excludeIpList, anonymousUsers, realtimeClock, emailNotifier), nil
+			return wag07.NewTransformer(bufferConf, anonymousUsers, realtimeClock, emailNotifier), nil
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported WaG version: %s", version)
 		}
 	case servicelog.AppTypeWsserver:
-		return &wsserver.Transformer{
-			ExcludeIPList: excludeIpList,
-		}, nil
+		return &wsserver.Transformer{}, nil
 	case servicelog.AppTypeMasm:
-		return &masm.Transformer{ExcludeIPList: excludeIpList}, nil
+		return &masm.Transformer{}, nil
 	case servicelog.AppTypeMquery:
-		return &mquery.Transformer{ExcludeIPList: excludeIpList}, nil
+		return &mquery.Transformer{}, nil
 	case servicelog.AppTypeMquerySRU:
-		return &mquerysru.Transformer{ExcludeIPList: excludeIpList}, nil
+		return &mquerysru.Transformer{}, nil
 	case servicelog.AppTypeVLO:
-		return &vlo.Transformer{ExcludeIPList: excludeIpList}, nil
+		return &vlo.Transformer{}, nil
 	default:
 		return nil, fmt.Errorf("cannot find log transformer for app type %s", appType)
 	}
