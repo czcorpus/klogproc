@@ -113,6 +113,7 @@ func setupLogging(L *lua.LState) {
 
 func CreateEnvironment(
 	logConf servicelog.LogProcConf,
+	anonymousUsers []int,
 	defaultTransformer servicelog.LogItemTransformer,
 	outRecFactory func() servicelog.OutputRecord,
 ) (*lua.LState, error) {
@@ -126,6 +127,11 @@ func CreateEnvironment(
 	L.SetGlobal("rec_prop_exists", L.NewFunction(testIRecProp))
 	L.SetGlobal("app_type", lua.LString(logConf.GetAppType()))
 	L.SetGlobal("app_version", lua.LString(logConf.GetVersion()))
+	anUsers, err := ValueToLua(L, reflect.ValueOf(anonymousUsers))
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize Lua environment: %w", err)
+	}
+	L.SetGlobal("anonymous_users", anUsers)
 
 	if err := prepareScript(L, logConf.GetScriptPath()); err != nil {
 		return nil, fmt.Errorf("failed to process script %s: %w", logConf.GetScriptPath(), err)

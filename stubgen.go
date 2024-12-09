@@ -182,7 +182,7 @@ The second arg. is optional
 
 Global variables:
 
-app_type, app_version
+app_type, app_version, anonymous_users
 
 ]]--
 

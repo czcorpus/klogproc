@@ -56,7 +56,11 @@ func GetLogTransformer(
 			version == servicelog.AppVersionKontext016 ||
 			version == servicelog.AppVersionKontext015 {
 			env, err := scripting.CreateEnvironment(
-				logConf, tr, func() servicelog.OutputRecord { return &kontext015.OutputRecord{} })
+				logConf,
+				anonymousUsers,
+				tr,
+				func() servicelog.OutputRecord { return &kontext015.OutputRecord{} },
+			)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)
 			}
@@ -64,7 +68,11 @@ func GetLogTransformer(
 		}
 	case servicelog.AppTypeKorpusDB:
 		env, err := scripting.CreateEnvironment(
-			logConf, tr, func() servicelog.OutputRecord { return &korpusdb.OutputRecord{} })
+			logConf,
+			anonymousUsers,
+			tr,
+			func() servicelog.OutputRecord { return &korpusdb.OutputRecord{} },
+		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)
 		}
@@ -72,7 +80,11 @@ func GetLogTransformer(
 	case servicelog.AppTypeKwords:
 		if version == servicelog.AppVersionKwords2 {
 			env, err := scripting.CreateEnvironment(
-				logConf, tr, func() servicelog.OutputRecord { return &kwords2.OutputRecord{} })
+				logConf,
+				anonymousUsers,
+				tr,
+				func() servicelog.OutputRecord { return &kwords2.OutputRecord{} },
+			)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)
 			}
@@ -80,14 +92,22 @@ func GetLogTransformer(
 		}
 	case servicelog.AppTypeSke:
 		env, err := scripting.CreateEnvironment(
-			logConf, tr, func() servicelog.OutputRecord { return &ske.OutputRecord{} })
+			logConf,
+			anonymousUsers,
+			tr,
+			func() servicelog.OutputRecord { return &ske.OutputRecord{} },
+		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)
 		}
 		return scripting.NewTransformer(env, tr), nil
 	case servicelog.AppTypeTreq:
 		env, err := scripting.CreateEnvironment(
-			logConf, tr, func() servicelog.OutputRecord { return &treq.OutputRecord{} })
+			logConf,
+			anonymousUsers,
+			tr,
+			func() servicelog.OutputRecord { return &treq.OutputRecord{} },
+		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)
 		}
