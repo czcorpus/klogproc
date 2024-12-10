@@ -91,8 +91,9 @@ type OutputRecord struct {
 // SetTime is defined for other treq variants
 // so they can all share the same output rec. type
 func (cnkr *OutputRecord) SetTime(t time.Time, tzShiftMin int) {
-	cnkr.Datetime = t.Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339)
-	cnkr.time = t
+	t2 := t.Add(time.Minute * time.Duration(tzShiftMin))
+	cnkr.Datetime = t2.Format(time.RFC3339)
+	cnkr.time = t2
 }
 
 // ToJSON converts self to JSON string

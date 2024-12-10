@@ -53,8 +53,9 @@ type OutputRecord struct {
 // SetTime is defined for other treq variants
 // so they can all share the same output rec. type
 func (r *OutputRecord) SetTime(t time.Time, tzShiftMin int) {
-	r.Datetime = t.Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339)
-	r.time = t
+	t2 := t.Add(time.Minute * time.Duration(tzShiftMin))
+	r.Datetime = t2.Format(time.RFC3339)
+	r.time = t2
 }
 
 // SetLocation sets all the location related properties
