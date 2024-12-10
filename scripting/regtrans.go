@@ -20,13 +20,14 @@ import (
 	"klogproc/servicelog"
 	"reflect"
 
-	"github.com/rs/zerolog/log"
 	lua "github.com/yuin/gopher-lua"
 )
 
-func registerStaticTransformer[T servicelog.LogItemTransformer](env *lua.LState, transformer T) error {
+func registerStaticTransformer[T servicelog.LogItemTransformer](
+	L *lua.LState, transformer T,
+) error {
 
-	env.SetGlobal("transform_default", env.NewFunction(func(L *lua.LState) int {
+	L.SetGlobal("transform_default", L.NewFunction(func(L *lua.LState) int {
 		lrec := L.CheckUserData(1)
 		tLrec, ok := lrec.Value.(servicelog.InputRecord)
 		if !ok {
@@ -37,13 +38,13 @@ func registerStaticTransformer[T servicelog.LogItemTransformer](env *lua.LState,
 		if err != nil {
 			L.RaiseError("failed to transform record: %s", err)
 		}
-		ud := env.NewUserData()
+		ud := L.NewUserData()
 		ud.Value = ans
-		env.Push(ud)
+		L.Push(ud)
 		return 1
 	}))
 
-	env.SetGlobal("preprocess_default", env.NewFunction(func(L *lua.LState) int {
+	L.SetGlobal("preprocess_default", L.NewFunction(func(L *lua.LState) int {
 		lrec := L.CheckUserData(1)
 		tLrec, ok := lrec.Value.(servicelog.InputRecord)
 		if !ok {
@@ -68,26 +69,28 @@ func registerStaticTransformer[T servicelog.LogItemTransformer](env *lua.LState,
 		return 1
 	}))
 
-	env.SetGlobal("set_out_prop", env.NewFunction(func(e *lua.LState) int {
-		orec := checkOutputRecord(env, 1)
-		key := env.CheckString(2)
-		val := env.CheckAny(3)
+	L.SetGlobal("set_out_prop", L.NewFunction(func(e *lua.LState) int {
+		orec := checkOutputRecord(L, 1)
+		key := L.CheckString(2)
+		val := L.CheckAny(3)
 		if err := orec.LSetProperty(key, val); err != nil {
-			// TODO
-			log.Error().Err(err).Str("recType", orec.GetType()).Msg("failed to set output property")
+			L.RaiseError(
+				"set_out_prop failed for type %s and key %s: %s",
+				orec.GetType(), key, err,
+			)
 		}
 		return 0
 	}))
 
-	env.SetGlobal("get_out_prop", env.NewFunction(func(e *lua.LState) int {
-		orec := checkOutputRecord(env, 1)
-		key := env.CheckString(2)
-		val, err := StructPropToLua(env, reflect.ValueOf(orec), key)
+	L.SetGlobal("get_out_prop", L.NewFunction(func(e *lua.LState) int {
+		orec := checkOutputRecord(L, 1)
+		key := L.CheckString(2)
+		val, err := StructPropToLua(L, reflect.ValueOf(orec), key)
 		if err != nil {
-			env.RaiseError("failed to get property: %s", err)
+			L.RaiseError("failed to get property: %s", err)
 			return 0
 		}
-		env.Push(val)
+		L.Push(val)
 		return 1
 	}))
 
