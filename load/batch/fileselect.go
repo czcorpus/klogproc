@@ -156,8 +156,8 @@ func importTimeFromLine(lineStr string, tzShiftMin int) (int64, error) {
 
 // LogFileMatches tests whether the log file specified by filePath matches
 // in terms of its first record (whether it is older than the 'minTimestamp').
-// If strictMatch is false then in case of non matching file, also its mtime
-// is tested.
+// If strictMatch is true, then partially matching file (i.e. its first
+// record datetime is older than minTimestamp) is not accepted.
 //
 // The function expects that the first line on any log file contains proper
 // log record which should be OK (KonText also writes multi-line error dumps
