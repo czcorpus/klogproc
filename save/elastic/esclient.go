@@ -239,6 +239,8 @@ func (c *ESClient) FetchScroll(scrollID string, ttl string) (Result, error) {
 // DocFilter specifies parameters of filtering operation
 type DocFilter struct {
 	AppType         string  `json:"appType"`
+	ClientFlag      string  `json:"clientFlag"`
+	Path            string  `json:"path"`
 	Disabled        bool    `json:"disabled"`
 	FromDate        string  `json:"fromDate"`
 	ToDate          string  `json:"toDate"`
