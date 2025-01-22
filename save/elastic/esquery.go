@@ -76,6 +76,22 @@ type actionMatchObj struct {
 	Match actionExpr `json:"match"`
 }
 
+type clientFlagExpr struct {
+	ClientFlag string `json:"clientFlag"`
+}
+
+type clientFlagMatchObj struct {
+	Match clientFlagExpr `json:"match"`
+}
+
+type pathExpr struct {
+	Path string `json:"path"`
+}
+
+type pathMatchObj struct {
+	Match pathExpr `json:"match"`
+}
+
 type boolObj struct {
 	Must []interface{} `json:"must"`
 }
@@ -192,6 +208,14 @@ func CreateClientSrchQuery(filter DocFilter, chunkSize int) ([]byte, error) {
 	}
 	if filter.Action != "" {
 		actionObj := actionMatchObj{actionExpr{Action: filter.Action}}
+		m.Must = append(m.Must, actionObj)
+	}
+	if filter.ClientFlag != "" {
+		actionObj := clientFlagMatchObj{clientFlagExpr{ClientFlag: filter.ClientFlag}}
+		m.Must = append(m.Must, actionObj)
+	}
+	if filter.Path != "" {
+		actionObj := pathMatchObj{pathExpr{Path: filter.Path}}
 		m.Must = append(m.Must, actionObj)
 	}
 	q := srchQuery{Query: query{Bool: m}, From: 0, Size: chunkSize}
