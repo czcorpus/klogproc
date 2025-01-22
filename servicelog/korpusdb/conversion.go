@@ -40,8 +40,12 @@ func testIsAPI(rec *InputRecord) bool {
 	return rec.Request.ClientFlag != "" && !strings.HasPrefix(rec.Request.ClientFlag, "ratatosk-paw/")
 }
 
+func isInteractionPath(rec *InputRecord) bool {
+	return rec.Path == "cunits/_view" || rec.Path == "/api/cunits/_view"
+}
+
 func testIsQuery(rec *InputRecord) bool {
-	return !testIsAPI(rec) && rec.Path == "cunits/_view" && rec.Request.Page.From == 0
+	return !testIsAPI(rec) && isInteractionPath(rec) && rec.Request.Page.From == 0
 }
 
 // Transformer converts a KorpusDB log record to a destination format
