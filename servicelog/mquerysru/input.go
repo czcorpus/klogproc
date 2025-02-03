@@ -35,15 +35,16 @@ type InputArgs struct {
 // InputRecord represents a raw-parsed version of masm query log
 type InputRecord struct {
 	// gokit logging middleware log events
-	Level        string  `json:"level"`
-	Time         string  `json:"time"`
-	Latency      float64 `json:"latency"`
-	ClientIP     string  `json:"clientIP"`
-	Method       string  `json:"method"`
-	Status       int     `json:"status"`
-	ErrorMessage string  `json:"errorMessage"`
-	BodySize     int     `json:"bodySize"`
-	Path         string  `json:"path"`
+	Level           string  `json:"level"`
+	Time            string  `json:"time"`
+	Latency         float64 `json:"latency"`
+	ClientIP        string  `json:"clientIP"`
+	Method          string  `json:"method"`
+	Status          int     `json:"status"`
+	ErrorMessage    string  `json:"errorMessage"`
+	BodySize        int     `json:"bodySize"`
+	Path            string  `json:"path"`
+	IsWatchdogQuery bool    `json:"isWatchdogQuery"`
 	// additional log events
 	Version           string `json:"version"`
 	Operation         string `json:"operation"`
@@ -90,7 +91,7 @@ func (rec *InputRecord) IsSuspicious() bool {
 }
 
 func (rec *InputRecord) IsQuery() bool {
-	return rec.Operation == "searchRetrieve" || rec.Operation == "scan"
+	return !rec.IsWatchdogQuery && (rec.Operation == "searchRetrieve" || rec.Operation == "scan")
 }
 
 func (rec *InputRecord) ExportError() *servicelog.ErrorRecord {
