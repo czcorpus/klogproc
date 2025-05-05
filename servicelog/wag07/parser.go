@@ -19,7 +19,7 @@ package wag07
 import (
 	"encoding/json"
 
-	"klogproc/load/accesslog"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -37,7 +37,6 @@ const (
 
 // LineParser is a parser for reading KonText application logs
 type LineParser struct {
-	parser accesslog.LineParser
 }
 
 func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
@@ -50,6 +49,12 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 		}
 		return &record, err
 	}
-	record.isProcessable = true
+	if len(record.Timestamp) == 0 {
+		log.Warn().Msg("missing time information in wag07 record, skipping")
+		record.isProcessable = false
+
+	} else {
+		record.isProcessable = true
+	}
 	return &record, nil
 }
