@@ -20,6 +20,8 @@ import (
 	"klogproc/servicelog"
 	"net"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Request is a simple representation of
@@ -41,7 +43,7 @@ type InputRecord struct {
 	Request             Request `json:"request"`
 	Lang1               string  `json:"lang1"`
 	Lang2               string  `json:"lang2"`
-	Timestamp           string  `json:"timestamp"`
+	Timestamp           string  `json:"time"`
 	isProcessable       bool
 	IsMobileClient      bool `json:"isMobileClient"`
 	HasMatch            bool `json:"hasMatch"`
@@ -61,6 +63,7 @@ func (r *InputRecord) GetTime() time.Time {
 		}
 		return servicelog.ConvertDatetimeStringWithMillisNoTZ(r.Timestamp + "000")
 	}
+	log.Warn().Str("value", r.Timestamp).Msg("wag07 processing encountered an invalid datetime")
 	return time.Time{}
 }
 
