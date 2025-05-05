@@ -41,11 +41,15 @@ func testIsAPI(rec *InputRecord) bool {
 }
 
 func isInteractionPath(rec *InputRecord) bool {
-	return rec.Path == "cunits/_view" || rec.Path == "/api/cunits/_view"
+	return rec.Path == "cunits/_view" || rec.Path == "/api/cunits/_view" || strings.HasPrefix(rec.Path, "/api/cunits/-const-acphrase")
 }
 
 func testIsQuery(rec *InputRecord) bool {
 	return !testIsAPI(rec) && isInteractionPath(rec) && rec.Request.Page.From == 0
+}
+
+func testIsPhraseBank(rec *InputRecord) bool {
+	return strings.HasPrefix(rec.Path, "/api/cunits/-const-acphrase")
 }
 
 // Transformer converts a KorpusDB log record to a destination format
@@ -76,18 +80,19 @@ func (t *Transformer) Transform(
 	}
 
 	out := &OutputRecord{
-		Type:        t.AppType(),
-		Datetime:    tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
-		time:        tLogRecord.GetTime(),
-		Path:        tLogRecord.Path,
-		Page:        tLogRecord.Request.Page,
-		IPAddress:   tLogRecord.IP,
-		UserID:      tLogRecord.UserID,
-		ClientFlag:  tLogRecord.Request.ClientFlag,
-		IsAnonymous: userID == -1 || servicelog.UserBelongsToList(userID, t.AnonymousUsers),
-		IsQuery:     testIsQuery(tLogRecord),
-		IsAPI:       testIsAPI(tLogRecord),
-		QueryType:   getQueryType(tLogRecord),
+		Type:         t.AppType(),
+		Datetime:     tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		time:         tLogRecord.GetTime(),
+		Path:         tLogRecord.Path,
+		Page:         tLogRecord.Request.Page,
+		IPAddress:    tLogRecord.IP,
+		UserID:       tLogRecord.UserID,
+		ClientFlag:   tLogRecord.Request.ClientFlag,
+		IsAnonymous:  userID == -1 || servicelog.UserBelongsToList(userID, t.AnonymousUsers),
+		IsQuery:      testIsQuery(tLogRecord),
+		IsAPI:        testIsAPI(tLogRecord),
+		IsPhraseBank: testIsPhraseBank(tLogRecord),
+		QueryType:    getQueryType(tLogRecord),
 	}
 	out.ID = out.GenerateDeterministicID()
 	return out, nil

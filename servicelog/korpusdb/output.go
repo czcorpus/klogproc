@@ -30,20 +30,21 @@ import (
 
 // OutputRecord represents polished, export ready record from KorpusDB log
 type OutputRecord struct {
-	ID          string `json:"-"`
-	Type        string `json:"type"`
-	time        time.Time
-	Path        string                   `json:"path"`
-	Page        Pagination               `json:"page"`
-	Datetime    string                   `json:"datetime"`
-	IPAddress   string                   `json:"ipAddress"`
-	UserID      string                   `json:"userId"`
-	IsAnonymous bool                     `json:"isAnonymous"`
-	IsQuery     bool                     `json:"isQuery"`
-	IsAPI       bool                     `json:"isApi"`
-	ClientFlag  string                   `json:"clientFlag"`
-	GeoIP       servicelog.GeoDataRecord `json:"geoip,omitempty"`
-	QueryType   string                   `json:"queryType"` // token/ngram
+	ID           string `json:"-"`
+	Type         string `json:"type"`
+	time         time.Time
+	Path         string                   `json:"path"`
+	Page         Pagination               `json:"page"`
+	Datetime     string                   `json:"datetime"`
+	IPAddress    string                   `json:"ipAddress"`
+	UserID       string                   `json:"userId"`
+	IsAnonymous  bool                     `json:"isAnonymous"`
+	IsQuery      bool                     `json:"isQuery"`
+	IsAPI        bool                     `json:"isApi"`
+	IsPhraseBank bool                     `json:"isPhraseBank"`
+	ClientFlag   string                   `json:"clientFlag"`
+	GeoIP        servicelog.GeoDataRecord `json:"geoip,omitempty"`
+	QueryType    string                   `json:"queryType"` // token/ngram
 }
 
 // SetLocation sets all the location related properties
@@ -145,6 +146,9 @@ func (r *OutputRecord) LSetProperty(name string, value lua.LValue) error {
 			r.QueryType = string(tValue)
 			return nil
 		}
+	case "IsPhraseBank":
+		r.IsAnonymous = value == lua.LTrue
+		return nil
 	}
 	return scripting.InvalidAttrError{Attr: name}
 }
