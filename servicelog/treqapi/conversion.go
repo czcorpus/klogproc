@@ -58,6 +58,7 @@ func (t *Transformer) Transform(
 	out := &treq.OutputRecord{
 		Type:        "treq",
 		IsAPI:       true,
+		IsQuery:     true,
 		QLang:       tLogRecord.From,
 		SecondLang:  tLogRecord.To,
 		IPAddress:   tLogRecord.IP,
@@ -69,7 +70,12 @@ func (t *Transformer) Transform(
 		IsLemma:     tLogRecord.Lemma,
 	}
 	out.SetTime(tLogRecord.GetTime(), tzShiftMin)
-	out.ID = out.GenerateDeterministicID()
+	// !!! Due to unique hash generation and a bug in older records with isQuery:false, we have
+	// We have to ensure that IDs are generated consistently, so we keep isQuery:false
+	// when calculating the hash.
+	out_compat := *out
+	out_compat.IsQuery = false
+	out.ID = out_compat.GenerateDeterministicID()
 	return out, nil
 }
 
