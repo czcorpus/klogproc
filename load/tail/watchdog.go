@@ -91,10 +91,18 @@ type Conf struct {
 	ErrCountTimeRangeSecs int        `json:"errCountTimeRangeSecs"`
 }
 
-// FullFiles provides a slice of `FileConf` with items where
-// only Buffer.ID is filled upgraded to full config. This
-// solves situations where user wants to share
-// buffer between file processors and the buffer is configured
+func (conf *Conf) WatchedFiles() []string {
+	ans := make([]string, len(conf.Files))
+	for i, v := range conf.Files {
+		ans[i] = v.Path
+	}
+	return ans
+}
+
+// FullFiles provides a slice of `FileConf` where items which
+// have originally only Buffer.ID configured, are upgraded to contain
+// full buffer configuration. This solves situations where user wants
+// to share buffer between file processors and the buffer is configured
 // only for one of the processors (which is reasonable as
 // otherwise, there would be quite lot of rendundant conf. data)
 func (conf *Conf) FullFiles() ([]FileConf, error) {

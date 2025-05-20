@@ -106,7 +106,11 @@ func (ftw *FileTailReader) ApplyNewContent(
 		}
 		newPosition.SeekEnd = newPosition.SeekStart + int64(len(rawLine))
 		ftw.internalSeek = newPosition.SeekEnd
-		processor.OnEntry(dataWriter, string(rawLine[:len(rawLine)-1]), newPosition)
+		processor.OnEntry(
+			dataWriter,
+			string(rawLine[:len(rawLine)-1]),
+			newPosition,
+		)
 		select {
 		case <-ctx.Done():
 			log.Warn().Str("appType", processor.AppType()).Msg("closing FileTailReader")

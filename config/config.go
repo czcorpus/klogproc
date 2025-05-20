@@ -16,6 +16,8 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
 	"time"
 
 	"klogproc/common"
@@ -41,22 +43,29 @@ const (
 	ActionVersion          = "version"
 	ActionTestNotification = "test-notification"
 
-	DefaultTimeZone = "Europe/Prague"
+	DefaultTimeZone                       = "Europe/Prague"
+	DefaultAlarmMaxLogInactivitySecs      = 3600 * 20
+	DefaultLogInactivityCheckIntervalSecs = 3600
 )
 
 // Main describes klogproc's configuration
 type Main struct {
-	LogFiles           *batch.Conf                    `json:"logFiles"`
-	LogTail            *tail.Conf                     `json:"logTail"`
-	GeoIPDbPath        string                         `json:"geoIpDbPath"`
-	AnonymousUsers     []int                          `json:"anonymousUsers"`
-	Logging            logging.LoggingConf            `json:"logging"`
-	RecUpdate          elastic.DocUpdConf             `json:"recordUpdate"`
-	RecRemove          elastic.DocRemConf             `json:"recordRemove"`
-	ElasticSearch      elastic.ConnectionConf         `json:"elasticSearch"`
-	EmailNotification  *mail.NotificationConf         `json:"emailNotification"`
-	ConomiNotification *conomiClient.ConomiClientConf `json:"conomiNotification"`
-	TimeZone           string                         `json:"timeZone"`
+	LogFiles                  *batch.Conf                    `json:"logFiles"`
+	LogTail                   *tail.Conf                     `json:"logTail"`
+	GeoIPDbPath               string                         `json:"geoIpDbPath"`
+	AnonymousUsers            []int                          `json:"anonymousUsers"`
+	Logging                   logging.LoggingConf            `json:"logging"`
+	RecUpdate                 elastic.DocUpdConf             `json:"recordUpdate"`
+	RecRemove                 elastic.DocRemConf             `json:"recordRemove"`
+	ElasticSearch             elastic.ConnectionConf         `json:"elasticSearch"`
+	EmailNotification         *mail.NotificationConf         `json:"emailNotification"`
+	ConomiNotification        *conomiClient.ConomiClientConf `json:"conomiNotification"`
+	TimeZone                  string                         `json:"timeZone"`
+	AlarmMaxLogInactivitySecs int                            `json:"alarmMaxLogInactivitySecs"`
+
+	// NotificationTag provides a better identification of a message source when sending
+	// warnings to Conomi
+	NotificationTag string `json:"notificationTag"`
 }
 
 func (c *Main) TimezoneLocation() *time.Location {
@@ -101,6 +110,22 @@ func Validate(conf *Main, action string) {
 		conf.TimeZone = DefaultTimeZone
 		log.Warn().Str("timezone", conf.TimeZone).
 			Msg("timeZone not specified, using default")
+	}
+	if conf.AlarmMaxLogInactivitySecs == 0 {
+		conf.AlarmMaxLogInactivitySecs = DefaultAlarmMaxLogInactivitySecs
+		log.Warn().
+			Str("value", fmt.Sprintf("%v", time.Duration(conf.AlarmMaxLogInactivitySecs)*time.Second)).
+			Msg("alarmMaxLogInactivitySecs not set, using default")
+	}
+	if conf.NotificationTag == "" {
+		hostname, err := os.Hostname()
+		if err != nil {
+			hostname = "unknown-host"
+		}
+		conf.NotificationTag = fmt.Sprintf("unspecified instance at %s", hostname)
+		log.Warn().
+			Str("tag", conf.NotificationTag).
+			Msg("notificationTag not specified, using default")
 	}
 }
 
