@@ -23,9 +23,11 @@ import (
 	"path/filepath"
 	"sync"
 	"syscall"
+	"time"
 
 	"klogproc/analysis"
 	"klogproc/config"
+	"klogproc/healthchk"
 	"klogproc/load/alarm"
 	"klogproc/load/tail"
 	"klogproc/logbuffer"
@@ -39,6 +41,12 @@ import (
 	"github.com/oschwald/geoip2-golang"
 	"github.com/rs/zerolog/log"
 )
+
+// --------- a general watchdog to look for files not updated for too long
+
+type processingHealthChecker interface {
+	Ping(logPath string, dt time.Time)
+}
 
 // -----
 
@@ -58,6 +66,7 @@ type tailProcessor struct {
 	alarm             servicelog.AppErrorRegister
 	analysis          chan<- servicelog.InputRecord
 	logBuffer         servicelog.ServiceLogBuffer
+	procHealthChecker processingHealthChecker
 	dryRun            bool
 }
 
@@ -149,6 +158,7 @@ func (tp *tailProcessor) OnEntry(
 				Rec:      outRec,
 				FilePos:  logPosition,
 			}
+			tp.procHealthChecker.Ping(tp.filePath, outRec.GetTime())
 		}
 
 	} else {
@@ -210,14 +220,9 @@ func newTailProcessor(
 	geoDB *geoip2.Reader,
 	logBuffers map[string]servicelog.ServiceLogBuffer,
 	options *ProcessOptions,
+	healthChecker processingHealthChecker,
+	notifier notifications.Notifier,
 ) *tailProcessor {
-
-	var notifier notifications.Notifier
-	notifier, err := notifications.NewNotifier(
-		conf.EmailNotification, conf.ConomiNotification, conf.TimezoneLocation())
-	if err != nil {
-		log.Fatal().Msgf("Failed to initialize e-mail notifier: %s", err)
-	}
 
 	procAlarm, err := newProcAlarm(tailConf, conf.LogTail, notifier)
 	if err != nil {
@@ -323,6 +328,7 @@ func newTailProcessor(
 		elasticChunkSize:  conf.ElasticSearch.PushChunkSize,
 		alarm:             procAlarm,
 		logBuffer:         buffStorage,
+		procHealthChecker: healthChecker,
 		dryRun:            options.dryRun,
 	}
 }
@@ -341,6 +347,23 @@ func runTailAction(
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	var notifier notifications.Notifier
+	notifier, err := notifications.NewNotifier(
+		conf.EmailNotification, conf.ConomiNotification, conf.TimezoneLocation())
+	if err != nil {
+		log.Fatal().Msgf("Failed to initialize e-mail notifier: %s", err)
+	}
+
+	hlthChecker := healthchk.NewConomiNotifier(
+		ctx,
+		conf.LogTail.WatchedFiles(),
+		conf.TimezoneLocation(),
+		config.DefaultLogInactivityCheckIntervalSecs,
+		conf.AlarmMaxLogInactivitySecs,
+		notifier,
+		conf.NotificationTag,
+	)
+
 	tailProcessors := make([]tail.FileTailProcessor, len(conf.LogTail.Files))
 	var wg sync.WaitGroup
 	wg.Add(len(conf.LogTail.Files))
@@ -352,7 +375,8 @@ func runTailAction(
 	}
 
 	for i, f := range fullFiles {
-		tailProcessors[i] = newTailProcessor(&f, *conf, geoDB, logBuffers, options)
+		tailProcessors[i] = newTailProcessor(
+			&f, *conf, geoDB, logBuffers, options, hlthChecker, notifier)
 	}
 	go func() {
 		wg.Wait()
