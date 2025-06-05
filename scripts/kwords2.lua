@@ -9,6 +9,9 @@ function transform (input_rec)
     else
         set_out_prop(out, "IsAPI", true)
     end
+    if is_after_datetime(out, "2025-06-05T13:00:00") then
+        datetime_add_minutes(out, -120)
+    end
     return out
 end
 
