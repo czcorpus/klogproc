@@ -34,7 +34,8 @@ import (
 )
 
 const (
-	defaultTickerIntervalSecs = 60
+	defaultTickerIntervalSecs        = 60
+	defaultAlarmMaxLogInactivitySecs = 3600 * 20
 )
 
 // FileConf represents a configuration for a single
@@ -44,10 +45,11 @@ type FileConf struct {
 	AppType string `json:"appType"`
 	// Version represents a major and minor version signature as used in semantic versioning
 	// (e.g. 0.15, 1.2)
-	Version    string           `json:"version"`
-	TZShift    int              `json:"tzShift"`
-	Buffer     *load.BufferConf `json:"buffer"`
-	ScriptPath string           `json:"scriptPath"`
+	Version             string           `json:"version"`
+	TZShift             int              `json:"tzShift"`
+	Buffer              *load.BufferConf `json:"buffer"`
+	ScriptPath          string           `json:"scriptPath"`
+	InactivitySecsAlarm int              `json:"inactivitySecsAlarm"`
 }
 
 func (fc *FileConf) GetAppType() string {
@@ -77,6 +79,14 @@ func (fc *FileConf) Validate() error {
 	if fc.Buffer != nil && !fc.Buffer.IsReference() {
 		return fc.Buffer.Validate()
 	}
+	if fc.InactivitySecsAlarm == 0 {
+		log.Warn().
+			Str("appType", fc.AppType).
+			Str("file", fc.Path).
+			Int("default", defaultTickerIntervalSecs).
+			Msg("inactivitySecsAlarm not set, using default")
+		fc.InactivitySecsAlarm = defaultAlarmMaxLogInactivitySecs
+	}
 	return nil
 }
 
@@ -95,6 +105,14 @@ func (conf *Conf) WatchedFiles() []string {
 	ans := make([]string, len(conf.Files))
 	for i, v := range conf.Files {
 		ans[i] = v.Path
+	}
+	return ans
+}
+
+func (conf *Conf) GetInactivityAlarmLimits() map[string]int {
+	ans := make(map[string]int)
+	for _, item := range conf.Files {
+		ans[item.Path] = item.InactivitySecsAlarm
 	}
 	return ans
 }

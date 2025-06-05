@@ -31,8 +31,9 @@ import (
 )
 
 type updateInfo struct {
-	logPath string
-	dt      time.Time
+	logPath            string
+	dt                 time.Time
+	isSentNotification bool
 }
 
 type logInfo struct {
@@ -44,7 +45,7 @@ type ConomiNotifier struct {
 	ctx             context.Context
 	ticker          *time.Ticker
 	incomingUpdates chan updateInfo
-	maxInactivity   time.Duration
+	maxInactivity   map[string]time.Duration
 	dataLock        sync.Mutex
 	notifier        notifications.Notifier
 	notificationTag string
@@ -61,12 +62,17 @@ func (lwatch *ConomiNotifier) checkStatus() {
 	lwatch.dataLock.Lock()
 	defer lwatch.dataLock.Unlock()
 	for logPath, v := range lwatch.logs {
-		if time.Since(v.lastDatetime) > lwatch.maxInactivity {
+		if time.Since(v.lastDatetime) > lwatch.maxInactivity[logPath] {
 			go func() {
+				lwatch.incomingUpdates <- updateInfo{
+					logPath:            logPath,
+					dt:                 time.Now().Add(-lwatch.maxInactivity[logPath] / 2),
+					isSentNotification: true,
+				}
 				subj := fmt.Sprintf(
 					"log file %s seems inactive for too long (limit: %01.0f sec.)",
 					logPath,
-					lwatch.maxInactivity.Seconds(),
+					lwatch.maxInactivity[logPath].Seconds(),
 				)
 				meta := map[string]any{}
 				if lwatch.notifier != nil {
@@ -123,8 +129,8 @@ func NewConomiNotifier(
 	ctx context.Context,
 	filesToWatch []string,
 	tz *time.Location,
-	intervalSecs,
-	maxInactivitySecs int,
+	intervalSecs int,
+	maxInactivitySecs map[string]int,
 	notifier notifications.Notifier,
 	notificationTag string,
 ) *ConomiNotifier {
@@ -133,11 +139,15 @@ func NewConomiNotifier(
 	for _, f := range filesToWatch {
 		logs[f] = logInfo{lastDatetime: time.Now().In(tz)}
 	}
+	maxInactivity := make(map[string]time.Duration)
+	for filePath, limitSecs := range maxInactivitySecs {
+		maxInactivity[filePath] = time.Duration(limitSecs) * time.Second
+	}
 	ans := &ConomiNotifier{
 		logs:            logs,
 		ctx:             ctx,
 		incomingUpdates: make(chan updateInfo, 1000),
-		maxInactivity:   time.Duration(maxInactivitySecs) * time.Second,
+		maxInactivity:   maxInactivity,
 		notifier:        notifier,
 		notificationTag: notificationTag,
 	}

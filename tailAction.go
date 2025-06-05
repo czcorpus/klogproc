@@ -359,7 +359,7 @@ func runTailAction(
 		conf.LogTail.WatchedFiles(),
 		conf.TimezoneLocation(),
 		config.DefaultLogInactivityCheckIntervalSecs,
-		conf.AlarmMaxLogInactivitySecs,
+		conf.LogTail.GetInactivityAlarmLimits(),
 		notifier,
 		conf.NotificationTag,
 	)
