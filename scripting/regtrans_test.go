@@ -289,3 +289,231 @@ func TestDatetimeAddMinutesNegative(t *testing.T) {
 	assert.Equal(t, expectedTime, outRec.GetTime())
 	assert.Equal(t, expectedTime.Format(time.RFC3339), outRec.Time)
 }
+
+func TestIsBeforeDateTime(t *testing.T) {
+	L, _ := setupLuaState()
+	defer L.Close()
+
+	// Create mock output record with specific time
+	recordTime := time.Date(2024, 6, 5, 10, 0, 0, 0, time.UTC)
+	outRec := &dummyOutRec{
+		ID:   "test-before",
+		time: recordTime,
+		Time: recordTime.Format(time.RFC3339),
+	}
+
+	// Create user data
+	ud := L.NewUserData()
+	ud.Value = outRec
+
+	// Test is_before_datetime function - record time is before comparison time
+	err := L.DoString(`
+		function test_is_before_true()
+			local result = is_before_datetime(output_rec, "2024-06-05T12:00:00")
+			return result
+		end
+	`)
+	assert.NoError(t, err)
+
+	L.SetGlobal("output_rec", ud)
+	err = L.CallByParam(lua.P{
+		Fn:      L.GetGlobal("test_is_before_true"),
+		NRet:    1,
+		Protect: true,
+	})
+	assert.NoError(t, err)
+
+	// Check result is true (record time 10:00 is before 12:00)
+	result := L.Get(-1)
+	assert.Equal(t, lua.LTBool, result.Type())
+	assert.Equal(t, lua.LTrue, result)
+}
+
+func TestIsBeforeDateTimeFalse(t *testing.T) {
+	L, _ := setupLuaState()
+	defer L.Close()
+
+	// Create mock output record with specific time
+	recordTime := time.Date(2024, 6, 5, 14, 0, 0, 0, time.UTC)
+	outRec := &dummyOutRec{
+		ID:   "test-before-false",
+		time: recordTime,
+		Time: recordTime.Format(time.RFC3339),
+	}
+
+	// Create user data
+	ud := L.NewUserData()
+	ud.Value = outRec
+
+	// Test is_before_datetime function - record time is after comparison time
+	err := L.DoString(`
+		function test_is_before_false()
+			local result = is_before_datetime(output_rec, "2024-06-05T12:00:00")
+			return result
+		end
+	`)
+	assert.NoError(t, err)
+
+	L.SetGlobal("output_rec", ud)
+	err = L.CallByParam(lua.P{
+		Fn:      L.GetGlobal("test_is_before_false"),
+		NRet:    1,
+		Protect: true,
+	})
+	assert.NoError(t, err)
+
+	// Check result is false (record time 14:00 is not before 12:00)
+	result := L.Get(-1)
+	assert.Equal(t, lua.LTBool, result.Type())
+	assert.Equal(t, lua.LFalse, result)
+}
+
+func TestIsBeforeDateTimeInvalidFormat(t *testing.T) {
+	L, _ := setupLuaState()
+	defer L.Close()
+
+	// Create mock output record
+	recordTime := time.Date(2024, 6, 5, 10, 0, 0, 0, time.UTC)
+	outRec := &dummyOutRec{
+		ID:   "test-before-invalid",
+		time: recordTime,
+		Time: recordTime.Format(time.RFC3339),
+	}
+
+	// Create user data
+	ud := L.NewUserData()
+	ud.Value = outRec
+
+	// Test is_before_datetime function with invalid datetime format
+	err := L.DoString(`
+		function test_is_before_invalid()
+			local result = is_before_datetime(output_rec, "invalid-datetime")
+			return result
+		end
+	`)
+	assert.NoError(t, err)
+
+	L.SetGlobal("output_rec", ud)
+	err = L.CallByParam(lua.P{
+		Fn:      L.GetGlobal("test_is_before_invalid"),
+		NRet:    1,
+		Protect: true,
+	})
+	// Should fail due to invalid datetime format
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse datetime argument")
+}
+
+func TestIsAfterDateTime(t *testing.T) {
+	L, _ := setupLuaState()
+	defer L.Close()
+
+	// Create mock output record with specific time
+	recordTime := time.Date(2024, 6, 5, 14, 0, 0, 0, time.UTC)
+	outRec := &dummyOutRec{
+		ID:   "test-after",
+		time: recordTime,
+		Time: recordTime.Format(time.RFC3339),
+	}
+
+	// Create user data
+	ud := L.NewUserData()
+	ud.Value = outRec
+
+	// Test is_after_datetime function - record time is after comparison time
+	err := L.DoString(`
+		function test_is_after_true()
+			local result = is_after_datetime(output_rec, "2024-06-05T12:00:00")
+			return result
+		end
+	`)
+	assert.NoError(t, err)
+
+	L.SetGlobal("output_rec", ud)
+	err = L.CallByParam(lua.P{
+		Fn:      L.GetGlobal("test_is_after_true"),
+		NRet:    1,
+		Protect: true,
+	})
+	assert.NoError(t, err)
+
+	// Check result is true (record time 14:00 is after 12:00)
+	result := L.Get(-1)
+	assert.Equal(t, lua.LTBool, result.Type())
+	assert.Equal(t, lua.LTrue, result)
+}
+
+func TestIsAfterDateTimeFalse(t *testing.T) {
+	L, _ := setupLuaState()
+	defer L.Close()
+
+	// Create mock output record with specific time
+	recordTime := time.Date(2024, 6, 5, 10, 0, 0, 0, time.UTC)
+	outRec := &dummyOutRec{
+		ID:   "test-after-false",
+		time: recordTime,
+		Time: recordTime.Format(time.RFC3339),
+	}
+
+	// Create user data
+	ud := L.NewUserData()
+	ud.Value = outRec
+
+	// Test is_after_datetime function - record time is before comparison time
+	err := L.DoString(`
+		function test_is_after_false()
+			local result = is_after_datetime(output_rec, "2024-06-05T12:00:00")
+			return result
+		end
+	`)
+	assert.NoError(t, err)
+
+	L.SetGlobal("output_rec", ud)
+	err = L.CallByParam(lua.P{
+		Fn:      L.GetGlobal("test_is_after_false"),
+		NRet:    1,
+		Protect: true,
+	})
+	assert.NoError(t, err)
+
+	// Check result is false (record time 10:00 is not after 12:00)
+	result := L.Get(-1)
+	assert.Equal(t, lua.LTBool, result.Type())
+	assert.Equal(t, lua.LFalse, result)
+}
+
+func TestIsAfterDateTimeInvalidFormat(t *testing.T) {
+	L, _ := setupLuaState()
+	defer L.Close()
+
+	// Create mock output record
+	recordTime := time.Date(2024, 6, 5, 14, 0, 0, 0, time.UTC)
+	outRec := &dummyOutRec{
+		ID:   "test-after-invalid",
+		time: recordTime,
+		Time: recordTime.Format(time.RFC3339),
+	}
+
+	// Create user data
+	ud := L.NewUserData()
+	ud.Value = outRec
+
+	// Test is_after_datetime function with invalid datetime format
+	err := L.DoString(`
+		function test_is_after_invalid()
+			local result = is_after_datetime(output_rec, "invalid-datetime")
+			return result
+		end
+	`)
+	assert.NoError(t, err)
+
+	L.SetGlobal("output_rec", ud)
+	err = L.CallByParam(lua.P{
+		Fn:      L.GetGlobal("test_is_after_invalid"),
+		NRet:    1,
+		Protect: true,
+	})
+	// Should fail due to invalid datetime format
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse datetime argument")
+}
