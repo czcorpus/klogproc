@@ -76,7 +76,9 @@ func (fc *FileConf) Validate() error {
 		return fmt.Errorf("failed to validate FileConf for %s - path does not exist	", fc.Path)
 	}
 	if fc.Buffer != nil && !fc.Buffer.IsReference() {
-		return fc.Buffer.Validate()
+		if err := fc.Buffer.Validate(); err != nil {
+			return fmt.Errorf("failed to validate FileConf for %s: %w", fc.Path, err)
+		}
 	}
 	if fc.InactivitySecsAlarm == 0 {
 		log.Warn().
