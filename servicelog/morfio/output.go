@@ -81,6 +81,11 @@ func (r *OutputRecord) GetTime() time.Time {
 	return r.time
 }
 
+func (r *OutputRecord) SetTime(t time.Time) {
+	r.Datetime = t.Format(time.RFC3339)
+	r.time = t
+}
+
 func (r *OutputRecord) GenerateDeterministicID() string {
 	str := r.Type + r.Datetime + r.IPAddress + r.UserID + r.KeyReq + r.KeyUsed +
 		r.Key + r.RunScript + r.Corpus + strconv.Itoa(r.MinFreq) + r.InputAttr + r.OutputAttr +

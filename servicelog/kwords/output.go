@@ -82,6 +82,11 @@ func (r *OutputRecord) GetTime() time.Time {
 	return r.time
 }
 
+func (r *OutputRecord) SetTime(t time.Time) {
+	r.Datetime = t.Format(time.RFC3339)
+	r.time = t
+}
+
 func (r *OutputRecord) GenerateDeterministicID() string {
 	rls := ""
 	if r.RefLength != nil {

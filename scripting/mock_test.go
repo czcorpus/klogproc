@@ -109,6 +109,11 @@ func (r *dummyOutRec) GetTime() time.Time {
 	return r.time
 }
 
+func (r *dummyOutRec) SetTime(t time.Time) {
+	r.Time = t.Format(time.RFC3339)
+	r.time = t
+}
+
 func (r *dummyOutRec) LSetProperty(name string, value lua.LValue) error {
 	return ErrScriptingNotSupported
 }

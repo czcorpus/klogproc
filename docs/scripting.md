@@ -19,7 +19,7 @@ Output record represents a normalized record shared by all logged applications. 
 script is configured for the application, Klogproc will only call the Lua-defined transformation function which means that the default conversion is omitted. For use cases where the default conversion is still required and the purpose of the Lua script is just to customise the default conversion, it can be called explicitly:
 
 ```lua
-local out = transform_default(input_rec, tz_offset_min)
+local out = transform_default(input_rec)
 -- modify the output
 -- ...
 ```
@@ -117,10 +117,33 @@ As mentioned above, if a Lua script is defined for an application, Klogproc will
 ```lua
 -- transform function processes the input record and returns an output record
 function transform(input_rec)
-    local out = transform_default(input_rec, 0)
+    local out = transform_default(input_rec)
     -- now we modify the Path property already set by transform_default
 	set_out_prop(
         out, "Path", string.format("%s/modified/value", input_rec.Path))
     return out
 end
 ```
+
+
+## Function datetime_add_minutes(num_min)
+
+The `datetime_add_minutes` allows for shifting log record time forwards and backwards
+to correct possible timezone issues.
+
+```lua
+function transform(input_rec)
+    local out = transform_default(input_rec)
+    datetime_add_minutes(out, -120)
+    return out
+end
+```
+
+## Function is_before_datetime(rec, datetime)
+
+The `is_before_datetime` tests whether the `rec` record has its datetime property before
+the provided `datetime` argument. The format is `2006-01-02T15:04:05-07:00`.
+
+## Function is_after_datetime(rec, datetime)
+
+The `is_after_datetime` is analogous to the `is_before_datetime`.

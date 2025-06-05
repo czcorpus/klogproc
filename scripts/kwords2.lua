@@ -3,7 +3,7 @@ function preprocess (log_rec, buffer)
 end
 
 function transform (input_rec)
-    local out = transform_default(input_rec, 0)
+    local out = transform_default(input_rec)
     if input_rec.Headers["x-is-web-app"] == "1" or input_rec.Headers["x-is-web-app"] == "true" then
         set_out_prop(out, "IsAPI", false)
     else

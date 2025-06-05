@@ -65,6 +65,11 @@ func (r *OutputRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (r *OutputRecord) SetTime(t time.Time) {
+	r.Datetime = t.Format(time.RFC3339)
+	r.datetime = t
+}
+
 // SetLocation sets all the location related properties
 func (r *OutputRecord) SetLocation(countryName string, latitude float32, longitude float32, timezone string) {
 	r.GeoIP.IP = r.IPAddress

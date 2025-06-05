@@ -101,5 +101,39 @@ func registerStaticTransformer[T servicelog.LogItemTransformer](
 		return 0
 	}))
 
+	L.SetGlobal("is_before_datetime", L.NewFunction(func(l *lua.LState) int {
+		orec := checkOutputRecord(L, 1)
+		value := L.CheckString(2)
+		dt, err := time.Parse("2006-01-02T15:04:05", value)
+		if err != nil {
+			L.RaiseError("failed to parse datetime argument: %s", err.Error())
+			return 0
+		}
+		ans := orec.GetTime().Before(dt)
+		lv, err := ValueToLua(L, reflect.ValueOf(ans))
+		if err != nil {
+			L.RaiseError("failed to run preprocess(): %s", err)
+		}
+		L.Push(lv)
+		return 1
+	}))
+
+	L.SetGlobal("is_after_datetime", L.NewFunction(func(l *lua.LState) int {
+		orec := checkOutputRecord(L, 1)
+		value := L.CheckString(2)
+		dt, err := time.Parse("2006-01-02T15:04:05", value)
+		if err != nil {
+			L.RaiseError("failed to parse datetime argument: %s", err.Error())
+			return 0
+		}
+		ans := orec.GetTime().After(dt)
+		lv, err := ValueToLua(L, reflect.ValueOf(ans))
+		if err != nil {
+			L.RaiseError("failed to run preprocess(): %s", err)
+		}
+		L.Push(lv)
+		return 1
+	}))
+
 	return nil
 }
