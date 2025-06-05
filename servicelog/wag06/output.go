@@ -95,8 +95,8 @@ func (r *OutputRecord) GenerateDeterministicID() string {
 }
 
 // NewTimedOutputRecord creates a general empty record with specified date and time
-func NewTimedOutputRecord(t time.Time, tzShiftMin int) *OutputRecord {
-	dt := t.Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339)
+func NewTimedOutputRecord(t time.Time) *OutputRecord {
+	dt := t.Format(time.RFC3339)
 	if dt[len(dt)-1] == 'Z' {
 		dt = dt[:len(dt)-1] + "+00:00"
 	}

@@ -89,9 +89,9 @@ func (t *Transformer) Preprocess(
 	return unwrapped, nil
 }
 
-func (t *Transformer) Transform(logRec servicelog.InputRecord, tzShiftMin int) (servicelog.OutputRecord, error) {
+func (t *Transformer) Transform(logRec servicelog.InputRecord) (servicelog.OutputRecord, error) {
 	if t.L == nil {
-		return t.staticTransformer.Transform(logRec, tzShiftMin)
+		return t.staticTransformer.Transform(logRec)
 	}
 	aus := &lua.LTable{} // TODO what about anonymous users? should we pass it to transform?
 	for i, v := range t.anonymousUsers {
@@ -110,7 +110,6 @@ func (t *Transformer) Transform(logRec servicelog.InputRecord, tzShiftMin int) (
 			Protect: true,
 		},
 		importInputRecord(t.L, logRec),
-		lua.LNumber(tzShiftMin),
 	)
 	if err != nil {
 		return nil, fmt.Errorf(

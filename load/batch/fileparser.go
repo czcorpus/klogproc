@@ -94,7 +94,7 @@ func (p *Parser) Parse(
 				break
 			}
 			if recTime.Unix() >= fromTimestamp {
-				outRecs := proc.ProcItem(rec, p.tzShift)
+				outRecs := proc.ProcItem(rec)
 				for _, outRec := range outRecs {
 					for _, output := range outputs {
 						output <- &servicelog.BoundOutputRecord{Rec: outRec, FilePath: p.fileName}

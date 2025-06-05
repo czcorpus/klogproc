@@ -38,13 +38,12 @@ func (t *Transformer) AppType() string {
 
 func (t *Transformer) Transform(
 	logRecord servicelog.InputRecord,
-	tzShiftMin int,
 ) (servicelog.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
 		panic(servicelog.ErrFailedTypeAssertion)
 	}
-	rec := wag06.NewTimedOutputRecord(tLogRecord.GetTime(), tzShiftMin)
+	rec := wag06.NewTimedOutputRecord(tLogRecord.GetTime())
 	rec.Type = t.AppType()
 	rec.Action = tLogRecord.Action
 	rec.IPAddress = tLogRecord.Request.Origin

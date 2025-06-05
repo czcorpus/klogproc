@@ -210,10 +210,7 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, tzShift
 
 // logItemProcessor is an object handling a specific log file with a specific format
 type logItemProcessor interface {
-	ProcItem(
-		logRec servicelog.InputRecord,
-		tzShiftMin int,
-	) []servicelog.OutputRecord
+	ProcItem(logRec servicelog.InputRecord) []servicelog.OutputRecord
 	GetAppType() string
 	GetAppVersion() string
 }

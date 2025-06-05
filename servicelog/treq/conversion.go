@@ -41,7 +41,6 @@ func (t *Transformer) AppType() string {
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
 	logRecord servicelog.InputRecord,
-	tzShiftMin int,
 ) (servicelog.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
@@ -76,7 +75,7 @@ func (t *Transformer) Transform(
 	out := &OutputRecord{
 		Type:        "treq",
 		time:        tLogRecord.GetTime(),
-		Datetime:    tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		Datetime:    tLogRecord.GetTime().Format(time.RFC3339),
 		QLang:       tLogRecord.QLang,
 		SecondLang:  tLogRecord.SecondLang,
 		IPAddress:   tLogRecord.IPAddress,

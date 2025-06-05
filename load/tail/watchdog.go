@@ -46,7 +46,6 @@ type FileConf struct {
 	// Version represents a major and minor version signature as used in semantic versioning
 	// (e.g. 0.15, 1.2)
 	Version             string           `json:"version"`
-	TZShift             int              `json:"tzShift"`
 	Buffer              *load.BufferConf `json:"buffer"`
 	ScriptPath          string           `json:"scriptPath"`
 	InactivitySecsAlarm int              `json:"inactivitySecsAlarm"`
