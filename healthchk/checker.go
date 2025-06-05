@@ -31,8 +31,9 @@ import (
 )
 
 type updateInfo struct {
-	logPath string
-	dt      time.Time
+	logPath            string
+	dt                 time.Time
+	isSentNotification bool
 }
 
 type logInfo struct {
@@ -63,6 +64,11 @@ func (lwatch *ConomiNotifier) checkStatus() {
 	for logPath, v := range lwatch.logs {
 		if time.Since(v.lastDatetime) > lwatch.maxInactivity[logPath] {
 			go func() {
+				lwatch.incomingUpdates <- updateInfo{
+					logPath:            logPath,
+					dt:                 time.Now().Add(-lwatch.maxInactivity[logPath] / 2),
+					isSentNotification: true,
+				}
 				subj := fmt.Sprintf(
 					"log file %s seems inactive for too long (limit: %01.0f sec.)",
 					logPath,
