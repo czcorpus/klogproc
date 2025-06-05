@@ -117,11 +117,11 @@ func help(topic string) {
 
 func setup(confPath, action string) *config.Main {
 	conf := config.Load(confPath)
-	config.Validate(conf, action)
 	if conf.Logging.Level == "" {
 		conf.Logging.Level = "info"
 	}
 	logging.SetupLogging(conf.Logging)
+	config.Validate(conf, action)
 	return conf
 }
 
