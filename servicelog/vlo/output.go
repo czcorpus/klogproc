@@ -58,6 +58,11 @@ func (r *OutputRecord) GetTime() time.Time {
 	return r.datetime
 }
 
+func (r *OutputRecord) SetTime(t time.Time) {
+	r.Datetime = t.Format(time.RFC3339)
+	r.datetime = t
+}
+
 // ToJSON converts data to a JSON document (typically for ElasticSearch)
 func (r *OutputRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(r)

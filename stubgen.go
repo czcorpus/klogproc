@@ -202,7 +202,7 @@ end
 
 -- transform function processes the input record and returns an output record
 function transform(input_rec)
-    local out = transform_default(input_rec, 0)
+    local out = transform_default(input_rec)
 	-- setting an output field:
 	set_out_prop(out, "{{.FirstFieldName}}", string.format("%s[modified]", input_rec.{{.FirstFieldName}}))
     -- TODO: Transform input record to output format

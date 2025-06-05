@@ -252,6 +252,9 @@ type OutputRecord interface {
 	// Get time of the log record
 	GetTime() time.Time
 
+	// Set time of the log record (this is used for Lua scripting)
+	SetTime(t time.Time)
+
 	// LSetProperty is used for dynamic property setting from within Lua environment.
 	// In case the output record does not (yet) support such property access, the
 	// method should return ErrScriptingNotSupported (but any returned error will

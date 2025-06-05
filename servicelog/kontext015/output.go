@@ -88,13 +88,6 @@ type OutputRecord struct {
 	Args           map[string]interface{}   `json:"args"`
 }
 
-// SetTime is defined for other treq variants
-// so they can all share the same output rec. type
-func (cnkr *OutputRecord) SetTime(t time.Time) {
-	cnkr.Datetime = t.Format(time.RFC3339)
-	cnkr.time = t
-}
-
 // ToJSON converts self to JSON string
 func (cnkr *OutputRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(cnkr)
@@ -112,6 +105,11 @@ func (cnkr *OutputRecord) GetType() string {
 // date and time when the record was created.
 func (cnkr *OutputRecord) GetTime() time.Time {
 	return cnkr.time
+}
+
+func (cnkr *OutputRecord) SetTime(t time.Time) {
+	cnkr.Datetime = t.Format(time.RFC3339)
+	cnkr.time = t
 }
 
 func (cnkr *OutputRecord) SetLocation(countryName string, latitude float32, longitude float32, timezone string) {

@@ -119,6 +119,11 @@ func (cnkr *OutputRecord) GetTime() time.Time {
 	return cnkr.datetime
 }
 
+func (cnkr *OutputRecord) SetTime(t time.Time) {
+	cnkr.Datetime = t.Format(time.RFC3339)
+	cnkr.datetime = t
+}
+
 func (cnkr *OutputRecord) SetLocation(countryName string, latitude float32, longitude float32, timezone string) {
 	cnkr.GeoIP.IP = cnkr.IPAddress
 	cnkr.GeoIP.CountryName = countryName

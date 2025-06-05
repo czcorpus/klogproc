@@ -81,6 +81,11 @@ func (r *OutputRecord) GetTime() time.Time {
 	return r.time
 }
 
+func (r *OutputRecord) SetTime(t time.Time) {
+	r.Datetime = t.Format(time.RFC3339)
+	r.time = t
+}
+
 func (r *OutputRecord) LSetProperty(name string, value lua.LValue) error {
 	return scripting.ErrScriptingNotSupported
 }

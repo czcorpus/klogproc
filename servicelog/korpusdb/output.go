@@ -78,6 +78,11 @@ func (r *OutputRecord) GetTime() time.Time {
 	return r.time
 }
 
+func (r *OutputRecord) SetTime(t time.Time) {
+	r.Datetime = t.Format(time.RFC3339)
+	r.time = t
+}
+
 func (rec *OutputRecord) GenerateDeterministicID() string {
 	str := rec.Type + rec.Path + rec.Datetime + rec.IPAddress + rec.UserID + rec.QueryType +
 		strconv.Itoa(rec.Page.From) + strconv.Itoa(rec.Page.Size)

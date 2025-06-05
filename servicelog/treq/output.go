@@ -50,13 +50,6 @@ type OutputRecord struct {
 	GeoIP       servicelog.GeoDataRecord `json:"geoip,omitempty"`
 }
 
-// SetTime is defined for other treq variants
-// so they can all share the same output rec. type
-func (r *OutputRecord) SetTime(t time.Time) {
-	r.Datetime = t.Format(time.RFC3339)
-	r.time = t
-}
-
 // SetLocation sets all the location related properties
 func (r *OutputRecord) SetLocation(countryName string, latitude float32, longitude float32, timezone string) {
 	r.GeoIP.IP = r.IPAddress
@@ -86,6 +79,11 @@ func (r *OutputRecord) GetType() string {
 // GetTime returns a creation time of the record
 func (r *OutputRecord) GetTime() time.Time {
 	return r.time
+}
+
+func (r *OutputRecord) SetTime(t time.Time) {
+	r.Datetime = t.Format(time.RFC3339)
+	r.time = t
 }
 
 func (r *OutputRecord) GenerateDeterministicID() string {
