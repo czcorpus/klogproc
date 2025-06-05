@@ -110,6 +110,7 @@ func (t *Transformer) Transform(
 		TextCharCount: tLogRecord.Body.TextCharCount,
 		TextWordCount: tLogRecord.Body.TextWordCount,
 		TextLang:      tLogRecord.Body.Lang,
+		time:          tLogRecord.GetTime(),
 		Datetime:      tLogRecord.GetTime().Format(time.RFC3339),
 		IPAddress:     tLogRecord.GetClientIP().String(),
 		IsAnonymous:   isAnonymous,
