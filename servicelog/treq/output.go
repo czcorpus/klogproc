@@ -52,10 +52,9 @@ type OutputRecord struct {
 
 // SetTime is defined for other treq variants
 // so they can all share the same output rec. type
-func (r *OutputRecord) SetTime(t time.Time, tzShiftMin int) {
-	t2 := t.Add(time.Minute * time.Duration(tzShiftMin))
-	r.Datetime = t2.Format(time.RFC3339)
-	r.time = t2
+func (r *OutputRecord) SetTime(t time.Time) {
+	r.Datetime = t.Format(time.RFC3339)
+	r.time = t
 }
 
 // SetLocation sets all the location related properties
@@ -114,7 +113,7 @@ func (r *OutputRecord) LSetProperty(name string, value lua.LValue) error {
 		return nil
 	case "Datetime":
 		if tValue, ok := value.(lua.LString); ok {
-			r.SetTime(servicelog.ConvertDatetimeString(string(tValue)), 0) // TODO can we use tzshift 0 here?
+			r.SetTime(servicelog.ConvertDatetimeString(string(tValue)))
 			return nil
 		}
 	case "QLang":

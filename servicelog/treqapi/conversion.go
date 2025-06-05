@@ -37,7 +37,6 @@ func (t *Transformer) AppType() string {
 
 func (t *Transformer) Transform(
 	logRecord servicelog.InputRecord,
-	tzShiftMin int,
 ) (servicelog.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
@@ -69,7 +68,7 @@ func (t *Transformer) Transform(
 		IsMultiWord: tLogRecord.Multiword,
 		IsLemma:     tLogRecord.Lemma,
 	}
-	out.SetTime(tLogRecord.GetTime(), tzShiftMin)
+	out.SetTime(tLogRecord.GetTime())
 	// !!! Due to unique hash generation and a bug in older records with isQuery:false, we have
 	// We have to ensure that IDs are generated consistently, so we keep isQuery:false
 	// when calculating the hash.

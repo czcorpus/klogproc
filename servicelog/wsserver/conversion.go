@@ -36,7 +36,6 @@ func (t *Transformer) AppType() string {
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
 	logRecord servicelog.InputRecord,
-	tzShiftMin int,
 ) (servicelog.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {

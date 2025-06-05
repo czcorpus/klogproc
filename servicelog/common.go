@@ -323,7 +323,7 @@ type LogItemTransformer interface {
 
 	// Transform converts an input log record into a normalized output
 	// record suitable for storing into a common log storage (currently: Elasticsearch)
-	Transform(logRec InputRecord, tzShiftMin int) (OutputRecord, error)
+	Transform(logRec InputRecord) (OutputRecord, error)
 }
 
 // AppErrorRegister describes a type which reacts to logged errors

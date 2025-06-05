@@ -137,7 +137,6 @@ func (lt *ltrans) Preprocess(
 
 func (lt *ltrans) Transform(
 	logRec servicelog.InputRecord,
-	tzShiftMin int,
 ) (servicelog.OutputRecord, error) {
 	tLogRec, ok := logRec.(*dummyInputRec)
 	if !ok {

@@ -33,7 +33,6 @@ func (t *Transformer) AppType() string {
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
 	logRecord servicelog.InputRecord,
-	tzShiftMin int,
 ) (servicelog.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
@@ -43,7 +42,6 @@ func (t *Transformer) Transform(
 	if tLogRecord.UserID != nil {
 		sUserID = strconv.Itoa(*tLogRecord.UserID)
 	}
-	corrDT := logRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin))
 	r := &OutputRecord{
 		Type:       tLogRecord.Type,
 		IsQuery:    true,
@@ -54,8 +52,8 @@ func (t *Transformer) Transform(
 		UserID:     sUserID,
 		IPAddress:  tLogRecord.IPAddress,
 		UserAgent:  tLogRecord.UserAgent,
-		datetime:   corrDT,
-		Datetime:   corrDT.Format(time.RFC3339),
+		datetime:   logRecord.GetTime(),
+		Datetime:   logRecord.GetTime().Format(time.RFC3339),
 	}
 	r.ID = r.GenerateDeterministicID()
 	return r, nil

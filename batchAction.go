@@ -59,7 +59,6 @@ func (clp *cnkLogProcessor) recordIsLoggable(logRec servicelog.InputRecord) bool
 // In case an unsupported record is encountered, nil is returned.
 func (clp *cnkLogProcessor) ProcItem(
 	logRec servicelog.InputRecord,
-	tzShiftMin int,
 ) []servicelog.OutputRecord {
 	if clp.recordIsLoggable(logRec) {
 		ans := make([]servicelog.OutputRecord, 0, 2)
@@ -73,7 +72,7 @@ func (clp *cnkLogProcessor) ProcItem(
 		}
 		for _, precord := range prepInp {
 			clp.logBuffer.AddRecord(precord)
-			rec, err := clp.logTransformer.Transform(precord, tzShiftMin)
+			rec, err := clp.logTransformer.Transform(precord)
 			if err != nil {
 				log.Error().
 					Str("appType", clp.appType).

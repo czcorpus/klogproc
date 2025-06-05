@@ -54,7 +54,6 @@ type tailProcessor struct {
 	appType           string
 	filePath          string
 	version           string
-	tzShift           int
 	checkIntervalSecs int
 	maxLinesPerCheck  int
 	conf              *config.Main
@@ -142,7 +141,7 @@ func (tp *tailProcessor) OnEntry(
 		}
 		for _, precord := range prepInp {
 			tp.logBuffer.AddRecord(precord)
-			outRec, err := tp.logTransformer.Transform(precord, tp.tzShift)
+			outRec, err := tp.logTransformer.Transform(precord)
 			if err != nil {
 				log.Error().
 					Str("appType", tp.appType).
@@ -245,7 +244,6 @@ func newTailProcessor(
 		Str("logPath", filepath.Clean(tailConf.Path)).
 		Str("appType", tailConf.AppType).
 		Str("version", tailConf.Version).
-		Int("tzShift", tailConf.TZShift).
 		Str("script", tailConf.ScriptPath).
 		Msg("Creating tail log processor")
 
@@ -317,7 +315,6 @@ func newTailProcessor(
 		appType:           tailConf.AppType,
 		filePath:          filepath.Clean(tailConf.Path), // note: this is not a full path normalization !
 		version:           tailConf.Version,
-		tzShift:           tailConf.TZShift,
 		checkIntervalSecs: conf.LogTail.IntervalSecs,     // TODO maybe per-app type here ??
 		maxLinesPerCheck:  conf.LogTail.MaxLinesPerCheck, // TODO dtto
 		conf:              &conf,

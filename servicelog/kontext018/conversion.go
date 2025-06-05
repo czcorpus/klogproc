@@ -113,7 +113,6 @@ func (t *Transformer) AppType() string {
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
 	logRecord servicelog.InputRecord,
-	tzShiftMin int,
 ) (servicelog.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
@@ -136,7 +135,7 @@ func (t *Transformer) Transform(
 		Error:          tLogRecord.Error.AsPointer(),
 		Args:           exportArgs(tLogRecord.Action, tLogRecord.Args),
 	}
-	r.SetTime(tLogRecord.GetTime(), tzShiftMin)
+	r.SetTime(tLogRecord.GetTime())
 	r.ID = r.GenerateDeterministicID()
 	return r, nil
 }

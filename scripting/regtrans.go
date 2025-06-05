@@ -19,6 +19,7 @@ package scripting
 import (
 	"klogproc/servicelog"
 	"reflect"
+	"time"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -33,8 +34,7 @@ func registerStaticTransformer[T servicelog.LogItemTransformer](
 		if !ok {
 			L.ArgError(1, "expected InputRecord")
 		}
-		tzshift := L.CheckInt(2)
-		ans, err := transformer.Transform(tLrec, tzshift)
+		ans, err := transformer.Transform(tLrec)
 		if err != nil {
 			L.RaiseError("failed to transform record: %s", err)
 		}
@@ -54,7 +54,7 @@ func registerStaticTransformer[T servicelog.LogItemTransformer](
 		logBuffer := L.CheckUserData(2)
 		tLogBuffer, ok := logBuffer.Value.(servicelog.ServiceLogBuffer)
 		if !ok {
-			L.ArgError(1, "expected InputRecord")
+			L.ArgError(2, "expected ServiceLogBuffer")
 			return 1
 		}
 		ans, err := transformer.Preprocess(tLrec, tLogBuffer)
@@ -92,6 +92,13 @@ func registerStaticTransformer[T servicelog.LogItemTransformer](
 		}
 		L.Push(val)
 		return 1
+	}))
+
+	L.SetGlobal("datetime_add_minutes", L.NewFunction(func(l *lua.LState) int {
+		orec := checkOutputRecord(L, 1)
+		shift := L.CheckInt(2)
+		orec.SetTime(orec.GetTime().Add(time.Duration(shift) * time.Minute))
+		return 0
 	}))
 
 	return nil

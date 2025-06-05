@@ -28,7 +28,7 @@ func TestTransformDia(t *testing.T) {
 		UserID: "30",
 		Ltool:  "D",
 	}
-	outRec, err := tmr.Transform(rec, 0)
+	outRec, err := tmr.Transform(rec)
 	tOutRec, ok := outRec.(*OutputRecord)
 	assert.True(t, ok)
 	assert.Nil(t, err)
@@ -42,7 +42,7 @@ func TestTransformSync(t *testing.T) {
 		UserID: "30",
 		Ltool:  "S",
 	}
-	outRec, err := tmr.Transform(rec, 0)
+	outRec, err := tmr.Transform(rec)
 	tOutRec, ok := outRec.(*OutputRecord)
 	assert.True(t, ok)
 	assert.Nil(t, err)
@@ -57,7 +57,7 @@ func TestAcceptsDashAsUserID(t *testing.T) {
 	rec := &InputRecord{
 		UserID: "-",
 	}
-	outRec, err := tmr.Transform(rec, 0)
+	outRec, err := tmr.Transform(rec)
 	assert.Nil(t, err)
 	tOutRec, ok := outRec.(*OutputRecord)
 	assert.True(t, ok)
@@ -70,7 +70,7 @@ func TestAnonymousUserDetection(t *testing.T) {
 	rec := &InputRecord{
 		UserID: "27",
 	}
-	outRec, err := tmr.Transform(rec, 0)
+	outRec, err := tmr.Transform(rec)
 	assert.Nil(t, err)
 	tOutRec, ok := outRec.(*OutputRecord)
 	assert.True(t, ok)
@@ -79,7 +79,7 @@ func TestAnonymousUserDetection(t *testing.T) {
 	rec = &InputRecord{
 		UserID: "28",
 	}
-	outRec, err = tmr.Transform(rec, 0)
+	outRec, err = tmr.Transform(rec)
 	assert.Nil(t, err)
 	tOutRec, ok = outRec.(*OutputRecord)
 	assert.True(t, ok)

@@ -50,7 +50,6 @@ func (t *Transformer) corpusPID2ID(s string) string {
 
 func (t *Transformer) Transform(
 	logRecord servicelog.InputRecord,
-	tzShiftMin int,
 ) (servicelog.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
@@ -58,7 +57,7 @@ func (t *Transformer) Transform(
 	}
 	rec := &OutputRecord{
 		Type:      t.AppType(),
-		Datetime:  tLogRecord.GetTime().Add(time.Minute * time.Duration(tzShiftMin)).Format(time.RFC3339),
+		Datetime:  tLogRecord.GetTime().Format(time.RFC3339),
 		datetime:  tLogRecord.GetTime(),
 		Level:     tLogRecord.Level,
 		IPAddress: tLogRecord.ClientIP,
