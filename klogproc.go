@@ -65,6 +65,9 @@ func updateRecords(conf *config.Main, options *ProcessOptions) {
 }
 
 func removeRecords(conf *config.Main, options *ProcessOptions) {
+	if err := conf.RecRemove.Validate(); err != nil {
+		log.Fatal().Err(err).Msg("Failed to remove records")
+	}
 	client := elastic.NewClient(&conf.ElasticSearch)
 	for _, remConf := range conf.RecRemove.Filters {
 		totalRemoved, err := client.ManualBulkRecordRemove(conf.ElasticSearch.Index, remConf,
