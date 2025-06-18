@@ -217,6 +217,24 @@ func (c *ESClient) search(query []byte, scroll string) (Result, error) {
 	return NewEmptyResult(), err2
 }
 
+// count is a low level count function TODO
+func (c *ESClient) count(query []byte, scroll string) (Result, error) {
+	path := "/" + c.index + "/_count"
+	if scroll != "" {
+		path += "?scroll=" + scroll
+	}
+	resp, err := c.Do("GET", path, query)
+	if err != nil {
+		return NewEmptyResult(), err
+	}
+	var srchResult Result
+	err2 := json.Unmarshal(resp, &srchResult)
+	if err2 == nil {
+		return srchResult, err2
+	}
+	return NewEmptyResult(), err2
+}
+
 // FetchScroll fetch additional data from an existing result
 // using a scrollId.
 func (c *ESClient) FetchScroll(scrollID string, ttl string) (Result, error) {
