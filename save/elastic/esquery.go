@@ -110,6 +110,14 @@ func (sq *srchQuery) ToJSONQuery() ([]byte, error) {
 	return json.Marshal(sq)
 }
 
+type countQuery struct {
+	Query query `json:"query"`
+}
+
+func (cq *countQuery) ToJSONQuery() ([]byte, error) {
+	return json.Marshal(cq)
+}
+
 // ---------------------------------------------------
 
 // CNKRecordMeta contains meta information for a record
@@ -179,21 +187,23 @@ type Result struct {
 	Hits     Hits        `json:"hits"`
 }
 
+// Result represents an ElasticSearch query count object
+type CountResult struct {
+	Count  int         `json:"count"`
+	Shards interface{} `json:"_shards"`
+}
+
 // NewEmptyResult returns a new result with Total = 0
 func NewEmptyResult() Result {
 	return Result{Hits: Hits{Total: 0}}
 }
 
-// CreateClientSrchQuery generates a JSON-encoded query for ElastiSearch to
-// find documents matching specified datetime range, optional IP
-// address and optional userAgent substring/pattern
-func CreateClientSrchQuery(filter DocFilter, chunkSize int) ([]byte, error) {
-	if chunkSize < 1 {
-		return []byte{}, fmt.Errorf("cannot load results of size < 1 (found %d)", chunkSize)
+func createBoolQuery(filter DocFilter) boolObj {
+	m := boolObj{Must: make([]interface{}, 0)}
+	if filter.FromDate != "" && filter.ToDate != "" {
+		dateInterval := datetimeRangeExpr{From: filter.FromDate, To: filter.ToDate}
+		m.Must = append(m.Must, &rangeObj{Range: datetimeRangeQuery{Datetime: dateInterval}})
 	}
-	m := boolObj{Must: make([]interface{}, 1)}
-	dateInterval := datetimeRangeExpr{From: filter.FromDate, To: filter.ToDate}
-	m.Must[0] = &rangeObj{Range: datetimeRangeQuery{Datetime: dateInterval}}
 	if filter.IPAddress != "" {
 		ipAddrObj := iPAddressTermObj{Term: iPAddressExpr{IPAddress: filter.IPAddress}}
 		m.Must = append(m.Must, ipAddrObj)
@@ -218,7 +228,24 @@ func CreateClientSrchQuery(filter DocFilter, chunkSize int) ([]byte, error) {
 		actionObj := pathMatchObj{pathExpr{Path: filter.Path}}
 		m.Must = append(m.Must, actionObj)
 	}
+	return m
+}
+
+// CreateClientSrchQuery generates a JSON-encoded query for ElastiSearch to
+// find documents matching specified datetime range, optional IP
+// address and optional userAgent substring/pattern
+func CreateClientSrchQuery(filter DocFilter, chunkSize int) ([]byte, error) {
+	if chunkSize < 1 {
+		return []byte{}, fmt.Errorf("cannot load results of size < 1 (found %d)", chunkSize)
+	}
+	m := createBoolQuery(filter)
 	q := srchQuery{Query: query{Bool: m}, From: 0, Size: chunkSize}
+	return q.ToJSONQuery()
+}
+
+func CreateCountQuery(filter DocFilter) ([]byte, error) {
+	m := createBoolQuery(filter)
+	q := countQuery{Query: query{Bool: m}}
 	return q.ToJSONQuery()
 }
 
