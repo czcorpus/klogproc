@@ -217,6 +217,21 @@ func (c *ESClient) search(query []byte, scroll string) (Result, error) {
 	return NewEmptyResult(), err2
 }
 
+// count is a low level count function
+func (c *ESClient) count(query []byte) (int, error) {
+	path := "/" + c.index + "/_count"
+	resp, err := c.Do("GET", path, query)
+	if err != nil {
+		return 0, err
+	}
+	var countResult CountResult
+	err2 := json.Unmarshal(resp, &countResult)
+	if err2 == nil {
+		return countResult.Count, err2
+	}
+	return 0, err2
+}
+
 // FetchScroll fetch additional data from an existing result
 // using a scrollId.
 func (c *ESClient) FetchScroll(scrollID string, ttl string) (Result, error) {
@@ -260,4 +275,21 @@ func (c *ESClient) SearchRecords(filter DocFilter, ttl string, chunkSize int) (R
 		return c.search(encQuery, ttl)
 	}
 	return NewEmptyResult(), err
+}
+
+// CountRecords counts records matching provided filter.
+func (c *ESClient) CountRecords(filters []DocFilter) (int, error) {
+	count := 0
+	for _, filter := range filters {
+		encQuery, err := CreateCountQuery(filter)
+		if err != nil {
+			return count, err
+		}
+		c, err := c.count(encQuery)
+		if err != nil {
+			return count, err
+		}
+		count += c
+	}
+	return count, nil
 }
