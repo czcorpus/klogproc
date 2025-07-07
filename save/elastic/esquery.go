@@ -198,7 +198,7 @@ func NewEmptyResult() Result {
 	return Result{Hits: Hits{Total: 0}}
 }
 
-func createBoolQuery(filter DocFilter) boolObj {
+func createBoolQuery(appType string, filter DocFilter) boolObj {
 	m := boolObj{Must: make([]interface{}, 0)}
 	if filter.FromDate != "" && filter.ToDate != "" {
 		dateInterval := datetimeRangeExpr{From: filter.FromDate, To: filter.ToDate}
@@ -212,8 +212,8 @@ func createBoolQuery(filter DocFilter) boolObj {
 		userAgentObj := userAgentMatchObj{userAgentExpr{UserAgent: filter.UserAgent}}
 		m.Must = append(m.Must, userAgentObj)
 	}
-	if filter.AppType != "" {
-		appTypeObj := appTypeMatchObj{appTypeExpr{AppType: filter.AppType}}
+	if appType != "" {
+		appTypeObj := appTypeMatchObj{appTypeExpr{AppType: appType}}
 		m.Must = append(m.Must, appTypeObj)
 	}
 	if filter.Action != "" {
@@ -234,17 +234,17 @@ func createBoolQuery(filter DocFilter) boolObj {
 // CreateClientSrchQuery generates a JSON-encoded query for ElastiSearch to
 // find documents matching specified datetime range, optional IP
 // address and optional userAgent substring/pattern
-func CreateClientSrchQuery(filter DocFilter, chunkSize int) ([]byte, error) {
+func CreateClientSrchQuery(appType string, filter DocFilter, chunkSize int) ([]byte, error) {
 	if chunkSize < 1 {
 		return []byte{}, fmt.Errorf("cannot load results of size < 1 (found %d)", chunkSize)
 	}
-	m := createBoolQuery(filter)
+	m := createBoolQuery(appType, filter)
 	q := srchQuery{Query: query{Bool: m}, From: 0, Size: chunkSize}
 	return q.ToJSONQuery()
 }
 
-func CreateCountQuery(filter DocFilter) ([]byte, error) {
-	m := createBoolQuery(filter)
+func CreateCountQuery(appType string, filter DocFilter) ([]byte, error) {
+	m := createBoolQuery(appType, filter)
 	q := countQuery{Query: query{Bool: m}}
 	return q.ToJSONQuery()
 }

@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -139,6 +140,10 @@ type ESClient struct {
 	reqTimeoutSecs int
 }
 
+func (esc *ESClient) Index() string {
+	return esc.index
+}
+
 // NewClient returns an instance of ESClient
 func NewClient(conf *ConnectionConf) *ESClient {
 	return &ESClient{
@@ -253,10 +258,9 @@ func (c *ESClient) FetchScroll(scrollID string, ttl string) (Result, error) {
 
 // DocFilter specifies parameters of filtering operation
 type DocFilter struct {
-	AppType         string  `json:"appType"`
 	ClientFlag      string  `json:"clientFlag"`
 	Path            string  `json:"path"`
-	Disabled        bool    `json:"disabled"`
+	Disabled        bool    `json:"_disabled"`
 	FromDate        string  `json:"fromDate"`
 	ToDate          string  `json:"toDate"`
 	IPAddress       string  `json:"ipAddress"`
@@ -265,12 +269,51 @@ type DocFilter struct {
 	WithProbability float64 `json:"_withProbability"`
 }
 
+func (df *DocFilter) Validate() error {
+	if df.FromDate != "" && df.ToDate == "" || df.FromDate == "" && df.ToDate != "" {
+		return fmt.Errorf("incomplete datetime range `%s .. %s`", df.FromDate, df.ToDate)
+	}
+	return nil
+}
+
+func (df *DocFilter) Overview() string {
+	var buff strings.Builder
+	if df.ClientFlag != "" {
+		buff.WriteString(fmt.Sprintf("  clientFlag: %s\n", df.ClientFlag))
+	}
+	if df.Path != "" {
+		buff.WriteString(fmt.Sprintf("  path: %s\n", df.Path))
+	}
+	buff.WriteString(fmt.Sprintf("  [_disabled]: %t\n", df.Disabled))
+	if df.FromDate != "" {
+		buff.WriteString(fmt.Sprintf("  fromDate: %s\n", df.FromDate))
+	}
+	if df.ToDate != "" {
+		buff.WriteString(fmt.Sprintf("  toDate: %s\n", df.ToDate))
+	}
+	if df.IPAddress != "" {
+		buff.WriteString(fmt.Sprintf("  ipAddress: %s\n", df.IPAddress))
+	}
+	if df.UserAgent != "" {
+		buff.WriteString(fmt.Sprintf("  userAgent: %s\n", df.UserAgent))
+	}
+	if df.Action != "" {
+		buff.WriteString(fmt.Sprintf("  action: %s\n", df.Action))
+	}
+	if df.WithProbability > 0 {
+		buff.WriteString(fmt.Sprintf("  [_withProbability]: %01.2f\n", df.WithProbability))
+	}
+	return buff.String()
+}
+
+// ------------------------
+
 // SearchRecords searches records matching provided filter.
 // Result fetching uses ElasticSearch scroll mechanism which requires
 // providing TTL value to specify how long the result scroll should be
 // available.
-func (c *ESClient) SearchRecords(filter DocFilter, ttl string, chunkSize int) (Result, error) {
-	encQuery, err := CreateClientSrchQuery(filter, chunkSize)
+func (c *ESClient) SearchRecords(appType string, filter DocFilter, ttl string, chunkSize int) (Result, error) {
+	encQuery, err := CreateClientSrchQuery(appType, filter, chunkSize)
 	if err == nil {
 		return c.search(encQuery, ttl)
 	}
@@ -278,10 +321,13 @@ func (c *ESClient) SearchRecords(filter DocFilter, ttl string, chunkSize int) (R
 }
 
 // CountRecords counts records matching provided filter.
-func (c *ESClient) CountRecords(filters []DocFilter) (int, error) {
+func (c *ESClient) CountRecords(appType string, filters []DocFilter) (int, error) {
 	count := 0
 	for _, filter := range filters {
-		encQuery, err := CreateCountQuery(filter)
+		if filter.Disabled {
+			continue
+		}
+		encQuery, err := CreateCountQuery(appType, filter)
 		if err != nil {
 			return count, err
 		}

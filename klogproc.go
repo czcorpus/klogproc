@@ -81,8 +81,14 @@ func yesNoPrompt(label string, def bool) bool {
 func updateRecords(conf *config.Main, options *ProcessOptions) {
 	client := elastic.NewClient(&conf.ElasticSearch)
 	for _, updConf := range conf.RecUpdate.Filters {
-		totalUpdated, err := client.ManualBulkRecordUpdate(conf.ElasticSearch.Index, updConf,
-			conf.RecUpdate.Update, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize)
+		totalUpdated, err := client.ManualBulkRecordUpdate(
+			conf.ElasticSearch.Index,
+			conf.RecUpdate.AppType,
+			updConf,
+			conf.RecUpdate.Update,
+			conf.ElasticSearch.ScrollTTL,
+			conf.RecUpdate.SearchChunkSize,
+		)
 		if err == nil {
 			log.Info().Msgf("Updated %d items\n", totalUpdated)
 
@@ -96,18 +102,38 @@ func removeRecords(conf *config.Main, options *ProcessOptions) {
 	if err := conf.RecRemove.Validate(); err != nil {
 		log.Fatal().Err(err).Msg("Failed to remove records")
 	}
-	client := elastic.NewClient(&conf.ElasticSearch)
-	count, err := client.CountRecords(conf.RecRemove.Filters)
+	fmt.Fprintln(os.Stderr, "----------------------------------------------")
+	fmt.Fprintf(os.Stderr, "the following subset(s) will be removed: \n")
+	fmt.Fprintln(os.Stderr, conf.RecRemove.Overview())
+	fmt.Fprintln(os.Stderr, "----------------------------------------------")
+	var esclient *elastic.ESClient
+	if conf.ElasticSearch.MajorVersion < 6 {
+		esclient = elastic.NewClient(&conf.ElasticSearch)
+
+	} else {
+		esclient = elastic.NewClient6(&conf.ElasticSearch, conf.RecRemove.AppType)
+	}
+	count, err := esclient.CountRecords(conf.RecRemove.AppType, conf.RecRemove.Filters)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to count records")
 	}
-	if !yesNoPrompt(fmt.Sprintf("Found %d records. Are you sure you want to remove these?", count), true) {
+	if count == 0 {
+		fmt.Fprintf(os.Stderr, "No matching records found.\n")
+		return
+	}
+	if !yesNoPrompt(fmt.Sprintf("Found %d matching records. Are you sure to continue?", count), true) {
 		return
 	}
 	log.Info().Msgf("%d items would be removed", count)
 	for _, remConf := range conf.RecRemove.Filters {
-		totalRemoved, err := client.ManualBulkRecordRemove(conf.ElasticSearch.Index, remConf,
-			conf.ElasticSearch.ScrollTTL, conf.RecRemove.SearchChunkSize, options.dryRun)
+		totalRemoved, err := esclient.ManualBulkRecordRemove(
+			esclient.Index(),
+			conf.RecRemove.AppType,
+			remConf,
+			conf.ElasticSearch.ScrollTTL,
+			conf.RecRemove.SearchChunkSize,
+			options.dryRun,
+		)
 		if err == nil {
 			if options.dryRun {
 				log.Info().Msgf("%d items would be removed", totalRemoved)
@@ -123,10 +149,22 @@ func removeRecords(conf *config.Main, options *ProcessOptions) {
 }
 
 func removeKeyFromRecords(conf *config.Main, options *ProcessOptions) {
-	client := elastic.NewClient(&conf.ElasticSearch)
+	var esclient *elastic.ESClient
+	if conf.ElasticSearch.MajorVersion < 6 {
+		esclient = elastic.NewClient(&conf.ElasticSearch)
+
+	} else {
+		esclient = elastic.NewClient6(&conf.ElasticSearch, conf.RecRemove.AppType)
+	}
 	for _, updConf := range conf.RecUpdate.Filters {
-		totalUpdated, err := client.ManualBulkRecordKeyRemove(conf.ElasticSearch.Index, updConf,
-			conf.RecUpdate.RemoveKey, conf.ElasticSearch.ScrollTTL, conf.RecUpdate.SearchChunkSize)
+		totalUpdated, err := esclient.ManualBulkRecordKeyRemove(
+			esclient.Index(),
+			conf.RecUpdate.AppType,
+			updConf,
+			conf.RecUpdate.RemoveKey,
+			conf.ElasticSearch.ScrollTTL,
+			conf.RecUpdate.SearchChunkSize,
+		)
 		if err == nil {
 			log.Info().Msgf("Removed key %s from %d items", conf.RecUpdate.RemoveKey, totalUpdated)
 
