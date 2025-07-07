@@ -31,6 +31,7 @@ type DocUpdRecord map[string]interface{}
 // records to be updated and also an update object
 // used to merge with selected records.
 type DocUpdConf struct {
+	AppType string `json:"appType"`
 
 	// Filters specifies which items should we look for.
 	// Items in the list are taken as logical conjunction
@@ -122,6 +123,7 @@ func createDocBulkUpdateMetaRecord(index string, objType string, id string) ([]b
 
 func (c *ESClient) manualBulkRecordOp(
 	index string,
+	appType string,
 	filters DocFilter,
 	rawOp []byte,
 	scrollTTL string,
@@ -129,7 +131,7 @@ func (c *ESClient) manualBulkRecordOp(
 ) (int, error) {
 	totalUpdated := 0
 	if !filters.Disabled {
-		items, err := c.SearchRecords(filters, scrollTTL, srchChunkSize)
+		items, err := c.SearchRecords(appType, filters, scrollTTL, srchChunkSize)
 		if err != nil {
 			return totalUpdated, err
 		}
@@ -171,6 +173,7 @@ func (c *ESClient) manualBulkRecordOp(
 // ManualBulkRecordUpdate updates matching records with provided object
 func (c *ESClient) ManualBulkRecordUpdate(
 	index string,
+	appType string,
 	filters DocFilter,
 	upd DocUpdRecord,
 	scrollTTL string,
@@ -181,15 +184,22 @@ func (c *ESClient) ManualBulkRecordUpdate(
 	if err != nil {
 		log.Fatal().Msgf("Failed to generate bulk update JSON (values): %s", err)
 	}
-	return c.manualBulkRecordOp(index, filters, jsonData, scrollTTL, srchChunkSize)
+	return c.manualBulkRecordOp(index, appType, filters, jsonData, scrollTTL, srchChunkSize)
 }
 
 // ManualBulkRecordKeyRemove removes a specified key from matching records.
-func (c *ESClient) ManualBulkRecordKeyRemove(index string, filters DocFilter, key string, scrollTTL string, srchChunkSize int) (int, error) {
+func (c *ESClient) ManualBulkRecordKeyRemove(
+	index string,
+	appType string,
+	filters DocFilter,
+	key string,
+	scrollTTL string,
+	srchChunkSize int,
+) (int, error) {
 
 	jsonData, err := createLogRecKeyRemoveQuery(key)
 	if err != nil {
 		log.Fatal().Msgf("Failed to generate bulk update JSON (values): %s", err)
 	}
-	return c.manualBulkRecordOp(index, filters, jsonData, scrollTTL, srchChunkSize)
+	return c.manualBulkRecordOp(index, appType, filters, jsonData, scrollTTL, srchChunkSize)
 }

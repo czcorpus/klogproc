@@ -21,12 +21,18 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	docRmDefaultSearchChunkSize = 10000
+)
+
 // DocRemConf wraps filters used to reove records
 type DocRemConf struct {
+	AppType string `json:"appType"`
 
 	// Filters specifies which items should we look for.
 	// Items in the list are taken as logical conjunction
@@ -39,10 +45,27 @@ type DocRemConf struct {
 	SearchChunkSize int `json:"searchChunkSize"`
 }
 
+func (df *DocRemConf) Overview() string {
+	var buff strings.Builder
+	for i, filter := range df.Filters {
+		buff.WriteString(fmt.Sprintf("%d)\n%s\n", i+1, filter.Overview()))
+	}
+	return buff.String()
+}
+
 func (df *DocRemConf) Validate() error {
+	if df.SearchChunkSize == 0 {
+		log.Warn().
+			Int("default", docRmDefaultSearchChunkSize).
+			Msg("recordRemove.searchChunkSize not specified, using default")
+		df.SearchChunkSize = docRmDefaultSearchChunkSize
+	}
+	if df.AppType == "" {
+		return fmt.Errorf("missing appType")
+	}
 	for index, filter := range df.Filters {
-		if filter.AppType == "" {
-			return fmt.Errorf("Filter %d is missing `appType`", index)
+		if err := filter.Validate(); err != nil {
+			return fmt.Errorf("filter #%d: %w", index, err)
 		}
 	}
 	return nil
@@ -82,6 +105,7 @@ func (c *ESClient) bulkRemoveRecordScroll(index string, hits Hits) (int, error) 
 // ManualBulkRecordRemove removes matching records
 func (c *ESClient) ManualBulkRecordRemove(
 	index string,
+	appType string,
 	filters DocFilter,
 	scrollTTL string,
 	srchChunkSize int,
@@ -89,7 +113,7 @@ func (c *ESClient) ManualBulkRecordRemove(
 ) (int, error) {
 	totalRemoved := 0
 	if !filters.Disabled {
-		items, err := c.SearchRecords(filters, scrollTTL, srchChunkSize)
+		items, err := c.SearchRecords(appType, filters, scrollTTL, srchChunkSize)
 		if filters.WithProbability > 0 {
 			items.Hits = items.Hits.Sampled(filters.WithProbability)
 		}
