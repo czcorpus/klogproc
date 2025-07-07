@@ -20,6 +20,7 @@ package elastic
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 
 	"github.com/rs/zerolog/log"
 )
@@ -36,6 +37,15 @@ type DocRemConf struct {
 	// klogproc search and load for a specified cleaning. For a slow
 	// environment, keep the value reasonably small.
 	SearchChunkSize int `json:"searchChunkSize"`
+}
+
+func (df *DocRemConf) Validate() error {
+	for index, filter := range df.Filters {
+		if filter.AppType == "" {
+			return fmt.Errorf("Filter %d is missing `appType`", index)
+		}
+	}
+	return nil
 }
 
 type docBulkRemoveMetaObj struct {
