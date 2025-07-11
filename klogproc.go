@@ -230,6 +230,9 @@ func main() {
 	keyremoveCmd.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
 	keyremoveCmd.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
 
+	snapshotCmd := flag.NewFlagSet(config.ActionKeyremove, flag.ExitOnError)
+	snapshotCmd.StringVar(&procOpts.appType, "app-type", "", "Set app type for the snapshot (e.g. kontext, kontext-logs, etc.)")
+
 	testnotifCmd := flag.NewFlagSet(config.ActionTestNotification, flag.ExitOnError)
 
 	mkscriptCmd := flag.NewFlagSet(config.ActionMkScript, flag.ExitOnError)
@@ -322,6 +325,14 @@ func main() {
 		if err := generateLuaStub(mkscriptCmd.Arg(0), mkscriptCmd.Arg(1)); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
+		}
+	case config.ActionSnapshot:
+		snapshotCmd.Parse(os.Args[2:])
+		conf = setup(snapshotCmd.Arg(0), action)
+		if err := elastic.SnapshotRequest(procOpts.appType, &conf.ElasticSearch); err != nil {
+			log.Fatal().Err(err).Msg("Failed to create snapshot backup")
+		} else {
+			log.Info().Msg("Snapshot backup created successfully")
 		}
 
 	case config.ActionVersion:

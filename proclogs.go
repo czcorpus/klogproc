@@ -45,4 +45,5 @@ type ProcessOptions struct {
 	analysisOnly  bool
 	datetimeRange batch.DatetimeRange
 	scriptPath    string
+	appType       string
 }

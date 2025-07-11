@@ -36,12 +36,13 @@ const (
 // ConnectionConf defines a configuration
 // required to work with ES client.
 type ConnectionConf struct {
-	Server         string `json:"server"`
-	Index          string `json:"index"`
-	PushChunkSize  int    `json:"pushChunkSize"`
-	ScrollTTL      string `json:"scrollTtl"`
-	ReqTimeoutSecs int    `json:"reqTimeoutSecs"`
-	MajorVersion   int    `json:"majorVersion"`
+	Server             string `json:"server"`
+	Index              string `json:"index"`
+	PushChunkSize      int    `json:"pushChunkSize"`
+	ScrollTTL          string `json:"scrollTtl"`
+	ReqTimeoutSecs     int    `json:"reqTimeoutSecs"`
+	MajorVersion       int    `json:"majorVersion"`
+	SnapshotRepository string `json:"snapshotRepository"`
 }
 
 // IsConfigured tests whether the configuration is considered
@@ -198,9 +199,6 @@ func (c *ESClient) Do(method string, path string, query []byte) ([]byte, error) 
 	if firstErr != "" {
 		return []byte{}, fmt.Errorf("failed to write data to ES: %w", errors.New(firstErr))
 	}
-	if err != nil {
-		return []byte{}, err
-	}
 	return respBody, nil
 }
 
@@ -235,6 +233,59 @@ func (c *ESClient) count(query []byte) (int, error) {
 		return countResult.Count, err2
 	}
 	return 0, err2
+}
+
+type SnapshotMetadata struct {
+	TakenBy      string `json:"taken_by"`
+	TakenBecause string `json:"taken_because"`
+}
+
+type SnapshotArgs struct {
+	Indices            string           `json:"indices"`
+	IgnoreUnavailable  bool             `json:"ignore_unavailable"`
+	IncludeGlobalState bool             `json:"include_global_state"`
+	Metadata           SnapshotMetadata `json:"metadata"`
+}
+
+type SnapshotInfo struct {
+	Snapshot           string   `json:"snapshot"`
+	UUID               string   `json:"uuid"`
+	Repository         string   `json:"repository"`
+	VersionID          any      `json:"version_id"`
+	Version            any      `json:"version"`
+	Indices            []string `json:"indices"`
+	DataStreams        []string `json:"data_streams"`
+	IncludeGlobalState bool     `json:"include_global_state"`
+	FeatureStates      []any    `json:"feature_states"`
+	Metadata           struct {
+		TakenBy      string `json:"taken_by"`
+		TakenBecause string `json:"taken_because"`
+	} `json:"metadata"`
+	State             string `json:"state"`
+	StartTime         string `json:"start_time"`
+	StartTimeInMillis int64  `json:"start_time_in_millis"`
+	EndTime           string `json:"end_time"`
+	EndTimeInMillis   int64  `json:"end_time_in_millis"`
+	DurationInMillis  int64  `json:"duration_in_millis"`
+	Failures          []any  `json:"failures"`
+	Shards            struct {
+		Total      int `json:"total"`
+		Successful int `json:"successful"`
+		Failed     int `json:"failed"`
+	} `json:"shards"`
+}
+
+func (c *ESClient) createSnapshot(repository string, name string, query []byte) (*SnapshotInfo, error) {
+	path := "/_snapshot/" + repository + "/" + name
+	resp, err := c.Do("POST", path, query)
+	if err != nil {
+		return nil, err
+	}
+	var snapshotInfo SnapshotInfo
+	if err2 := json.Unmarshal(resp, &snapshotInfo); err2 != nil {
+		return nil, err2
+	}
+	return &snapshotInfo, nil
 }
 
 // FetchScroll fetch additional data from an existing result
@@ -338,4 +389,26 @@ func (c *ESClient) CountRecords(appType string, filters []DocFilter) (int, error
 		count += c
 	}
 	return count, nil
+}
+
+// Create backup snapshot
+func (c *ESClient) CreateSnapshot(repository string, reason string) error {
+	now := time.Now().Unix()
+	snapshotArgs := SnapshotArgs{
+		Indices:            c.index,
+		IgnoreUnavailable:  true,
+		IncludeGlobalState: false,
+		Metadata: SnapshotMetadata{
+			TakenBy:      "Klogproc",
+			TakenBecause: reason,
+		},
+	}
+	query, err := json.Marshal(snapshotArgs)
+	if err != nil {
+		return fmt.Errorf("failed to marshal snapshot args: %w", err)
+	}
+
+	log.Debug().Any("snapshotArgs", snapshotArgs).Msg("Creating snapshot")
+	_, err = c.createSnapshot(repository, fmt.Sprintf("snapshot_%d", now), query)
+	return err
 }
