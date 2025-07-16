@@ -1,11 +1,12 @@
 {
-    "appType": "kontext",
     "logRedis": {
         "address": "localhost",
         "database": "1",
         "key": "kontext_log"
     },
     "logFiles": {
+        "appType": "kontext",
+        "version": "0.18",
         "worklogPath": "/var/log/klogproc/worklog/worklog.txt",
         "srcPath": "/var/log/kontext-logs",
         "partiallyMatchingFiles": false
@@ -23,6 +24,7 @@
         "path": "/var/log/klogproc/klogproc.log" 
     },
     "recordUpdate": {
+        "appType": "kontext",
         "searchChunkSize": 10,
         "filters": [
             {
@@ -40,6 +42,7 @@
         "removeKey": "foo"
     },
     "recordRemove": {
+        "appType": "kontext",
         "searchChunkSize": 10,
         "filters": [
             {
