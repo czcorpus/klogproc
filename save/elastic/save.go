@@ -41,13 +41,7 @@ type ESImportFailHandler interface {
 // ----
 
 func BulkWriteRequest(data [][]byte, appType string, esconf *ConnectionConf) error {
-	var esclient *ESClient
-	if esconf.MajorVersion < 6 {
-		esclient = NewClient(esconf)
-
-	} else {
-		esclient = NewClient6(esconf, appType)
-	}
+	esclient := NewClient(esconf, appType)
 	q := bytes.Join(data, []byte("\n"))
 	_, err := esclient.Do("POST", "/_bulk", q)
 	if err != nil {
