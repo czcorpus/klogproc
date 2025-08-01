@@ -79,7 +79,7 @@ func yesNoPrompt(label string, def bool) bool {
 }
 
 func updateRecords(conf *config.Main, options *ProcessOptions) {
-	client := elastic.NewClient(&conf.ElasticSearch)
+	client := elastic.NewClient(&conf.ElasticSearch, options.appType)
 	for _, updConf := range conf.RecUpdate.Filters {
 		totalUpdated, err := client.ManualBulkRecordUpdate(
 			conf.ElasticSearch.Index,
@@ -106,13 +106,7 @@ func removeRecords(conf *config.Main, options *ProcessOptions) {
 	fmt.Fprintf(os.Stderr, "the following subset(s) will be removed: \n")
 	fmt.Fprintln(os.Stderr, conf.RecRemove.Overview())
 	fmt.Fprintln(os.Stderr, "----------------------------------------------")
-	var esclient *elastic.ESClient
-	if conf.ElasticSearch.MajorVersion < 6 {
-		esclient = elastic.NewClient(&conf.ElasticSearch)
-
-	} else {
-		esclient = elastic.NewClient6(&conf.ElasticSearch, conf.RecRemove.AppType)
-	}
+	esclient := elastic.NewClient(&conf.ElasticSearch, conf.RecRemove.AppType)
 	count, err := esclient.CountRecords(conf.RecRemove.AppType, conf.RecRemove.Filters)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to count records")
@@ -149,13 +143,7 @@ func removeRecords(conf *config.Main, options *ProcessOptions) {
 }
 
 func removeKeyFromRecords(conf *config.Main, options *ProcessOptions) {
-	var esclient *elastic.ESClient
-	if conf.ElasticSearch.MajorVersion < 6 {
-		esclient = elastic.NewClient(&conf.ElasticSearch)
-
-	} else {
-		esclient = elastic.NewClient6(&conf.ElasticSearch, conf.RecRemove.AppType)
-	}
+	esclient := elastic.NewClient(&conf.ElasticSearch, options.appType)
 	for _, updConf := range conf.RecUpdate.Filters {
 		totalUpdated, err := esclient.ManualBulkRecordKeyRemove(
 			esclient.Index(),
@@ -230,6 +218,10 @@ func main() {
 	keyremoveCmd.BoolVar(&procOpts.dryRun, "dry-run", false, "Do not write data (only for manual updates - batch, docupdate, keyremove)")
 	keyremoveCmd.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
 
+	snapshotCmd := flag.NewFlagSet(config.ActionSnapshot, flag.ExitOnError)
+	snapshotCmd.StringVar(&procOpts.appType, "app-type", "", "Set app type for snapshot action (e.g. kontext, etc.), required for ES6+")
+	snapshotCmd.StringVar(&procOpts.snapshot, "snapshot", "", "Set snapshot name")
+
 	testnotifCmd := flag.NewFlagSet(config.ActionTestNotification, flag.ExitOnError)
 
 	mkscriptCmd := flag.NewFlagSet(config.ActionMkScript, flag.ExitOnError)
@@ -242,12 +234,13 @@ func main() {
 			"\t%s docupdate [options] [config.json]\n"+
 			"\t%s docremove [options] [config.json]\n"+
 			"\t%s keyremove [options] [config.json]\n"+
+			"\t%s snapshot [options] [config.json] [list/create/remove/restore]\n"+
 			"\t%s test-nofification [options] [config.json]\n"+
 			"\t%s mkscript [options] [config.json]\n"+
 			"\t%s version\n",
 			filepath.Base(os.Args[0]), filepath.Base(os.Args[0]), filepath.Base(os.Args[0]),
 			filepath.Base(os.Args[0]), filepath.Base(os.Args[0]), filepath.Base(os.Args[0]),
-			filepath.Base(os.Args[0]), filepath.Base(os.Args[0]))
+			filepath.Base(os.Args[0]), filepath.Base(os.Args[0]), filepath.Base(os.Args[0]))
 	}
 	flag.Parse()
 
@@ -322,6 +315,51 @@ func main() {
 		if err := generateLuaStub(mkscriptCmd.Arg(0), mkscriptCmd.Arg(1)); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
+		}
+
+	case config.ActionSnapshot:
+		snapshotCmd.Parse(os.Args[2:])
+		conf = setup(snapshotCmd.Arg(0), action)
+		snapshotAction := snapshotCmd.Arg(1)
+		if snapshotAction == "" {
+			log.Fatal().Msgf("Missing snapshot action (create/list/remove/restore)")
+		}
+		esclient := elastic.NewClient(&conf.ElasticSearch, procOpts.appType)
+		switch snapshotAction {
+		case "create":
+			snapshot, err := esclient.CreateSnapshot(conf.ElasticSearch.SnapshotRepository, procOpts.snapshot, "backup")
+			if err != nil {
+				log.Fatal().Err(err).Msg("Failed to create snapshot backup")
+			}
+			log.Info().Msgf("Snapshot %s created successfully", snapshot.Snapshot)
+		case "list":
+			resp, err := esclient.ListSnapshots(conf.ElasticSearch.SnapshotRepository)
+			if err != nil {
+				log.Fatal().Err(err).Msg("Failed to list snapshots")
+			}
+			fmt.Printf("| %-20s | %-10s | %-25s | %-25s |\n", "Snapshot", "State", "Start Time", "End Time")
+			fmt.Printf("| %-20s | %-10s | %-25s | %-25s |\n", strings.Repeat("-", 20), strings.Repeat("-", 10), strings.Repeat("-", 25), strings.Repeat("-", 25))
+			for _, v := range resp.Snapshots {
+				fmt.Printf("| %-20s | %-10s | %-25s | %-25s |\n", v.Snapshot, v.State, v.StartTime, v.EndTime)
+			}
+		case "remove":
+			if procOpts.snapshot == "" {
+				log.Fatal().Msg("Snapshot name is required for removal")
+			}
+			if err := esclient.RemoveSnapshot(conf.ElasticSearch.SnapshotRepository, procOpts.snapshot); err != nil {
+				log.Fatal().Err(err).Msg("Failed to remove snapshot")
+			}
+			log.Info().Msgf("Snapshot %s removed successfully", procOpts.snapshot)
+		case "restore":
+			if procOpts.snapshot == "" {
+				log.Fatal().Msg("Snapshot name is required for removal")
+			}
+			if err := esclient.RestoreSnapshot(conf.ElasticSearch.SnapshotRepository, procOpts.snapshot); err != nil {
+				log.Fatal().Err(err).Msg("Failed to restore snapshot")
+			}
+			log.Info().Msgf("Snapshot %s restored successfully", procOpts.snapshot)
+		default:
+			log.Fatal().Msgf("Unknown snapshot action %s (allowed: create/list/remove/restore)", snapshotAction)
 		}
 
 	case config.ActionVersion:

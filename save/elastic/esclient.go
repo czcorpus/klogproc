@@ -36,12 +36,13 @@ const (
 // ConnectionConf defines a configuration
 // required to work with ES client.
 type ConnectionConf struct {
-	Server         string `json:"server"`
-	Index          string `json:"index"`
-	PushChunkSize  int    `json:"pushChunkSize"`
-	ScrollTTL      string `json:"scrollTtl"`
-	ReqTimeoutSecs int    `json:"reqTimeoutSecs"`
-	MajorVersion   int    `json:"majorVersion"`
+	Server             string `json:"server"`
+	Index              string `json:"index"`
+	PushChunkSize      int    `json:"pushChunkSize"`
+	ScrollTTL          string `json:"scrollTtl"`
+	ReqTimeoutSecs     int    `json:"reqTimeoutSecs"`
+	MajorVersion       int    `json:"majorVersion"`
+	SnapshotRepository string `json:"snapshotRepository"`
 }
 
 // IsConfigured tests whether the configuration is considered
@@ -144,8 +145,16 @@ func (esc *ESClient) Index() string {
 	return esc.index
 }
 
-// NewClient returns an instance of ESClient
-func NewClient(conf *ConnectionConf) *ESClient {
+// NewClient returns an instance of ESClient based on version of ElasticSearch
+func NewClient(esconf *ConnectionConf, appType string) *ESClient {
+	if esconf.MajorVersion < 6 {
+		return NewClientOld(esconf)
+	}
+	return NewClient6(esconf, appType)
+}
+
+// NewClientOld returns an instance of ESClient
+func NewClientOld(conf *ConnectionConf) *ESClient {
 	return &ESClient{
 		server:         conf.Server,
 		index:          conf.Index,
@@ -197,9 +206,6 @@ func (c *ESClient) Do(method string, path string, query []byte) ([]byte, error) 
 	firstErr := resObj.FirstError()
 	if firstErr != "" {
 		return []byte{}, fmt.Errorf("failed to write data to ES: %w", errors.New(firstErr))
-	}
-	if err != nil {
-		return []byte{}, err
 	}
 	return respBody, nil
 }

@@ -42,6 +42,7 @@ const (
 	ActionMkScript         = "mkscript"
 	ActionVersion          = "version"
 	ActionTestNotification = "test-notification"
+	ActionSnapshot         = "snapshot"
 
 	DefaultTimeZone                       = "Europe/Prague"
 	DefaultLogInactivityCheckIntervalSecs = 3600
