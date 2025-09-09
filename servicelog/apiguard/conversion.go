@@ -19,7 +19,10 @@ package apiguard
 import (
 	"klogproc/servicelog"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Transformer converts a source log object into a destination one
@@ -42,6 +45,16 @@ func (t *Transformer) Transform(
 	if tLogRecord.UserID != nil {
 		sUserID = strconv.Itoa(*tLogRecord.UserID)
 	}
+
+	if tLogRecord.IsCached {
+		if strings.HasSuffix(tLogRecord.Service, "mquery") {
+			log.Debug().Str("path", tLogRecord.Path).Msg("Importing API Guard record as mquery")
+			r := ImportAPIGuardRecordAsMQuery(tLogRecord)
+			r.ID = r.GenerateDeterministicID()
+			return r, nil
+		}
+	}
+
 	r := &OutputRecord{
 		Type:       tLogRecord.Type,
 		IsQuery:    true,
