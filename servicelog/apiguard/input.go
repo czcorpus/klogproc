@@ -35,9 +35,9 @@ type InputRecord struct {
 	Time       string  `json:"time"`
 	IPAddress  string  `json:"ipAddress,omitempty"`
 	UserAgent  string  `json:"userAgent,omitempty"`
-	// additional parameters used for chached requests
-	Path        string              `json:"path,omitempty"`
-	QueryParams map[string][]string `json:"queryParams,omitempty"`
+	// additional parameters used for cached requests
+	RequestPath string         `json:"requestPath,omitempty"`
+	Args        map[string]any `json:"args,omitempty"`
 }
 
 // GetTime returns record's time as a Golang's Time

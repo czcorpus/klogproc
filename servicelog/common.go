@@ -39,7 +39,8 @@ const (
 	AppTypeAkalex = "akalex"
 
 	// AppTypeAPIGuard represents a universal storage identifier for APIGuard
-	AppTypeAPIGuard = "apiguard"
+	AppTypeAPIGuard       = "apiguard"
+	AppTypeAPIGuardMquery = "apiguard-mquery"
 
 	// AppTypeCalc defines a universal storage identifier for Calc
 	AppTypeCalc = "calc"
@@ -115,6 +116,15 @@ const (
 	// AppTypeVLO defines a universal storage identifier for CNC-VLO
 	AppTypeVLO = "vlo"
 )
+
+func MapAppTypeToIndex(appType string) string {
+	switch appType {
+	case AppTypeAPIGuardMquery:
+		return AppTypeMquery
+	default:
+		return appType
+	}
+}
 
 var (
 	ErrFailedTypeAssertion = errors.New("failed type assertion")

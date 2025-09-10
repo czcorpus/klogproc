@@ -92,6 +92,7 @@ func RunWriteConsumer(appType string, conf *ConnectionConf, incomingData <-chan 
 	go func() {
 		if conf.IsConfigured() {
 			i := 0
+			appType = servicelog.MapAppTypeToIndex(appType)
 			data := make([][]byte, conf.PushChunkSize*2+1)
 			var chunkPosition *servicelog.LogRange
 			var esErr error
