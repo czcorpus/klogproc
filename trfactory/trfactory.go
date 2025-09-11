@@ -20,6 +20,7 @@ import (
 	"klogproc/notifications"
 	"klogproc/servicelog"
 	"klogproc/servicelog/apiguard"
+	apiguardMquery "klogproc/servicelog/apiguard-mquery"
 	"klogproc/servicelog/kontext013"
 	"klogproc/servicelog/kontext015"
 	"klogproc/servicelog/kontext018"
@@ -59,6 +60,8 @@ func GetStaticLogTransformer(
 	switch appType {
 	case servicelog.AppTypeAPIGuard:
 		return &apiguard.Transformer{}, nil
+	case servicelog.AppTypeAPIGuardMquery:
+		return &apiguardMquery.Transformer{}, nil
 	case servicelog.AppTypeAkalex, servicelog.AppTypeCalc, servicelog.AppTypeLists,
 		servicelog.AppTypeQuitaUp, servicelog.AppTypeGramatikat:
 		return shiny.NewTransformer(appType, anonymousUsers), nil

@@ -291,7 +291,7 @@ func (parser *VLOLineParser) ParseLine(s string, lineNum int64) (servicelog.Inpu
 // NewLineParser creates a parser for individual lines of a respective appType
 func NewLineParser(appType string, version string, appErrRegister servicelog.AppErrorRegister) (servicelog.LineParser, error) {
 	switch appType {
-	case servicelog.AppTypeAPIGuard:
+	case servicelog.AppTypeAPIGuard, servicelog.AppTypeAPIGuardMquery:
 		return &apiguardLineParser{lp: &apiguard.LineParser{}}, nil
 	case servicelog.AppTypeAkalex, servicelog.AppTypeCalc, servicelog.AppTypeLists,
 		servicelog.AppTypeQuitaUp, servicelog.AppTypeGramatikat:
