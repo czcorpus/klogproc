@@ -17,10 +17,43 @@
 package apiguard
 
 import (
+	"encoding/json"
+	"fmt"
 	"klogproc/servicelog"
 	"net"
 	"time"
 )
+
+type FlexibleArgs map[string]json.RawMessage
+
+func (fa FlexibleArgs) Get(key string) string {
+	slice, err := fa.GetStringSlice(key)
+	if err != nil || len(slice) == 0 {
+		return ""
+	}
+	return slice[0]
+}
+
+func (fa FlexibleArgs) GetStringSlice(key string) ([]string, error) {
+	raw, exists := fa[key]
+	if !exists {
+		return nil, fmt.Errorf("key %s not found", key)
+	}
+
+	// Try string first
+	var str string
+	if err := json.Unmarshal(raw, &str); err == nil {
+		return []string{str}, nil
+	}
+
+	// Try string slice
+	var slice []string
+	if err := json.Unmarshal(raw, &slice); err == nil {
+		return slice, nil
+	}
+
+	return nil, fmt.Errorf("cannot parse value for key %s", key)
+}
 
 // InputRecord represents a parsed KonText record
 type InputRecord struct {
@@ -36,8 +69,8 @@ type InputRecord struct {
 	IPAddress  string  `json:"ipAddress,omitempty"`
 	UserAgent  string  `json:"userAgent,omitempty"`
 	// additional parameters used for cached requests
-	RequestPath string         `json:"requestPath,omitempty"`
-	Args        map[string]any `json:"args,omitempty"`
+	RequestPath string       `json:"requestPath,omitempty"`
+	Args        FlexibleArgs `json:"args,omitempty"`
 }
 
 // GetTime returns record's time as a Golang's Time
