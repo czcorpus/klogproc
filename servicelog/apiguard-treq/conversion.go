@@ -1,5 +1,5 @@
-// Copyright 2023 Tomas Machalek <tomas.machalek@gmail.com>
-// Copyright 2023 Institute of the Czech National Corpus,
+// Copyright 2025 Martin Zimandl <martin.zimandl@gmail.com>
+// Copyright 2025 Institute of the Czech National Corpus,
 //                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +28,7 @@ import (
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
+	AnonymousUsers []int
 }
 
 func (t *Transformer) AppType() string {
@@ -55,7 +56,7 @@ func (t *Transformer) Transform(
 		SecondLang:  tLogRecord.Args.Get("to"),
 		IPAddress:   tLogRecord.IPAddress,
 		UserID:      userID,
-		IsAnonymous: tLogRecord.UserID == nil,
+		IsAnonymous: tLogRecord.UserID == nil || servicelog.UserBelongsToList(*tLogRecord.UserID, t.AnonymousUsers),
 		Corpus:      "", // TODO
 		Subcorpus:   "", // TODO
 		IsQuery:     tLogRecord.Args.Get("query") != "",

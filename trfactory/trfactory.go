@@ -20,7 +20,7 @@ import (
 	"klogproc/notifications"
 	"klogproc/servicelog"
 	"klogproc/servicelog/apiguard"
-	apiguardKontext "klogproc/servicelog/apiguard-kontext"
+	apiguardKontext018 "klogproc/servicelog/apiguard-kontext018"
 	apiguardKwords "klogproc/servicelog/apiguard-kwords"
 	apiguardMquery "klogproc/servicelog/apiguard-mquery"
 	apiguardTreq "klogproc/servicelog/apiguard-treq"
@@ -66,11 +66,26 @@ func GetStaticLogTransformer(
 	case servicelog.AppTypeAPIGuardMquery:
 		return &apiguardMquery.Transformer{}, nil
 	case servicelog.AppTypeAPIGuardKontext:
-		return &apiguardKontext.Transformer{}, nil
+		switch version {
+		case servicelog.AppVersionKontext018:
+			return &apiguardKontext018.Transformer{AnonymousUsers: anonymousUsers}, nil
+		default:
+			return nil, fmt.Errorf("cannot create ApiGuard transformer, unsupported KonText version: %s", version)
+		}
 	case servicelog.AppTypeAPIGuardTreq:
-		return &apiguardTreq.Transformer{}, nil
+		switch version {
+		case servicelog.AppVersionTreq1API:
+			return nil, fmt.Errorf("cannot create ApiGuard transformer, unsupported Treq version: %s", version)
+		default:
+			return &apiguardTreq.Transformer{AnonymousUsers: anonymousUsers}, nil
+		}
 	case servicelog.AppTypeAPIGuardKwords:
-		return &apiguardKwords.Transformer{}, nil
+		switch version {
+		case servicelog.AppVersionKwords1:
+			return &apiguardKwords.Transformer{AnonymousUsers: anonymousUsers}, nil
+		default:
+			return nil, fmt.Errorf("cannot create ApiGuard transformer, unsupported KWords version: %s", version)
+		}
 	case servicelog.AppTypeAkalex, servicelog.AppTypeCalc, servicelog.AppTypeLists,
 		servicelog.AppTypeQuitaUp, servicelog.AppTypeGramatikat:
 		return shiny.NewTransformer(appType, anonymousUsers), nil

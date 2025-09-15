@@ -1,5 +1,5 @@
-// Copyright 2023 Tomas Machalek <tomas.machalek@gmail.com>
-// Copyright 2023 Institute of the Czech National Corpus,
+// Copyright 2025 Martin Zimandl <martin.zimandl@gmail.com>
+// Copyright 2025 Institute of the Czech National Corpus,
 //                Faculty of Arts, Charles University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@ import (
 	"klogproc/servicelog"
 	"klogproc/servicelog/apiguard"
 	"klogproc/servicelog/kontext015"
+	"strconv"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -27,6 +28,7 @@ import (
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
+	AnonymousUsers []int
 }
 
 func (t *Transformer) AppType() string {
@@ -42,23 +44,33 @@ func (t *Transformer) Transform(
 		panic(servicelog.ErrFailedTypeAssertion)
 	}
 
-	var action, corpusID string
-	split := strings.Split(tLogRecord.RequestPath, "/")
-	if len(split) == 2 {
-		action = split[1]
-	} else if len(split) >= 3 {
-		action = split[len(split)-2]
-		corpusID = split[len(split)-1]
+	alignedCorpora, err := tLogRecord.Args.GetStringSlice("align")
+	if err != nil {
+		return nil, err
 	}
+
+	action := tLogRecord.RequestPath
+	var userID string
+	if tLogRecord.UserID != nil {
+		userID = strconv.Itoa(*tLogRecord.UserID)
+	}
+
 	r := &kontext015.OutputRecord{
-		Type:      servicelog.AppTypeMquery,
-		Level:     tLogRecord.Level,
-		IPAddress: tLogRecord.IPAddress,
-		UserAgent: tLogRecord.GetUserAgent(),
-		IsAI:      strings.Contains(tLogRecord.GetUserAgent(), "GPT"),
-		ProcTime:  tLogRecord.ProcTime,
-		Action:    action,
-		CorpusID:  corpusID,
+		Type:           servicelog.AppTypeKontext,
+		Action:         action,
+		Corpus:         tLogRecord.Args.Get("corpname"),
+		AlignedCorpora: alignedCorpora,
+		IPAddress:      tLogRecord.IPAddress,
+		IsAnonymous:    tLogRecord.UserID == nil || servicelog.UserBelongsToList(*tLogRecord.UserID, t.AnonymousUsers),
+		IsAPI:          false, // TODO
+		IsQuery:        kontext015.IsEntryQuery(action),
+		ProcTime:       tLogRecord.ProcTime,
+		QueryType:      "", // TODO
+		UserAgent:      tLogRecord.GetUserAgent(),
+		UserID:         userID,
+		// GeoIP          servicelog.GeoDataRecord `json:"geoip,omitempty"`
+		// Error          *servicelog.ErrorRecord  `json:"error,omitempty"`
+		// Args           map[string]interface{}   `json:"args"`
 	}
 	r.SetTime(logRecord.GetTime())
 	r.ID = r.GenerateDeterministicID()
@@ -77,21 +89,14 @@ func (t *Transformer) Preprocess(
 		return nil, servicelog.ErrFailedTypeAssertion
 	}
 
-	if !strings.HasSuffix(tLogRecord.Service, "mquery") {
-		log.Debug().Msg("Skipping non-mquery service")
+	if !strings.HasSuffix(tLogRecord.Service, "kontext") {
+		log.Debug().Msg("Skipping non-kontext service")
 		return []servicelog.InputRecord{}, nil
 	}
 
 	if !tLogRecord.IsCached {
-		log.Debug().Msg("Skipping non-cached mquery request")
+		log.Debug().Msg("Skipping non-cached kontext request")
 		return []servicelog.InputRecord{}, nil
-	}
-
-	for _, v := range []string{"login", "preflight", "merge-freqs", "speeches", "time-dist-word"} {
-		if strings.HasSuffix(tLogRecord.RequestPath, v) {
-			log.Debug().Msgf("Skipping virtual apiguard mquery action: %s", v)
-			return []servicelog.InputRecord{}, nil
-		}
 	}
 
 	return []servicelog.InputRecord{rec}, nil
