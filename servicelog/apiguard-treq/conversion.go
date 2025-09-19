@@ -14,12 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package apiguardMquery
+package apiguardTreq
 
 import (
 	"klogproc/servicelog"
 	"klogproc/servicelog/apiguard"
-	"klogproc/servicelog/mquery"
+	"klogproc/servicelog/treq"
+	"strconv"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -27,10 +28,11 @@ import (
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
+	AnonymousUsers []int
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeAPIGuardMquery
+	return servicelog.AppTypeAPIGuardTreq
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
@@ -42,23 +44,27 @@ func (t *Transformer) Transform(
 		panic(servicelog.ErrFailedTypeAssertion)
 	}
 
-	var action, corpusID string
-	split := strings.Split(tLogRecord.RequestPath, "/")
-	if len(split) == 2 {
-		action = split[1]
-	} else if len(split) >= 3 {
-		action = split[len(split)-2]
-		corpusID = split[len(split)-1]
+	var userID string
+	if tLogRecord.UserID != nil {
+		userID = strconv.Itoa(*tLogRecord.UserID)
 	}
-	r := &mquery.OutputRecord{
-		Type:      servicelog.AppTypeMquery,
-		Level:     tLogRecord.Level,
-		IPAddress: tLogRecord.IPAddress,
-		UserAgent: tLogRecord.GetUserAgent(),
-		IsAI:      strings.Contains(tLogRecord.GetUserAgent(), "GPT"),
-		ProcTime:  tLogRecord.ProcTime,
-		Action:    action,
-		CorpusID:  corpusID,
+
+	r := &treq.OutputRecord{
+		Type:        servicelog.AppTypeTreq,
+		IsAPI:       false, // TODO
+		QLang:       tLogRecord.Args.Get("from"),
+		SecondLang:  tLogRecord.Args.Get("to"),
+		IPAddress:   tLogRecord.IPAddress,
+		UserID:      userID,
+		IsAnonymous: tLogRecord.UserID == nil || servicelog.UserBelongsToList(*tLogRecord.UserID, t.AnonymousUsers),
+		Corpus:      "", // TODO
+		Subcorpus:   "", // TODO
+		IsQuery:     tLogRecord.Args.Get("query") != "",
+		IsRegexp:    tLogRecord.Args.Get("regex") == "true",
+		IsCaseInsen: tLogRecord.Args.Get("ci") == "true",
+		IsMultiWord: tLogRecord.Args.Get("multiword") == "true",
+		IsLemma:     tLogRecord.Args.Get("lemma") == "true",
+		// GeoIP:       nil, // TODO
 	}
 	r.SetTime(logRecord.GetTime())
 	r.ID = r.GenerateDeterministicID()
@@ -77,21 +83,14 @@ func (t *Transformer) Preprocess(
 		return nil, servicelog.ErrFailedTypeAssertion
 	}
 
-	if !strings.HasSuffix(tLogRecord.Service, "mquery") {
-		log.Debug().Msg("Skipping non-mquery service")
+	if !strings.HasSuffix(tLogRecord.Service, "treq") {
+		log.Debug().Msg("Skipping non-treq service")
 		return []servicelog.InputRecord{}, nil
 	}
 
 	if !tLogRecord.IsCached {
-		log.Debug().Msg("Skipping non-cached mquery request")
+		log.Debug().Msg("Skipping non-cached treq request")
 		return []servicelog.InputRecord{}, nil
-	}
-
-	for _, v := range []string{"login", "preflight", "merge-freqs", "speeches", "time-dist-word"} {
-		if strings.HasSuffix(tLogRecord.RequestPath, v) {
-			log.Debug().Msgf("Skipping virtual apiguard mquery action: %s", v)
-			return []servicelog.InputRecord{}, nil
-		}
 	}
 
 	return []servicelog.InputRecord{rec}, nil

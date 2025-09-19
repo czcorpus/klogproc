@@ -39,8 +39,11 @@ const (
 	AppTypeAkalex = "akalex"
 
 	// AppTypeAPIGuard represents a universal storage identifier for APIGuard
-	AppTypeAPIGuard       = "apiguard"
-	AppTypeAPIGuardMquery = "apiguard-mquery"
+	AppTypeAPIGuard        = "apiguard"
+	AppTypeAPIGuardMquery  = "apiguard-mquery"
+	AppTypeAPIGuardKontext = "apiguard-kontext"
+	AppTypeAPIGuardTreq    = "apiguard-treq"
+	AppTypeAPIGuardKwords  = "apiguard-kwords"
 
 	// AppTypeCalc defines a universal storage identifier for Calc
 	AppTypeCalc = "calc"
@@ -117,10 +120,19 @@ const (
 	AppTypeVLO = "vlo"
 )
 
+// MapAppTypeToIndex maps a provided application type to
+// a respective index name. It is used for cached apiguard logs
+// transformed to respective application logs.
 func MapAppTypeToIndex(appType string) string {
 	switch appType {
 	case AppTypeAPIGuardMquery:
 		return AppTypeMquery
+	case AppTypeAPIGuardKontext:
+		return AppTypeKontext
+	case AppTypeAPIGuardTreq:
+		return AppTypeTreq
+	case AppTypeAPIGuardKwords:
+		return AppTypeKwords
 	default:
 		return appType
 	}
