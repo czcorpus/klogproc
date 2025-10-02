@@ -55,19 +55,20 @@ func (fa FlexibleArgs) GetStringSlice(key string) ([]string, error) {
 	return nil, fmt.Errorf("cannot parse value for key %s", key)
 }
 
-// InputRecord represents a parsed KonText record
+// InputRecord represents a parsed APIGuard record (which is the same for all the
+// services handled by APIGuard).
 type InputRecord struct {
-	Type       string  `json:"type"`
-	Level      string  `json:"level"`
-	AccessLog  bool    `json:"accessLog"`
-	Service    string  `json:"service"`
-	ProcTime   float64 `json:"procTime"`
-	IsCached   bool    `json:"isCached"`
-	IsIndirect bool    `json:"isIndirect"`
-	UserID     *int    `json:"userId"`
-	Time       string  `json:"time"`
-	IPAddress  string  `json:"ipAddress,omitempty"`
-	UserAgent  string  `json:"userAgent,omitempty"`
+	Type           string  `json:"type"`
+	Level          string  `json:"level"`
+	AccessLog      bool    `json:"accessLog"`
+	Service        string  `json:"service"`
+	ProcTime       float64 `json:"procTime"`
+	IsCached       bool    `json:"isCached"`
+	IsIndirect     bool    `json:"isIndirect"`
+	UserID         *int    `json:"userId"`
+	Time           string  `json:"time"`
+	IPAddress      string  `json:"ipAddress,omitempty"`
+	UserAgentValue string  `json:"userAgent,omitempty"`
 	// additional parameters used for cached requests
 	RequestPath string       `json:"requestPath,omitempty"`
 	Args        FlexibleArgs `json:"args,omitempty"`
@@ -102,7 +103,12 @@ func (rec *InputRecord) SetCluster(size int) {
 
 // GetUserAgent returns a raw HTTP user agent info as provided by the client
 func (rec *InputRecord) GetUserAgent() string {
-	return rec.UserAgent
+	return rec.UserAgentValue
+}
+
+// note: this is to comply with other interface
+func (rec *InputRecord) UserAgent() string {
+	return rec.UserAgentValue
 }
 
 // IsProcessable declares whether the log record matches

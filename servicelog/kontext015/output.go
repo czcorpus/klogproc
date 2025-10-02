@@ -77,6 +77,7 @@ type OutputRecord struct {
 	time           time.Time
 	IPAddress      string                   `json:"ipAddress"`
 	IsAnonymous    bool                     `json:"isAnonymous"`
+	IsCached       bool                     `json:"isCached,omitempty"`
 	IsAPI          bool                     `json:"isApi"`
 	IsQuery        bool                     `json:"isQuery"`
 	ProcTime       float64                  `json:"procTime"`

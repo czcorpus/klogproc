@@ -19,7 +19,7 @@ package apiguardKwords
 import (
 	"klogproc/servicelog"
 	"klogproc/servicelog/apiguard"
-	"klogproc/servicelog/kwords"
+	"klogproc/servicelog/kwords2"
 	"strconv"
 	"strings"
 
@@ -44,28 +44,22 @@ func (t *Transformer) Transform(
 		panic(servicelog.ErrFailedTypeAssertion)
 	}
 
-	var userID string
+	var userID *string
 	if tLogRecord.UserID != nil {
-		userID = strconv.Itoa(*tLogRecord.UserID)
+		tmp := strconv.Itoa(*tLogRecord.UserID)
+		userID = &tmp
 	}
 
-	r := &kwords.OutputRecord{
-		Type:            servicelog.AppTypeKwords,
-		IPAddress:       tLogRecord.IPAddress,
-		UserID:          userID,
-		IsAnonymous:     tLogRecord.UserID == nil || servicelog.UserBelongsToList(*tLogRecord.UserID, t.AnonymousUsers),
-		IsQuery:         false, // TODO
-		NumFiles:        0,     // TODO
-		TargetInputType: "",    // TODO
-		TargetLength:    0,     // TODO
-		Corpus:          "",    // TODO
-		RefLength:       nil,   // TODO
-		Pronouns:        false, // TODO
-		Prep:            false, // TODO
-		Con:             false, // TODO
-		Num:             false, // TODO
-		CaseInsensitive: false, // TODO
-		// GeoIP           servicelog.GeoDataRecord `json:"geoip,omitempty"`
+	// note that in case of APIGuard logs for Kwords, we cannot
+	// fetch most of the attributes as APIGuard does not know details
+	// about KWords requests and its logging procedure knows only
+	// request URLs.
+	r := &kwords2.OutputRecord{
+		Type:        servicelog.AppTypeKwords,
+		IPAddress:   tLogRecord.IPAddress,
+		IsCached:    tLogRecord.IsCached,
+		UserID:      userID,
+		IsAnonymous: tLogRecord.UserID == nil || servicelog.UserBelongsToList(*tLogRecord.UserID, t.AnonymousUsers),
 	}
 	r.SetTime(logRecord.GetTime())
 	r.ID = r.GenerateDeterministicID()
@@ -85,12 +79,11 @@ func (t *Transformer) Preprocess(
 	}
 
 	if !strings.HasSuffix(tLogRecord.Service, "kwords") {
-		log.Debug().Msg("Skipping non-kwords service")
+		log.Warn().Msg("Found non-kwords service record, skipping")
 		return []servicelog.InputRecord{}, nil
 	}
 
 	if !tLogRecord.IsCached {
-		log.Debug().Msg("Skipping non-cached kwords request")
 		return []servicelog.InputRecord{}, nil
 	}
 

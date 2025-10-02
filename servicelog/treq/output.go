@@ -34,6 +34,7 @@ type OutputRecord struct {
 	Type        string `json:"type"`
 	time        time.Time
 	IsAPI       bool                     `json:"isApi"`
+	IsCached    bool                     `json:"isCached,omitempty"`
 	Datetime    string                   `json:"datetime"`
 	QLang       string                   `json:"qLang"`
 	SecondLang  string                   `json:"secondLang"`

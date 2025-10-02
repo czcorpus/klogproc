@@ -22,6 +22,7 @@ import (
 	"klogproc/servicelog/mquery"
 	"strings"
 
+	"github.com/czcorpus/cnc-gokit/unireq"
 	"github.com/rs/zerolog/log"
 )
 
@@ -46,6 +47,7 @@ func (t *Transformer) Transform(
 	split := strings.Split(tLogRecord.RequestPath, "/")
 	if len(split) == 2 {
 		action = split[1]
+
 	} else if len(split) >= 3 {
 		action = split[len(split)-2]
 		corpusID = split[len(split)-1]
@@ -53,9 +55,10 @@ func (t *Transformer) Transform(
 	r := &mquery.OutputRecord{
 		Type:      servicelog.AppTypeMquery,
 		Level:     tLogRecord.Level,
+		IsCached:  tLogRecord.IsCached,
 		IPAddress: tLogRecord.IPAddress,
 		UserAgent: tLogRecord.GetUserAgent(),
-		IsAI:      strings.Contains(tLogRecord.GetUserAgent(), "GPT"),
+		IsAI:      unireq.IsAIBot(tLogRecord),
 		ProcTime:  tLogRecord.ProcTime,
 		Action:    action,
 		CorpusID:  corpusID,
@@ -78,12 +81,11 @@ func (t *Transformer) Preprocess(
 	}
 
 	if !strings.HasSuffix(tLogRecord.Service, "mquery") {
-		log.Debug().Msg("Skipping non-mquery service")
+		log.Warn().Msg("Found non-mquery service record, skipping")
 		return []servicelog.InputRecord{}, nil
 	}
 
 	if !tLogRecord.IsCached {
-		log.Debug().Msg("Skipping non-cached mquery request")
 		return []servicelog.InputRecord{}, nil
 	}
 

@@ -21,6 +21,8 @@ import (
 	"net"
 	"strings"
 	"time"
+
+	"github.com/czcorpus/cnc-gokit/unireq"
 )
 
 // InputRecord represents a raw-parsed version of masm query log
@@ -36,8 +38,8 @@ type InputRecord struct {
 	BodySize     int     `json:"bodySize"`
 	Path         string  `json:"path"`
 	// additional log events
-	UserAgent string `json:"userAgent"`
-	CorpusId  string `json:"corpusId"`
+	UserAgentValue string `json:"userAgent"`
+	CorpusId       string `json:"corpusId"`
 }
 
 // GetTime returns a normalized log date and time information
@@ -64,7 +66,12 @@ func (rec *InputRecord) SetCluster(size int) {
 }
 
 func (r *InputRecord) GetUserAgent() string {
-	return r.UserAgent
+	return r.UserAgentValue
+}
+
+// note: this is to comply with other interface
+func (r *InputRecord) UserAgent() string {
+	return r.UserAgentValue
 }
 
 func (r *InputRecord) IsProcessable() bool {
@@ -77,7 +84,7 @@ func (rec *InputRecord) IsSuspicious() bool {
 }
 
 func (rec *InputRecord) IsAI() bool {
-	return strings.Contains(rec.GetUserAgent(), "GPT")
+	return unireq.IsAIBot(rec)
 }
 
 func (rec *InputRecord) GetAction() string {
