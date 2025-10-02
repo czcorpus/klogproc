@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.24.1
 
 require (
-	github.com/czcorpus/cnc-gokit v0.11.0
+	github.com/czcorpus/cnc-gokit v0.19.0
 	github.com/czcorpus/conomi v0.0.7
 	github.com/google/uuid v1.3.0
 	github.com/kelindar/dbscan v0.0.1

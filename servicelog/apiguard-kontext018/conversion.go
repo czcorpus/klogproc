@@ -60,17 +60,15 @@ func (t *Transformer) Transform(
 		Action:         action,
 		Corpus:         tLogRecord.Args.Get("corpname"),
 		AlignedCorpora: alignedCorpora,
+		IsCached:       tLogRecord.IsCached,
 		IPAddress:      tLogRecord.IPAddress,
 		IsAnonymous:    tLogRecord.UserID == nil || servicelog.UserBelongsToList(*tLogRecord.UserID, t.AnonymousUsers),
-		IsAPI:          false, // TODO
+		IsAPI:          true, // via APIGuard, only API KonText calls are performed
 		IsQuery:        kontext015.IsEntryQuery(action),
 		ProcTime:       tLogRecord.ProcTime,
-		QueryType:      "", // TODO
+		QueryType:      "", // we cannot decide from URL Query
 		UserAgent:      tLogRecord.GetUserAgent(),
 		UserID:         userID,
-		// GeoIP          servicelog.GeoDataRecord `json:"geoip,omitempty"`
-		// Error          *servicelog.ErrorRecord  `json:"error,omitempty"`
-		// Args           map[string]interface{}   `json:"args"`
 	}
 	r.SetTime(logRecord.GetTime())
 	r.ID = r.GenerateDeterministicID()
@@ -90,12 +88,11 @@ func (t *Transformer) Preprocess(
 	}
 
 	if !strings.HasSuffix(tLogRecord.Service, "kontext") {
-		log.Debug().Msg("Skipping non-kontext service")
+		log.Warn().Msg("Found non-kontext service record, skipping")
 		return []servicelog.InputRecord{}, nil
 	}
 
 	if !tLogRecord.IsCached {
-		log.Debug().Msg("Skipping non-cached kontext request")
 		return []servicelog.InputRecord{}, nil
 	}
 

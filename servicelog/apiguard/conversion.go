@@ -51,7 +51,7 @@ func (t *Transformer) Transform(
 		IsIndirect: tLogRecord.IsIndirect,
 		UserID:     sUserID,
 		IPAddress:  tLogRecord.IPAddress,
-		UserAgent:  tLogRecord.UserAgent,
+		UserAgent:  tLogRecord.UserAgentValue,
 		datetime:   logRecord.GetTime(),
 		Datetime:   logRecord.GetTime().Format(time.RFC3339),
 	}

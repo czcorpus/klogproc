@@ -43,6 +43,7 @@ type OutputRecord struct {
 	time          time.Time
 	Datetime      string                   `json:"datetime"`
 	IPAddress     string                   `json:"ipAddress"`
+	IsCached      bool                     `json:"isCached,omitempty"`
 	UserID        *string                  `json:"userId"`
 	IsAnonymous   bool                     `json:"isAnonymous"`
 	Action        string                   `json:"action,omitempty"`

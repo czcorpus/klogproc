@@ -51,20 +51,17 @@ func (t *Transformer) Transform(
 
 	r := &treq.OutputRecord{
 		Type:        servicelog.AppTypeTreq,
-		IsAPI:       false, // TODO
+		IsAPI:       true,
+		IsQuery:     true,
 		QLang:       tLogRecord.Args.Get("from"),
 		SecondLang:  tLogRecord.Args.Get("to"),
 		IPAddress:   tLogRecord.IPAddress,
 		UserID:      userID,
 		IsAnonymous: tLogRecord.UserID == nil || servicelog.UserBelongsToList(*tLogRecord.UserID, t.AnonymousUsers),
-		Corpus:      "", // TODO
-		Subcorpus:   "", // TODO
-		IsQuery:     tLogRecord.Args.Get("query") != "",
 		IsRegexp:    tLogRecord.Args.Get("regex") == "true",
 		IsCaseInsen: tLogRecord.Args.Get("ci") == "true",
 		IsMultiWord: tLogRecord.Args.Get("multiword") == "true",
 		IsLemma:     tLogRecord.Args.Get("lemma") == "true",
-		// GeoIP:       nil, // TODO
 	}
 	r.SetTime(logRecord.GetTime())
 	r.ID = r.GenerateDeterministicID()
@@ -84,7 +81,7 @@ func (t *Transformer) Preprocess(
 	}
 
 	if !strings.HasSuffix(tLogRecord.Service, "treq") {
-		log.Debug().Msg("Skipping non-treq service")
+		log.Warn().Msg("Found non-treq service record, skipping")
 		return []servicelog.InputRecord{}, nil
 	}
 

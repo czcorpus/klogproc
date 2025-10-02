@@ -37,6 +37,7 @@ type OutputRecord struct {
 	Level     string                   `json:"level"`
 	IPAddress string                   `json:"ipAddress"`
 	UserAgent string                   `json:"userAgent"`
+	IsCached  bool                     `json:"isCached,omitempty"`
 	IsAI      bool                     `json:"isAI"`
 	ProcTime  float64                  `json:"procTime"`
 	Error     *servicelog.ErrorRecord  `json:"error,omitempty"`

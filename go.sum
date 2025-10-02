@@ -7,8 +7,8 @@ github.com/chenzhuoyu/base64x v0.0.0-20211019084208-fb5309c8db06/go.mod h1:DH46F
 github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 h1:qSGYFH7+jGhDF8vLC+iwCD4WpbV1EBDSzWkJODFLams=
 github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311/go.mod h1:b583jCggY9gE99b6G5LEC39OIiVsWj+R97kbl5odCEk=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
-github.com/czcorpus/cnc-gokit v0.11.0 h1:0DSWVAMu6TyBLxeBfTRB/yezoFKQPy1zW8yqUJmcBzg=
-github.com/czcorpus/cnc-gokit v0.11.0/go.mod h1:BZSRrYUFIHXVIiuqnSoZbfXfL2X/gHWG3w35aIVW36U=
+github.com/czcorpus/cnc-gokit v0.19.0 h1:fhhN5Niekn2lY4aVHR3ENNlt5G+9DLGmPIZHYKDrerQ=
+github.com/czcorpus/cnc-gokit v0.19.0/go.mod h1:4vHbyf+qV8kHHwvWnPhiccMo5pVGY3tnSSRCP0mr2xc=
 github.com/czcorpus/conomi v0.0.7 h1:1E36ozDNfKmT0OKca2wSZPitsF8Zz0+Ys9d0WRY3Ay4=
 github.com/czcorpus/conomi v0.0.7/go.mod h1:mcgk79NYf35sco1unxJE3W/xiLddUJI6RjuGwytc5So=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
