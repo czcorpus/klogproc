@@ -43,7 +43,7 @@ type ESImportFailHandler interface {
 func BulkWriteRequest(data [][]byte, appType string, esconf *ConnectionConf) error {
 	esclient := NewClient(esconf, appType)
 	q := bytes.Join(data, []byte("\n"))
-	_, err := esclient.Do("POST", "/_bulk", q)
+	_, err := esclient.DoBulkRequest("POST", "/_bulk", q)
 	if err != nil {
 		return fmt.Errorf("failed to push log chunk: %w", err)
 	}

@@ -25,7 +25,9 @@ import (
 	"os"
 
 	"github.com/czcorpus/cnc-gokit/logging"
+	"github.com/fatih/color"
 	"github.com/oschwald/geoip2-golang"
+	"github.com/rodaine/table"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -219,8 +221,7 @@ func main() {
 	keyremoveCmd.BoolVar(&procOpts.worklogReset, "worklog-reset", false, "Use the provided worklog but reset it first")
 
 	snapshotCmd := flag.NewFlagSet(config.ActionSnapshot, flag.ExitOnError)
-	snapshotCmd.StringVar(&procOpts.appType, "app-type", "", "Set app type for snapshot action (e.g. kontext, etc.), required for ES6+")
-	snapshotCmd.StringVar(&procOpts.snapshot, "snapshot", "", "Set snapshot name")
+	snapshotCmd.StringVar(&procOpts.appType, "app-type", "", "Set app type for snapshot action (e.g. kontext, etc.)")
 
 	testnotifCmd := flag.NewFlagSet(config.ActionTestNotification, flag.ExitOnError)
 
@@ -234,7 +235,7 @@ func main() {
 			"\t%s docupdate [options] [config.json]\n"+
 			"\t%s docremove [options] [config.json]\n"+
 			"\t%s keyremove [options] [config.json]\n"+
-			"\t%s snapshot [options] [config.json] [list/create/remove/restore]\n"+
+			"\t%s snapshot [options] [config.json] [list/create/remove/restore] [snapshot name]\n"+
 			"\t%s test-nofification [options] [config.json]\n"+
 			"\t%s mkscript [options] [config.json]\n"+
 			"\t%s version\n",
@@ -324,40 +325,69 @@ func main() {
 		if snapshotAction == "" {
 			log.Fatal().Msgf("Missing snapshot action (create/list/remove/restore)")
 		}
-		esclient := elastic.NewClient(&conf.ElasticSearch, procOpts.appType)
+		if conf.LogFiles == nil && procOpts.appType == "" {
+			log.Fatal().Msg("No app-type found - use cmd arg. -app-type or a single application config for batch processing")
+		}
+		var appType string
+		if procOpts.appType != "" {
+			appType = procOpts.appType
+
+		} else {
+			appType = conf.LogFiles.AppType
+		}
+
+		snapshotName := snapshotCmd.Arg(2)
+
+		esclient := elastic.NewClient(&conf.ElasticSearch, appType)
 		switch snapshotAction {
 		case "create":
-			snapshot, err := esclient.CreateSnapshot(conf.ElasticSearch.SnapshotRepository, procOpts.snapshot, "backup")
+			snapshot, err := esclient.CreateSnapshot(conf.ElasticSearch.Snapshots, appType, snapshotName, "backup")
 			if err != nil {
 				log.Fatal().Err(err).Msg("Failed to create snapshot backup")
 			}
-			log.Info().Msgf("Snapshot %s created successfully", snapshot.Snapshot)
+			log.Info().Msgf("Snapshot %s created successfully", snapshot)
 		case "list":
-			resp, err := esclient.ListSnapshots(conf.ElasticSearch.SnapshotRepository)
+			resp, err := esclient.ListSnapshots(conf.ElasticSearch.Snapshots, appType)
 			if err != nil {
 				log.Fatal().Err(err).Msg("Failed to list snapshots")
 			}
-			fmt.Printf("| %-20s | %-10s | %-25s | %-25s |\n", "Snapshot", "State", "Start Time", "End Time")
-			fmt.Printf("| %-20s | %-10s | %-25s | %-25s |\n", strings.Repeat("-", 20), strings.Repeat("-", 10), strings.Repeat("-", 25), strings.Repeat("-", 25))
+
+			headerFmt := color.New(color.FgGreen).SprintfFunc()
+			columnFmt := color.New(color.FgHiMagenta).SprintfFunc()
+
+			tbl := table.New(
+				"Snapshot",
+				"State",
+				"Start Time",
+				"End Time",
+			)
+			tbl.
+				WithHeaderFormatter(headerFmt).
+				WithFirstColumnFormatter(columnFmt).
+				WithHeaderSeparatorRow('\u2550')
 			for _, v := range resp.Snapshots {
-				fmt.Printf("| %-20s | %-10s | %-25s | %-25s |\n", v.Snapshot, v.State, v.StartTime, v.EndTime)
+				tbl.AddRow(v.Snapshot, v.State, v.StartTime, v.EndTime)
 			}
+			color.New(color.FgCyan).Printf("\nSnapshots for \"%s\"\n\n", appType)
+			tbl.Print()
+			fmt.Println()
+
 		case "remove":
-			if procOpts.snapshot == "" {
+			if snapshotName == "" {
 				log.Fatal().Msg("Snapshot name is required for removal")
 			}
-			if err := esclient.RemoveSnapshot(conf.ElasticSearch.SnapshotRepository, procOpts.snapshot); err != nil {
+			if err := esclient.RemoveSnapshot(conf.ElasticSearch.Snapshots, appType, snapshotName); err != nil {
 				log.Fatal().Err(err).Msg("Failed to remove snapshot")
 			}
-			log.Info().Msgf("Snapshot %s removed successfully", procOpts.snapshot)
+			log.Info().Msgf("Snapshot %s removed successfully", snapshotName)
 		case "restore":
-			if procOpts.snapshot == "" {
+			if snapshotName == "" {
 				log.Fatal().Msg("Snapshot name is required for removal")
 			}
-			if err := esclient.RestoreSnapshot(conf.ElasticSearch.SnapshotRepository, procOpts.snapshot); err != nil {
+			if err := esclient.RestoreSnapshot(conf.ElasticSearch.Snapshots, appType, snapshotName); err != nil {
 				log.Fatal().Err(err).Msg("Failed to restore snapshot")
 			}
-			log.Info().Msgf("Snapshot %s restored successfully", procOpts.snapshot)
+			log.Info().Msgf("Snapshot %s restored successfully", snapshotName)
 		default:
 			log.Fatal().Msgf("Unknown snapshot action %s (allowed: create/list/remove/restore)", snapshotAction)
 		}

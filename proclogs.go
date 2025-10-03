@@ -46,5 +46,4 @@ type ProcessOptions struct {
 	datetimeRange batch.DatetimeRange
 	scriptPath    string
 	appType       string
-	snapshot      string
 }

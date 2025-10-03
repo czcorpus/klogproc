@@ -33,16 +33,27 @@ const (
 	defaultReqTimeoutSecs = 10
 )
 
+type SnapshotConf struct {
+
+	// RootFSPath must match one of corresponding
+	// ES instance's configured snapshot directories
+	//
+	// Note that Klogproc creates a repository (basically
+	// a subdirectory) for each service it is required
+	// to create snapshot for.
+	RootFSPath string `json:"rootFsPath"`
+}
+
 // ConnectionConf defines a configuration
 // required to work with ES client.
 type ConnectionConf struct {
-	Server             string `json:"server"`
-	Index              string `json:"index"`
-	PushChunkSize      int    `json:"pushChunkSize"`
-	ScrollTTL          string `json:"scrollTtl"`
-	ReqTimeoutSecs     int    `json:"reqTimeoutSecs"`
-	MajorVersion       int    `json:"majorVersion"`
-	SnapshotRepository string `json:"snapshotRepository"`
+	Server         string       `json:"server"`
+	Index          string       `json:"index"`
+	PushChunkSize  int          `json:"pushChunkSize"`
+	ScrollTTL      string       `json:"scrollTtl"`
+	ReqTimeoutSecs int          `json:"reqTimeoutSecs"`
+	MajorVersion   int          `json:"majorVersion"`
+	Snapshots      SnapshotConf `json:"snapshot"`
 }
 
 // IsConfigured tests whether the configuration is considered
@@ -177,7 +188,7 @@ func (c ESClient) String() string {
 
 // Do sends a general request to ElasticSearch server where
 // 'query' is expected to be a JSON-encoded argument object
-func (c *ESClient) Do(method string, path string, query []byte) ([]byte, error) {
+func (c *ESClient) DoBulkRequest(method string, path string, query []byte) ([]byte, error) {
 	body := bytes.NewBuffer(query)
 	client := http.Client{Timeout: time.Second * time.Duration(c.reqTimeoutSecs)}
 	req, err := http.NewRequest(method, c.server+path, body)
@@ -210,13 +221,36 @@ func (c *ESClient) Do(method string, path string, query []byte) ([]byte, error) 
 	return respBody, nil
 }
 
+func (c *ESClient) DoRequest(method string, path string, query []byte) ([]byte, error) {
+	body := bytes.NewBuffer(query)
+	client := http.Client{Timeout: time.Second * time.Duration(c.reqTimeoutSecs)}
+	req, err := http.NewRequest(method, c.server+path, body)
+	if err != nil {
+		return []byte{}, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := client.Do(req)
+	if err != nil {
+		return []byte{}, err
+	}
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return []byte{}, err
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+		return respBody, newESClientError(
+			fmt.Sprintf("Request %s failed with code %d", path, resp.StatusCode), respBody, query)
+	}
+	return respBody, nil
+}
+
 // search is a low level search function
 func (c *ESClient) search(query []byte, scroll string) (Result, error) {
 	path := "/" + c.index + "/_search"
 	if scroll != "" {
 		path += "?scroll=" + scroll
 	}
-	resp, err := c.Do("GET", path, query)
+	resp, err := c.DoRequest("GET", path, query)
 	if err != nil {
 		return NewEmptyResult(), err
 	}
@@ -231,7 +265,7 @@ func (c *ESClient) search(query []byte, scroll string) (Result, error) {
 // count is a low level count function
 func (c *ESClient) count(query []byte) (int, error) {
 	path := "/" + c.index + "/_count"
-	resp, err := c.Do("GET", path, query)
+	resp, err := c.DoRequest("GET", path, query)
 	if err != nil {
 		return 0, err
 	}
@@ -250,7 +284,7 @@ func (c *ESClient) FetchScroll(scrollID string, ttl string) (Result, error) {
 	if err != nil {
 		return NewEmptyResult(), err
 	}
-	resp, err := c.Do("POST", "/_search/scroll", jsonBody)
+	resp, err := c.DoRequest("POST", "/_search/scroll", jsonBody)
 	if err != nil {
 		return NewEmptyResult(), err
 	}

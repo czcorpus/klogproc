@@ -95,7 +95,7 @@ func (c *ESClient) bulkRemoveRecordScroll(index string, hits Hits) (int, error) 
 	}
 	jsonLines[stopIdx] = make([]byte, 0)
 	stopIdx++
-	_, err := c.Do("POST", "/_bulk", bytes.Join(jsonLines[:stopIdx], []byte("\n")))
+	_, err := c.DoBulkRequest("POST", "/_bulk", bytes.Join(jsonLines[:stopIdx], []byte("\n")))
 	if err != nil {
 		return 0, err
 	}

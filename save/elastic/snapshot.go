@@ -18,7 +18,10 @@ package elastic
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -61,40 +64,111 @@ type CreateSnapshotResponse struct {
 	} `json:"shards"`
 }
 
-func (c *ESClient) createSnapshot(repository string, name string, query []byte) (*CreateSnapshotResponse, error) {
-	path := "/_snapshot/" + repository + "/" + name
-	resp, err := c.Do("POST", path, query)
+type repoSettings struct {
+	Compress bool   `json:"compress"`
+	Location string `json:"location"`
+}
+
+type repoInfo struct {
+	Type     string       `json:"type"`
+	Settings repoSettings `json:"settings"`
+}
+
+type repoListResponse map[string]repoInfo
+
+type acceptedResp struct {
+	Accepted bool `json:"accepted"`
+}
+
+func (c *ESClient) createSnapshot(repository, name string, args CreateSnapshotArgs) (string, error) {
+	url := fmt.Sprintf("/_snapshot/%s/%s", repository, name)
+	query, err := json.Marshal(args)
 	if err != nil {
-		return nil, err
+		return "", fmt.Errorf("failed to create snapshot: %w", err)
 	}
-	var snapshotInfo CreateSnapshotResponse
-	if err2 := json.Unmarshal(resp, &snapshotInfo); err2 != nil {
-		return nil, err2
+	log.Debug().Any("snapshotArgs", args).Msg("Creating snapshot")
+	resp, err := c.DoRequest("PUT", url, query)
+	if err != nil {
+		return "", err
 	}
-	return &snapshotInfo, nil
+	var respObj acceptedResp
+	if err2 := json.Unmarshal(resp, &respObj); err2 != nil {
+		return "", err2
+	}
+	if respObj.Accepted {
+		return name, nil
+	}
+	return "", fmt.Errorf("snapshot %s not accepted", name)
+}
+
+func (c *ESClient) testRepoExists(repository, rootFSPath string) (bool, error) {
+	url := fmt.Sprintf("/_snapshot/%s", repository)
+	_, err := c.DoRequest("GET", url, []byte{})
+	if err != nil {
+		var tErr *ESClientError
+		if errors.As(err, &tErr) {
+			if tErr.ESError.Status == http.StatusNotFound {
+				return false, nil
+			}
+		}
+		return false, fmt.Errorf("failed to test repository existence: %w", err)
+	}
+	return true, nil
+}
+
+func (c *ESClient) createSnapshotRepo(repository, rootFSPath string) error {
+	exists, err := c.testRepoExists(repository, rootFSPath)
+	if err != nil {
+		return fmt.Errorf("failed to creeate snapshot repository: %w", err)
+	}
+	if exists {
+		log.Info().
+			Str("appType", repository).
+			Msg("repository for snapshots already exists, using that one")
+		return nil
+	}
+
+	url := fmt.Sprintf("/_snapshot/%s", repository)
+	body, err := json.Marshal(repoInfo{
+		Type: "fs",
+		Settings: repoSettings{
+			Compress: true,
+			Location: filepath.Join(rootFSPath, repository),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create snapshot repository: %w", err)
+	}
+	if _, err := c.DoRequest("PUT", url, body); err != nil {
+		return fmt.Errorf("failed to create snapshot repository: %w", err)
+	}
+	return nil
 }
 
 // Create snapshot
-func (c *ESClient) CreateSnapshot(repository string, name string, reason string) (*CreateSnapshotResponse, error) {
-	snapshotArgs := CreateSnapshotArgs{
-		Indices:            c.index,
-		IgnoreUnavailable:  false,
-		IncludeGlobalState: false,
-		Metadata: SnapshotMetadata{
-			TakenBy:      "Klogproc",
-			TakenBecause: reason,
-		},
+func (c *ESClient) CreateSnapshot(conf SnapshotConf, appType, name, reason string) (string, error) {
+	if err := c.createSnapshotRepo(appType, conf.RootFSPath); err != nil {
+		return "", fmt.Errorf("failed to create snapshot: %w", err)
 	}
-	query, err := json.Marshal(snapshotArgs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal snapshot args: %w", err)
-	}
-
-	log.Debug().Any("snapshotArgs", snapshotArgs).Msg("Creating snapshot")
 	if name == "" {
-		name = fmt.Sprintf("snapshot_%d", time.Now().Unix())
+		name = fmt.Sprintf("snapshot_%s", time.Now().Format("2006-01-02-15-04-05"))
 	}
-	return c.createSnapshot(repository, name, query)
+	if reason == "" {
+		reason = "Unspecified"
+	}
+	return c.createSnapshot(
+		appType,
+		name,
+		CreateSnapshotArgs{
+			Indices:            c.index,
+			IgnoreUnavailable:  false,
+			IncludeGlobalState: false,
+			Metadata: SnapshotMetadata{
+				TakenBy:      "Klogproc",
+				TakenBecause: reason,
+			},
+		},
+	)
 }
 
 type ListSnapshotsResponse struct {
@@ -119,9 +193,9 @@ type ListSnapshotsResponse struct {
 	} `json:"snapshots"`
 }
 
-func (c *ESClient) ListSnapshots(repository string) (*ListSnapshotsResponse, error) {
-	path := "/_snapshot/" + repository + "/_all"
-	resp, err := c.Do("GET", path, nil)
+func (c *ESClient) ListSnapshots(conf SnapshotConf, appType string) (*ListSnapshotsResponse, error) {
+	path := "/_snapshot/" + appType + "/_all"
+	resp, err := c.DoRequest("GET", path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -133,9 +207,9 @@ func (c *ESClient) ListSnapshots(repository string) (*ListSnapshotsResponse, err
 	return &snapshotList, nil
 }
 
-func (c *ESClient) RemoveSnapshot(repository string, name string) error {
-	path := "/_snapshot/" + repository + "/" + name
-	_, err := c.Do("DELETE", path, nil)
+func (c *ESClient) RemoveSnapshot(conf SnapshotConf, appType, name string) error {
+	path := "/_snapshot/" + appType + "/" + name
+	_, err := c.DoRequest("DELETE", path, nil)
 	if err != nil {
 		return fmt.Errorf("failed to remove snapshot %s: %w", name, err)
 	}
@@ -148,8 +222,8 @@ type RestoreSnapshotArgs struct {
 	IncludeGlobalState bool   `json:"include_global_state"`
 }
 
-func (c *ESClient) RestoreSnapshot(repository string, name string) error {
-	path := "/_snapshot/" + repository + "/" + name + "/_restore"
+func (c *ESClient) RestoreSnapshot(conf SnapshotConf, appType, name string) error {
+	path := "/_snapshot/" + appType + "/" + name + "/_restore"
 	snapshotArgs := RestoreSnapshotArgs{
 		Indices:            c.index,
 		IgnoreUnavailable:  false,
@@ -159,7 +233,7 @@ func (c *ESClient) RestoreSnapshot(repository string, name string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal snapshot args: %w", err)
 	}
-	_, err = c.Do("POST", path, query)
+	_, err = c.DoRequest("POST", path, query)
 	if err != nil {
 		return fmt.Errorf("failed to restore snapshot %s: %w", name, err)
 	}
