@@ -16,10 +16,13 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"os"
@@ -81,10 +84,11 @@ func yesNoPrompt(label string, def bool) bool {
 	}
 }
 
-func updateRecords(conf *config.Main, options *ProcessOptions) {
+func updateRecords(ctx context.Context, conf *config.Main, options *ProcessOptions) {
 	client := elastic.NewClient(&conf.ElasticSearch, options.appType)
 	for _, updConf := range conf.RecUpdate.Filters {
 		totalUpdated, err := client.ManualBulkRecordUpdate(
+			ctx,
 			conf.ElasticSearch.Index,
 			conf.RecUpdate.AppType,
 			updConf,
@@ -101,7 +105,7 @@ func updateRecords(conf *config.Main, options *ProcessOptions) {
 	}
 }
 
-func removeRecords(conf *config.Main, options *ProcessOptions) {
+func removeRecords(ctx context.Context, conf *config.Main, options *ProcessOptions) {
 	if err := conf.RecRemove.Validate(); err != nil {
 		log.Fatal().Err(err).Msg("Failed to remove records")
 	}
@@ -110,7 +114,7 @@ func removeRecords(conf *config.Main, options *ProcessOptions) {
 	fmt.Fprintln(os.Stderr, conf.RecRemove.Overview())
 	fmt.Fprintln(os.Stderr, "----------------------------------------------")
 	esclient := elastic.NewClient(&conf.ElasticSearch, conf.RecRemove.AppType)
-	count, err := esclient.CountRecords(conf.RecRemove.AppType, conf.RecRemove.Filters)
+	count, err := esclient.CountRecords(ctx, conf.RecRemove.AppType, conf.RecRemove.Filters)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to count records")
 	}
@@ -124,6 +128,7 @@ func removeRecords(conf *config.Main, options *ProcessOptions) {
 	log.Info().Msgf("%d items would be removed", count)
 	for _, remConf := range conf.RecRemove.Filters {
 		totalRemoved, err := esclient.ManualBulkRecordRemove(
+			ctx,
 			esclient.Index(),
 			conf.RecRemove.AppType,
 			remConf,
@@ -145,10 +150,11 @@ func removeRecords(conf *config.Main, options *ProcessOptions) {
 	}
 }
 
-func removeKeyFromRecords(conf *config.Main, options *ProcessOptions) {
+func removeKeyFromRecords(ctx context.Context, conf *config.Main, options *ProcessOptions) {
 	esclient := elastic.NewClient(&conf.ElasticSearch, options.appType)
 	for _, updConf := range conf.RecUpdate.Filters {
 		totalUpdated, err := esclient.ManualBulkRecordKeyRemove(
+			ctx,
 			esclient.Index(),
 			conf.RecUpdate.AppType,
 			updConf,
@@ -259,17 +265,23 @@ func main() {
 	case config.ActionHelp:
 		help(flag.Arg(1))
 	case config.ActionDocupdate:
+		ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+		defer stop()
 		docupdateCmd.Parse(os.Args[2:])
 		conf = setup(docupdateCmd.Arg(0), action)
-		updateRecords(conf, procOpts)
+		updateRecords(ctx, conf, procOpts)
 	case config.ActionDocremove:
+		ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+		defer stop()
 		docremoveCmd.Parse(os.Args[2:])
 		conf = setup(docremoveCmd.Arg(0), action)
-		removeRecords(conf, procOpts)
+		removeRecords(ctx, conf, procOpts)
 	case config.ActionKeyremove:
+		ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+		defer stop()
 		keyremoveCmd.Parse(os.Args[2:])
 		conf = setup(keyremoveCmd.Arg(0), action)
-		removeKeyFromRecords(conf, procOpts)
+		removeKeyFromRecords(ctx, conf, procOpts)
 	case config.ActionBatch:
 		batchCmd.Parse(os.Args[2:])
 		conf = setup(batchCmd.Arg(0), action)
@@ -342,13 +354,17 @@ func main() {
 		esclient := elastic.NewClient(&conf.ElasticSearch, appType)
 		switch snapshotAction {
 		case "create":
-			snapshot, err := esclient.CreateSnapshot(conf.ElasticSearch.Snapshots, appType, snapshotName, "backup")
+			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+			defer stop()
+			snapshot, err := esclient.CreateSnapshot(ctx, conf.ElasticSearch.Snapshots, appType, snapshotName, "backup")
 			if err != nil {
 				log.Fatal().Err(err).Msg("Failed to create snapshot backup")
 			}
 			log.Info().Msgf("Snapshot %s created successfully", snapshot)
 		case "list":
-			resp, err := esclient.ListSnapshots(conf.ElasticSearch.Snapshots, appType)
+			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+			defer stop()
+			resp, err := esclient.ListSnapshots(ctx, conf.ElasticSearch.Snapshots, appType)
 			if err != nil {
 				log.Fatal().Err(err).Msg("Failed to list snapshots")
 			}
@@ -377,7 +393,9 @@ func main() {
 			if snapshotName == "" {
 				log.Fatal().Msg("Snapshot name is required for removal")
 			}
-			if err := esclient.RemoveSnapshot(conf.ElasticSearch.Snapshots, appType, snapshotName); err != nil {
+			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+			defer stop()
+			if err := esclient.RemoveSnapshot(ctx, conf.ElasticSearch.Snapshots, appType, snapshotName); err != nil {
 				log.Fatal().Err(err).Msg("Failed to remove snapshot")
 			}
 			log.Info().Msgf("Snapshot %s removed successfully", snapshotName)
@@ -385,7 +403,9 @@ func main() {
 			if snapshotName == "" {
 				log.Fatal().Msg("Snapshot name is required for removal")
 			}
-			if err := esclient.RestoreSnapshot(conf.ElasticSearch.Snapshots, appType, snapshotName); err != nil {
+			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+			defer stop()
+			if err := esclient.RestoreSnapshot(ctx, conf.ElasticSearch.Snapshots, appType, snapshotName); err != nil {
 				log.Fatal().Err(err).Msg("Failed to restore snapshot")
 			}
 			log.Info().Msgf("Snapshot %s restored successfully", snapshotName)

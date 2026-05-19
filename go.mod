@@ -5,7 +5,7 @@ go 1.25.5
 require (
 	github.com/czcorpus/cnc-gokit v0.19.0
 	github.com/czcorpus/conomi v0.0.7
-	github.com/czcorpus/klogproc-core v1.5.2
+	github.com/czcorpus/klogproc-core v1.6.2
 	github.com/fatih/color v1.18.0
 	github.com/google/uuid v1.3.0
 	github.com/oschwald/geoip2-golang v1.8.0

@@ -184,7 +184,7 @@ func runBatchAction(
 
 	wait := make(chan any)
 	if options.dryRun || options.analysisOnly {
-		wch := save.RunWriteConsumer(channelWriteES, !options.analysisOnly)
+		wch := save.RunWriteConsumer(ctx, channelWriteES, !options.analysisOnly)
 		go func() {
 			for range wch {
 			}
@@ -193,7 +193,7 @@ func runBatchAction(
 		log.Warn().Msg("using dry-run mode, output goes to stdout")
 
 	} else {
-		wch := elastic.RunWriteConsumer(conf.LogFiles.AppType, &conf.ElasticSearch, channelWriteES)
+		wch := elastic.RunWriteConsumer(ctx, conf.LogFiles.AppType, &conf.ElasticSearch, channelWriteES)
 		go func() {
 			for confirm := range wch {
 				if confirm.Error != nil {
