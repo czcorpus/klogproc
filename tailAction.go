@@ -51,6 +51,7 @@ type processingHealthChecker interface {
 // -----
 
 type tailProcessor struct {
+	ctx               context.Context
 	appType           string
 	filePath          string
 	version           string
@@ -80,7 +81,7 @@ func (tp *tailProcessor) OnCheckStart() (tail.LineProcConfirmChan, *tail.LogData
 		var waitMergeEnd sync.WaitGroup
 		waitMergeEnd.Add(2)
 		if tp.dryRun {
-			confirmChan := save.RunWriteConsumer(dataWriter.Elastic, true)
+			confirmChan := save.RunWriteConsumer(tp.ctx, dataWriter.Elastic, true)
 			go func() {
 				for item := range confirmChan {
 					itemConfirm <- item
@@ -91,7 +92,7 @@ func (tp *tailProcessor) OnCheckStart() (tail.LineProcConfirmChan, *tail.LogData
 
 		} else {
 			confirmChan1 := elastic.RunWriteConsumer(
-				tp.appType, &tp.conf.ElasticSearch, dataWriter.Elastic)
+				tp.ctx, tp.appType, &tp.conf.ElasticSearch, dataWriter.Elastic)
 			go func() {
 				for item := range confirmChan1 {
 					itemConfirm <- item
@@ -214,6 +215,7 @@ func newProcAlarm(
 }
 
 func newTailProcessor(
+	ctx context.Context,
 	tailConf *tail.FileConf,
 	conf config.Main,
 	geoDB *geoip2.Reader,
@@ -312,6 +314,7 @@ func newTailProcessor(
 	}
 
 	return &tailProcessor{
+		ctx:               ctx,
 		appType:           tailConf.AppType,
 		filePath:          filepath.Clean(tailConf.Path), // note: this is not a full path normalization !
 		version:           tailConf.Version,
@@ -373,7 +376,7 @@ func runTailAction(
 
 	for i, f := range fullFiles {
 		tailProcessors[i] = newTailProcessor(
-			&f, *conf, geoDB, logBuffers, options, hlthChecker, notifier)
+			ctx, &f, *conf, geoDB, logBuffers, options, hlthChecker, notifier)
 	}
 	go func() {
 		wg.Wait()
