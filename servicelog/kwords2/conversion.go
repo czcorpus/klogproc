@@ -17,12 +17,12 @@
 package kwords2
 
 import (
-	"klogproc/servicelog"
 	"math"
 	"strconv"
-	"time"
 
 	"github.com/czcorpus/cnc-gokit/collections"
+	"github.com/czcorpus/klogproc-core/storage"
+	kw2Core "github.com/czcorpus/klogproc-core/storage/kwords2"
 	"github.com/rs/zerolog/log"
 )
 
@@ -53,25 +53,25 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
-	return []servicelog.InputRecord{rec}, nil
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
+	return []storage.InputRecord{rec}, nil
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeKwords
+	return storage.AppTypeKwords
 }
 
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
-	var args *Args
+	var args *kw2Core.Args
 	if tLogRecord.Action == "keywords/POST" {
-		args = &Args{
+		args = &kw2Core.Args{
 			Attrs:        tLogRecord.Body.Attrs,
 			Level:        tLogRecord.Body.Level,
 			EffectMetric: tLogRecord.Body.EffectMetric,
@@ -103,15 +103,13 @@ func (t *Transformer) Transform(
 			isAnonymous = collections.SliceContains(t.AnonymousUsers, v)
 		}
 	}
-	r := &OutputRecord{
+	r := &kw2Core.OutputRecord{
 		Type:          t.AppType(),
 		Action:        tLogRecord.Action,
 		Corpus:        tLogRecord.Body.RefCorpus,
 		TextCharCount: tLogRecord.Body.TextCharCount,
 		TextWordCount: tLogRecord.Body.TextWordCount,
 		TextLang:      tLogRecord.Body.Lang,
-		time:          tLogRecord.GetTime(),
-		Datetime:      tLogRecord.GetTime().Format(time.RFC3339),
 		IPAddress:     tLogRecord.GetClientIP().String(),
 		IsAnonymous:   isAnonymous,
 		IsQuery:       tLogRecord.IsQuery,
@@ -119,8 +117,9 @@ func (t *Transformer) Transform(
 		UserID:        userIDAttr,
 		Error:         tLogRecord.ExportError(),
 		Args:          args,
-		Version:       servicelog.AppVersionKwords2,
+		Version:       storage.AppVersionKwords2,
 	}
+	r.SetTime(tLogRecord.GetTime())
 	r.ID = r.GenerateDeterministicID()
 	return r, nil
 }

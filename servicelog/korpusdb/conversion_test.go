@@ -20,12 +20,13 @@ import (
 	"testing"
 	"time"
 
+	kdbCore "github.com/czcorpus/klogproc-core/storage/korpusdb"
 	"github.com/stretchr/testify/assert"
 	lua "github.com/yuin/gopher-lua"
 )
 
 func TestSetPropsDatetime(t *testing.T) {
-	outRec := &OutputRecord{}
+	outRec := &kdbCore.OutputRecord{}
 	tz, _ := time.LoadLocation("Europe/Prague")
 	v := time.Date(2024, time.December, 2, 16, 51, 19, 0, tz)
 	lv := lua.LString(v.Format(time.RFC3339))
@@ -36,7 +37,7 @@ func TestSetPropsDatetime(t *testing.T) {
 }
 
 func TestSetPropsPage(t *testing.T) {
-	outRec := &OutputRecord{}
+	outRec := &kdbCore.OutputRecord{}
 	L := lua.NewState()
 	tbl := L.NewTable()
 	tbl.RawSetString("From", lua.LNumber(13))

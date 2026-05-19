@@ -18,14 +18,9 @@ package main
 
 import (
 	"context"
-	"klogproc/analysis"
 	"klogproc/config"
 	"klogproc/load/batch"
-	"klogproc/logbuffer"
 	"klogproc/notifications"
-	"klogproc/save"
-	"klogproc/save/elastic"
-	"klogproc/servicelog"
 	"klogproc/trfactory"
 	"os/signal"
 	"reflect"
@@ -33,6 +28,11 @@ import (
 	"time"
 
 	"github.com/czcorpus/cnc-gokit/collections"
+	"github.com/czcorpus/klogproc-core/analysis"
+	"github.com/czcorpus/klogproc-core/logbuffer"
+	"github.com/czcorpus/klogproc-core/save"
+	"github.com/czcorpus/klogproc-core/save/elastic"
+	"github.com/czcorpus/klogproc-core/storage"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/rs/zerolog/log"
 )
@@ -47,28 +47,28 @@ type cnkLogProcessor struct {
 	chunkSize      int
 	numNonLoggable int
 	skipAnalysis   bool
-	logTransformer servicelog.LogItemTransformer
-	logBuffer      servicelog.ServiceLogBuffer
+	logTransformer storage.LogItemTransformer
+	logBuffer      storage.ServiceLogBuffer
 }
 
-func (clp *cnkLogProcessor) recordIsLoggable(logRec servicelog.InputRecord) bool {
+func (clp *cnkLogProcessor) recordIsLoggable(logRec storage.InputRecord) bool {
 	return logRec.IsProcessable()
 }
 
 // ProcItem transforms input log record into an output format.
 // In case an unsupported record is encountered, nil is returned.
 func (clp *cnkLogProcessor) ProcItem(
-	logRec servicelog.InputRecord,
-) []servicelog.OutputRecord {
+	logRec storage.InputRecord,
+) []storage.OutputRecord {
 	if clp.recordIsLoggable(logRec) {
-		ans := make([]servicelog.OutputRecord, 0, 2)
+		ans := make([]storage.OutputRecord, 0, 2)
 		prepInp, err := clp.logTransformer.Preprocess(logRec, clp.logBuffer)
 		if err != nil {
 			log.Error().
 				Str("appType", clp.appType).
 				Str("appVersion", clp.appVersion).
 				Err(err).Msgf("Failed to transform item %s", logRec)
-			return []servicelog.OutputRecord{}
+			return []storage.OutputRecord{}
 		}
 		for _, precord := range prepInp {
 			clp.logBuffer.AddRecord(precord)
@@ -78,7 +78,7 @@ func (clp *cnkLogProcessor) ProcItem(
 					Str("appType", clp.appType).
 					Str("appVersion", clp.appVersion).
 					Err(err).Msgf("Failed to transform item %s", logRec)
-				return []servicelog.OutputRecord{}
+				return []storage.OutputRecord{}
 			}
 			applyLocation(precord, clp.geoIPDb, rec)
 			ans = append(ans, rec)
@@ -86,7 +86,7 @@ func (clp *cnkLogProcessor) ProcItem(
 		return ans
 	}
 	clp.numNonLoggable++
-	return []servicelog.OutputRecord{}
+	return []storage.OutputRecord{}
 }
 
 // GetAppType returns a string idenfier unique for a concrete application we
@@ -124,7 +124,7 @@ func runBatchAction(
 		return
 	}
 
-	var buffStorage servicelog.ServiceLogBuffer
+	var buffStorage storage.ServiceLogBuffer
 	var stateFactory func() logbuffer.SerializableState
 	if conf.LogFiles.Buffer != nil && conf.LogFiles.Buffer.BotDetection != nil {
 		stateFactory = func() logbuffer.SerializableState {
@@ -141,7 +141,7 @@ func runBatchAction(
 	}
 
 	if conf.LogFiles.Buffer != nil {
-		buffStorage = logbuffer.NewStorage[servicelog.InputRecord, logbuffer.SerializableState](
+		buffStorage = logbuffer.NewStorage[storage.InputRecord, logbuffer.SerializableState](
 			conf.LogFiles.Buffer,
 			options.worklogReset,
 			conf.LogFiles.LogBufferStateDir,
@@ -150,7 +150,7 @@ func runBatchAction(
 		)
 
 	} else {
-		buffStorage = logbuffer.NewDummyStorage[servicelog.InputRecord, logbuffer.SerializableState](
+		buffStorage = logbuffer.NewDummyStorage[storage.InputRecord, logbuffer.SerializableState](
 			func() logbuffer.SerializableState {
 				return &analysis.BotAnalysisState{
 					PrevNums:          logbuffer.NewSampleWithReplac[int](20), // TODO hardcoded 20
@@ -170,7 +170,7 @@ func runBatchAction(
 		skipAnalysis:   conf.LogFiles.SkipAnalysis,
 		logBuffer:      buffStorage,
 	}
-	channelWriteES := make(chan *servicelog.BoundOutputRecord, conf.ElasticSearch.PushChunkSize*2)
+	channelWriteES := make(chan *storage.BoundOutputRecord, conf.ElasticSearch.PushChunkSize*2)
 	worklog := batch.NewWorklog(conf.LogFiles.WorklogPath)
 	log.Info().Msgf("using worklog %s", conf.LogFiles.WorklogPath)
 	if options.worklogReset {

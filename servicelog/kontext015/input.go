@@ -19,12 +19,13 @@ package kontext015
 import (
 	"encoding/json"
 	"fmt"
-	"klogproc/servicelog"
 	"net"
+	"net/url"
 	"reflect"
 	"regexp"
 	"time"
 
+	"github.com/czcorpus/klogproc-core/storage"
 	"github.com/rs/zerolog/log"
 )
 
@@ -78,6 +79,31 @@ func ImportJSONLog(jsonLine []byte) (*InputRecord, error) {
 	return &record, nil
 }
 
+// ImportQueryType translates KonText/Bonito query type argument
+// into a more understandable form
+func ImportQueryType(record KonTextInputRecord) string {
+	return record.GetStringArg("qtype")
+}
+
+// ImportCorpname extracts actual corpus name from
+// URL argument which may contain additional data (e.g. variant prefix)
+func ImportCorpname(record KonTextInputRecord) string {
+	var corpname string
+
+	if record.HasArg("corpname") && record.GetStringArg("corpname") != "" {
+		corpname = record.GetStringArg("corpname")
+		corpname, _ = url.QueryUnescape(corpname)
+		return corpname
+
+	} else if record.HasArg("corpora") {
+		c, ok := getSliceOfStrings(record.AllArgs(), "corpora")
+		if ok && len(c) > 0 {
+			return c[0]
+		}
+	}
+	return ""
+}
+
 func getSliceOfStrings(data interface{}, key string) ([]string, bool) {
 	v, ok := data.(map[string]interface{})
 	if !ok {
@@ -119,7 +145,7 @@ type Request struct {
 // for different KonText versions so we can share functions
 // between them
 type KonTextInputRecord interface {
-	servicelog.InputRecord
+	storage.InputRecord
 	GetStringArg(names ...string) string
 	HasArg(name string) bool
 	GetIntArg(name string) int
@@ -130,22 +156,22 @@ type KonTextInputRecord interface {
 
 // InputRecord represents a parsed KonText record
 type InputRecord struct {
-	UserID         int                    `json:"user_id"`
-	ProcTime       float64                `json:"proc_time"`
-	Date           string                 `json:"date"`
-	Action         string                 `json:"action"`
-	IsIndirectCall bool                   `json:"is_indirect_call"`
-	IsAPI          bool                   `json:"is_api"`
-	Request        Request                `json:"request"`
-	Args           map[string]any         `json:"args"`
-	Error          servicelog.ErrorRecord `json:"error"`
+	UserID         int                 `json:"user_id"`
+	ProcTime       float64             `json:"proc_time"`
+	Date           string              `json:"date"`
+	Action         string              `json:"action"`
+	IsIndirectCall bool                `json:"is_indirect_call"`
+	IsAPI          bool                `json:"is_api"`
+	Request        Request             `json:"request"`
+	Args           map[string]any      `json:"args"`
+	Error          storage.ErrorRecord `json:"error"`
 }
 
 // GetTime returns record's time as a Golang's Time
 // instance. Please note that the value is truncated
 // to seconds.
 func (rec *InputRecord) GetTime() time.Time {
-	return servicelog.ConvertDatetimeStringWithMillisNoTZ(rec.Date)
+	return storage.ConvertDatetimeStringWithMillisNoTZ(rec.Date)
 }
 
 // GetClientIP returns a client IP no matter in which
@@ -165,7 +191,7 @@ func (rec *InputRecord) GetClientIP() net.IP {
 }
 
 func (rec *InputRecord) ClusteringClientID() string {
-	return servicelog.GenerateRandomClusteringID()
+	return storage.GenerateRandomClusteringID()
 }
 
 func (rec *InputRecord) ClusterSize() int {

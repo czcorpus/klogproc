@@ -20,10 +20,10 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"klogproc/servicelog"
 	"net"
 	"time"
 
+	"github.com/czcorpus/klogproc-core/storage"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
@@ -60,7 +60,7 @@ type Extra struct {
 
 // GetTime returns a normalized log date and time information
 func (r *InputRecord) GetTime() time.Time {
-	return servicelog.ConvertDatetimeStringWithMillis(r.Datetime)
+	return storage.ConvertDatetimeStringWithMillis(r.Datetime)
 }
 
 // GetClientIP returns a normalized IP address info

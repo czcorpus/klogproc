@@ -24,17 +24,17 @@ package batch
 import (
 	"bufio"
 	"context"
-	"klogproc/servicelog"
 	"klogproc/trfactory"
 	"os"
 	"path/filepath"
 
+	"github.com/czcorpus/klogproc-core/storage"
 	"github.com/rs/zerolog/log"
 )
 
 // newParser creates a new instance of the Parser.
 // tzShift can be used to correct an incorrectly stored datetime
-func newParser(path string, tzShift int, appType string, version string, appErrRegister servicelog.AppErrorRegister) *Parser {
+func newParser(path string, tzShift int, appType string, version string, appErrRegister storage.AppErrorRegister) *Parser {
 	f, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -60,7 +60,7 @@ type Parser struct {
 	fr         *bufio.Scanner
 	fileName   string
 	tzShift    int
-	lineParser servicelog.LineParser
+	lineParser storage.LineParser
 	recType    string
 }
 
@@ -72,7 +72,7 @@ func (p *Parser) Parse(
 	fromTimestamp int64,
 	proc logItemProcessor,
 	datetimeRange DatetimeRange,
-	outputs ...chan *servicelog.BoundOutputRecord,
+	outputs ...chan *storage.BoundOutputRecord,
 ) {
 	for i := int64(0); p.fr.Scan(); i++ {
 		select {
@@ -97,14 +97,14 @@ func (p *Parser) Parse(
 				outRecs := proc.ProcItem(rec)
 				for _, outRec := range outRecs {
 					for _, output := range outputs {
-						output <- &servicelog.BoundOutputRecord{Rec: outRec, FilePath: p.fileName}
+						output <- &storage.BoundOutputRecord{Rec: outRec, FilePath: p.fileName}
 					}
 				}
 			}
 
 		} else {
 			switch tErr := err.(type) {
-			case servicelog.LineParsingError:
+			case storage.LineParsingError:
 				log.Info().Err(tErr).Str("file", p.fileName).Msg("file parsing error")
 			default:
 				log.Info().Err(tErr).Str("file", p.fileName).Msg("other file processing error")

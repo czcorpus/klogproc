@@ -17,40 +17,37 @@
 package mapka3
 
 import (
-	"time"
-
-	"klogproc/analysis/clustering"
-	"klogproc/load"
-	"klogproc/servicelog"
+	"github.com/czcorpus/klogproc-core/analysis/clustering"
+	"github.com/czcorpus/klogproc-core/logbuffer"
+	"github.com/czcorpus/klogproc-core/storage"
+	mapka3Core "github.com/czcorpus/klogproc-core/storage/mapka3"
 )
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	bufferConf     *load.BufferConf
-	analyzer       servicelog.Preprocessor
+	bufferConf     *logbuffer.BufferConf
+	analyzer       storage.Preprocessor
 	anonymousUsers []int
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeMapka
+	return storage.AppTypeMapka
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
-	r := &OutputRecord{
+	r := &mapka3Core.OutputRecord{
 		Type:      t.AppType(),
-		time:      tLogRecord.GetTime(),
-		Datetime:  tLogRecord.GetTime().Format(time.RFC3339),
 		IPAddress: tLogRecord.GetClientIP().String(),
 		UserAgent: tLogRecord.GetUserAgent(),
 		IsAnonymous: tLogRecord.Extra.UserID == "" ||
-			servicelog.UserBelongsToList(tLogRecord.Extra.UserID, t.anonymousUsers),
+			storage.UserBelongsToList(tLogRecord.Extra.UserID, t.anonymousUsers),
 		Action:      "interaction",
 		UserID:      tLogRecord.Extra.UserID,
 		ClusterSize: tLogRecord.clusterSize,
@@ -58,6 +55,7 @@ func (t *Transformer) Transform(
 	if r.ClusterSize > 0 {
 		r.IsQuery = true
 	}
+	r.SetTime(tLogRecord.GetTime())
 	r.ID = r.GenerateDeterministicID()
 	return r, nil
 }
@@ -67,16 +65,16 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord,
-	prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
+	rec storage.InputRecord,
+	prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
 	return t.analyzer.Preprocess(rec, prevRecs), nil
 }
 
 // NewTransformer is a default constructor for the Transformer.
 // It also loads user ID map from a configured file (if exists).
 func NewTransformer(
-	bufferConf *load.BufferConf,
+	bufferConf *logbuffer.BufferConf,
 	anonymousUsers []int,
 	realtimeClock bool,
 ) *Transformer {

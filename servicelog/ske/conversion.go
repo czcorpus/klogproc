@@ -19,10 +19,11 @@ package ske
 import (
 	"fmt"
 	"strconv"
-	"time"
 
-	"klogproc/servicelog"
 	"klogproc/users"
+
+	"github.com/czcorpus/klogproc-core/storage"
+	skeCore "github.com/czcorpus/klogproc-core/storage/ske"
 )
 
 // Transformer converts a source log object into a destination one
@@ -32,16 +33,16 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeSke
+	return storage.AppTypeSke
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
 	userID := -1
 	if tLogRecord.User != "-" && tLogRecord.User != "" {
@@ -52,22 +53,21 @@ func (t *Transformer) Transform(
 		userID = uid
 	}
 
-	corpname, isLimited := importCorpname(tLogRecord.Corpus)
-	r := &OutputRecord{
+	corpname, isLimited := skeCore.ImportCorpname(tLogRecord.Corpus)
+	r := &skeCore.OutputRecord{
 		Type:        t.AppType(),
 		Corpus:      corpname,
 		Subcorpus:   tLogRecord.Subcorpus,
 		Limited:     isLimited,
 		Action:      tLogRecord.Action,
-		Datetime:    tLogRecord.GetTime().Format(time.RFC3339),
-		time:        tLogRecord.GetTime(),
 		IPAddress:   tLogRecord.Request.RemoteAddr,
 		UserAgent:   tLogRecord.Request.HTTPUserAgent,
 		UserID:      strconv.Itoa(userID),
-		IsAnonymous: userID == -1 || servicelog.UserBelongsToList(userID, t.anonymousUsers),
-		IsQuery:     isEntryQuery(tLogRecord.Action),
+		IsAnonymous: userID == -1 || storage.UserBelongsToList(userID, t.anonymousUsers),
+		IsQuery:     skeCore.IsEntryQuery(tLogRecord.Action),
 		ProcTime:    tLogRecord.ProcTime,
 	}
+	r.SetTime(tLogRecord.GetTime())
 	r.ID = r.GenerateDeterministicID()
 	return r, nil
 }
@@ -77,9 +77,9 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
-	return []servicelog.InputRecord{rec}, nil
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
+	return []storage.InputRecord{rec}, nil
 }
 
 // NewTransformer is a default constructor for the Transformer.

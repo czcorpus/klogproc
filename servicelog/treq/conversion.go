@@ -19,9 +19,9 @@ package treq
 import (
 	"fmt"
 	"strconv"
-	"time"
 
-	"klogproc/servicelog"
+	"github.com/czcorpus/klogproc-core/storage"
+	treqCore "github.com/czcorpus/klogproc-core/storage/treq"
 )
 
 const (
@@ -35,16 +35,16 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeTreq
+	return storage.AppTypeTreq
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
 	userID := -1
 	if tLogRecord.UserID != "-" {
@@ -55,32 +55,30 @@ func (t *Transformer) Transform(
 		userID = uid
 	}
 
-	isRegexp, err := servicelog.ImportBool(tLogRecord.IsRegexp, "isRegexp")
+	isRegexp, err := storage.ImportBool(tLogRecord.IsRegexp, "isRegexp")
 	if err != nil {
 		return nil, err
 	}
-	isCaseInsen, err := servicelog.ImportBool(tLogRecord.IsCaseInsen, "isCaseInsen")
+	isCaseInsen, err := storage.ImportBool(tLogRecord.IsCaseInsen, "isCaseInsen")
 	if err != nil {
 		return nil, err
 	}
-	isMultiWord, err := servicelog.ImportBool(tLogRecord.IsMultiWord, "isMultiWord")
+	isMultiWord, err := storage.ImportBool(tLogRecord.IsMultiWord, "isMultiWord")
 	if err != nil {
 		return nil, err
 	}
-	isLemma, err := servicelog.ImportBool(tLogRecord.IsMultiWord, "isLemma")
+	isLemma, err := storage.ImportBool(tLogRecord.IsMultiWord, "isLemma")
 	if err != nil {
 		return nil, err
 	}
 
-	out := &OutputRecord{
+	out := &treqCore.OutputRecord{
 		Type:        "treq",
-		time:        tLogRecord.GetTime(),
-		Datetime:    tLogRecord.GetTime().Format(time.RFC3339),
 		QLang:       tLogRecord.QLang,
 		SecondLang:  tLogRecord.SecondLang,
 		IPAddress:   tLogRecord.IPAddress,
 		UserID:      tLogRecord.UserID,
-		IsAnonymous: userID == -1 || servicelog.UserBelongsToList(userID, t.AnonymousUsers),
+		IsAnonymous: userID == -1 || storage.UserBelongsToList(userID, t.AnonymousUsers),
 		// Corpus set later
 		Subcorpus: tLogRecord.Subcorpus,
 		// IsQuery set later
@@ -90,6 +88,7 @@ func (t *Transformer) Transform(
 		IsLemma:     isLemma,
 		// GeoIP set elsewhere
 	}
+	out.SetTime(tLogRecord.GetTime())
 	out.ID = out.GenerateDeterministicID()
 	if tLogRecord.QType == qTypeD {
 		out.Corpus = fmt.Sprintf("intercorp_v8_%s", tLogRecord.QLang)
@@ -103,7 +102,7 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
-	return []servicelog.InputRecord{rec}, nil
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
+	return []storage.InputRecord{rec}, nil
 }

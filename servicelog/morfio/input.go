@@ -17,9 +17,10 @@
 package morfio
 
 import (
-	"klogproc/servicelog"
 	"net"
 	"time"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 // InputRecord is a Treq parsed log record
@@ -39,7 +40,7 @@ type InputRecord struct {
 }
 
 func (r *InputRecord) GetTime() time.Time {
-	return servicelog.ConvertDatetimeString(r.Datetime)
+	return storage.ConvertDatetimeString(r.Datetime)
 }
 
 func (r *InputRecord) GetClientIP() net.IP {
@@ -47,7 +48,7 @@ func (r *InputRecord) GetClientIP() net.IP {
 }
 
 func (rec *InputRecord) ClusteringClientID() string {
-	return servicelog.GenerateRandomClusteringID()
+	return storage.GenerateRandomClusteringID()
 }
 
 func (rec *InputRecord) ClusterSize() int {

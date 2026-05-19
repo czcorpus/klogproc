@@ -18,8 +18,9 @@ package syd
 
 import (
 	"fmt"
-	"klogproc/servicelog"
 	"strings"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 // LineParser is a parser for reading SyD application log
@@ -55,6 +56,6 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 			RunScript: items[7],
 		}, err
 	}
-	return nil, servicelog.NewLineParsingError(
+	return nil, storage.NewLineParsingError(
 		lineNum, fmt.Sprintf("Invalid line format. Expecting 8 tab-separated items, found %d", len(items)))
 }

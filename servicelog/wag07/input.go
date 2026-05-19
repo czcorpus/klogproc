@@ -17,10 +17,10 @@
 package wag07
 
 import (
-	"klogproc/servicelog"
 	"net"
 	"time"
 
+	"github.com/czcorpus/klogproc-core/storage"
 	"github.com/rs/zerolog/log"
 )
 
@@ -59,9 +59,9 @@ func (r *InputRecord) ShouldBeAnalyzed() bool {
 func (r *InputRecord) GetTime() time.Time {
 	if r.isProcessable {
 		if r.Timestamp[len(r.Timestamp)-1] == 'Z' {
-			return servicelog.ConvertDatetimeStringWithMillisNoTZ(r.Timestamp[:len(r.Timestamp)-1] + "000")
+			return storage.ConvertDatetimeStringWithMillisNoTZ(r.Timestamp[:len(r.Timestamp)-1] + "000")
 		}
-		return servicelog.ConvertDatetimeStringWithMillisNoTZ(r.Timestamp + "000")
+		return storage.ConvertDatetimeStringWithMillisNoTZ(r.Timestamp + "000")
 	}
 	log.Warn().Str("value", r.Timestamp).Msg("wag07 processing encountered an invalid datetime")
 	return time.Time{}

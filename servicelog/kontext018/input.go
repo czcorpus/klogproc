@@ -18,9 +18,10 @@ package kontext018
 
 import (
 	"fmt"
-	"klogproc/servicelog"
 	"net"
 	"time"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 func getSliceOfStrings(data interface{}, key string) ([]string, bool) {
@@ -76,7 +77,7 @@ type InputRecord struct {
 	IsAPI          bool                   `json:"is_api"`
 	Request        Request                `json:"request"`
 	Args           map[string]interface{} `json:"args"`
-	Error          servicelog.ErrorRecord `json:"error"`
+	Error          storage.ErrorRecord    `json:"error"`
 	isProcessable  bool
 }
 
@@ -86,9 +87,9 @@ type InputRecord struct {
 func (rec *InputRecord) GetTime() time.Time {
 	if rec.isProcessable {
 		if rec.Date[len(rec.Date)-1] == 'Z' {
-			return servicelog.ConvertDatetimeStringWithMillisNoTZ(rec.Date[:len(rec.Date)-1] + "000")
+			return storage.ConvertDatetimeStringWithMillisNoTZ(rec.Date[:len(rec.Date)-1] + "000")
 		}
-		return servicelog.ConvertDatetimeStringWithMillis(rec.Date)
+		return storage.ConvertDatetimeStringWithMillis(rec.Date)
 	}
 	return time.Time{}
 }
@@ -116,7 +117,7 @@ func (rec *InputRecord) ShouldBeAnalyzed() bool {
 }
 
 func (rec *InputRecord) ClusteringClientID() string {
-	return servicelog.GenerateRandomClusteringID()
+	return storage.GenerateRandomClusteringID()
 }
 
 func (rec *InputRecord) ClusterSize() int {

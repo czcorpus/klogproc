@@ -17,12 +17,12 @@
 package apiguardKwords
 
 import (
-	"klogproc/servicelog"
 	"klogproc/servicelog/apiguard"
-	"klogproc/servicelog/kwords2"
 	"strconv"
 	"strings"
 
+	"github.com/czcorpus/klogproc-core/storage"
+	kwords2Core "github.com/czcorpus/klogproc-core/storage/kwords2"
 	"github.com/rs/zerolog/log"
 )
 
@@ -32,16 +32,16 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeAPIGuardTreq
+	return storage.AppTypeAPIGuardTreq
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*apiguard.InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
 
 	var userID *string
@@ -54,12 +54,12 @@ func (t *Transformer) Transform(
 	// fetch most of the attributes as APIGuard does not know details
 	// about KWords requests and its logging procedure knows only
 	// request URLs.
-	r := &kwords2.OutputRecord{
-		Type:        servicelog.AppTypeKwords,
+	r := &kwords2Core.OutputRecord{
+		Type:        storage.AppTypeKwords,
 		IPAddress:   tLogRecord.IPAddress,
 		IsCached:    tLogRecord.IsCached,
 		UserID:      userID,
-		IsAnonymous: tLogRecord.UserID == nil || servicelog.UserBelongsToList(*tLogRecord.UserID, t.AnonymousUsers),
+		IsAnonymous: tLogRecord.UserID == nil || storage.UserBelongsToList(*tLogRecord.UserID, t.AnonymousUsers),
 	}
 	r.SetTime(logRecord.GetTime())
 	r.ID = r.GenerateDeterministicID()
@@ -71,21 +71,21 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
 	tLogRecord, ok := rec.(*apiguard.InputRecord)
 	if !ok {
-		return nil, servicelog.ErrFailedTypeAssertion
+		return nil, storage.ErrFailedTypeAssertion
 	}
 
 	if !strings.HasSuffix(tLogRecord.Service, "kwords") {
 		log.Warn().Msg("Found non-kwords service record, skipping")
-		return []servicelog.InputRecord{}, nil
+		return []storage.InputRecord{}, nil
 	}
 
 	if !tLogRecord.IsCached {
-		return []servicelog.InputRecord{}, nil
+		return []storage.InputRecord{}, nil
 	}
 
-	return []servicelog.InputRecord{rec}, nil
+	return []storage.InputRecord{rec}, nil
 }

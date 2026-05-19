@@ -17,9 +17,10 @@
 package wag06
 
 import (
-	"klogproc/servicelog"
 	"net"
 	"time"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 // Request is a simple representation of
@@ -50,7 +51,7 @@ type InputRecord struct {
 // GetTime returns a normalized log date and time information
 func (r *InputRecord) GetTime() time.Time {
 	if r.isProcessable {
-		return servicelog.ConvertAccessLogDatetimeString(r.Datetime)
+		return storage.ConvertAccessLogDatetimeString(r.Datetime)
 	}
 	return time.Time{}
 }
@@ -61,7 +62,7 @@ func (r *InputRecord) GetClientIP() net.IP {
 }
 
 func (r *InputRecord) ClusteringClientID() string {
-	return servicelog.GenerateRandomClusteringID()
+	return storage.GenerateRandomClusteringID()
 }
 
 func (r *InputRecord) ClusterSize() int {

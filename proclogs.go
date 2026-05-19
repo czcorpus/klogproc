@@ -17,15 +17,15 @@
 package main
 
 import (
+	"github.com/czcorpus/klogproc-core/storage"
 	"github.com/rs/zerolog/log"
 
 	"klogproc/load/batch"
-	"klogproc/servicelog"
 
 	"github.com/oschwald/geoip2-golang"
 )
 
-func applyLocation(rec servicelog.InputRecord, db *geoip2.Reader, outRec servicelog.OutputRecord) {
+func applyLocation(rec storage.InputRecord, db *geoip2.Reader, outRec storage.OutputRecord) {
 	ip := rec.GetClientIP()
 	if len(ip) > 0 {
 		city, err := db.City(ip)

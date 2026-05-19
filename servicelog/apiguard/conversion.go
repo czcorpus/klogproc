@@ -17,9 +17,10 @@
 package apiguard
 
 import (
-	"klogproc/servicelog"
 	"strconv"
-	"time"
+
+	"github.com/czcorpus/klogproc-core/storage"
+	apiguardCore "github.com/czcorpus/klogproc-core/storage/apiguard"
 )
 
 // Transformer converts a source log object into a destination one
@@ -27,22 +28,22 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeAPIGuard
+	return storage.AppTypeAPIGuard
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
 	var sUserID string
 	if tLogRecord.UserID != nil {
 		sUserID = strconv.Itoa(*tLogRecord.UserID)
 	}
-	r := &OutputRecord{
+	r := &apiguardCore.OutputRecord{
 		Type:       tLogRecord.Type,
 		IsQuery:    true,
 		Service:    tLogRecord.Service,
@@ -52,9 +53,8 @@ func (t *Transformer) Transform(
 		UserID:     sUserID,
 		IPAddress:  tLogRecord.IPAddress,
 		UserAgent:  tLogRecord.UserAgentValue,
-		datetime:   logRecord.GetTime(),
-		Datetime:   logRecord.GetTime().Format(time.RFC3339),
 	}
+	r.SetTime(logRecord.GetTime())
 	r.ID = r.GenerateDeterministicID()
 	return r, nil
 }
@@ -64,7 +64,7 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
-	return []servicelog.InputRecord{rec}, nil
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
+	return []storage.InputRecord{rec}, nil
 }

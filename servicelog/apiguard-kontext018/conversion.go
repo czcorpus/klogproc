@@ -17,12 +17,12 @@
 package apiguardKontext
 
 import (
-	"klogproc/servicelog"
 	"klogproc/servicelog/apiguard"
-	"klogproc/servicelog/kontext015"
 	"strconv"
 	"strings"
 
+	"github.com/czcorpus/klogproc-core/storage"
+	kontext015 "github.com/czcorpus/klogproc-core/storage/kontext015"
 	"github.com/rs/zerolog/log"
 )
 
@@ -32,16 +32,16 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeAPIGuardKontext
+	return storage.AppTypeAPIGuardKontext
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*apiguard.InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
 
 	alignedCorpora, err := tLogRecord.Args.GetStringSlice("align")
@@ -56,13 +56,13 @@ func (t *Transformer) Transform(
 	}
 
 	r := &kontext015.OutputRecord{
-		Type:           servicelog.AppTypeKontext,
+		Type:           storage.AppTypeKontext,
 		Action:         action,
 		Corpus:         tLogRecord.Args.Get("corpname"),
 		AlignedCorpora: alignedCorpora,
 		IsCached:       tLogRecord.IsCached,
 		IPAddress:      tLogRecord.IPAddress,
-		IsAnonymous:    tLogRecord.UserID == nil || servicelog.UserBelongsToList(*tLogRecord.UserID, t.AnonymousUsers),
+		IsAnonymous:    tLogRecord.UserID == nil || storage.UserBelongsToList(*tLogRecord.UserID, t.AnonymousUsers),
 		IsAPI:          true, // via APIGuard, only API KonText calls are performed
 		IsQuery:        kontext015.IsEntryQuery(action),
 		ProcTime:       tLogRecord.ProcTime,
@@ -80,21 +80,21 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
 	tLogRecord, ok := rec.(*apiguard.InputRecord)
 	if !ok {
-		return nil, servicelog.ErrFailedTypeAssertion
+		return nil, storage.ErrFailedTypeAssertion
 	}
 
 	if !strings.HasSuffix(tLogRecord.Service, "kontext") {
 		log.Warn().Msg("Found non-kontext service record, skipping")
-		return []servicelog.InputRecord{}, nil
+		return []storage.InputRecord{}, nil
 	}
 
 	if !tLogRecord.IsCached {
-		return []servicelog.InputRecord{}, nil
+		return []storage.InputRecord{}, nil
 	}
 
-	return []servicelog.InputRecord{rec}, nil
+	return []storage.InputRecord{rec}, nil
 }

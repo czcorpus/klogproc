@@ -18,9 +18,10 @@
 package masm
 
 import (
-	"klogproc/servicelog"
 	"net"
 	"time"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 // InputRecord represents a raw-parsed version of masm query log
@@ -40,9 +41,9 @@ type InputRecord struct {
 // GetTime returns a normalized log date and time information
 func (r *InputRecord) GetTime() time.Time {
 	if r.Time[len(r.Time)-1] == 'Z' {
-		return servicelog.ConvertDatetimeString(r.Time[:len(r.Time)-1] + "+00:00")
+		return storage.ConvertDatetimeString(r.Time[:len(r.Time)-1] + "+00:00")
 	}
-	return servicelog.ConvertDatetimeString(r.Time)
+	return storage.ConvertDatetimeString(r.Time)
 }
 
 func (r *InputRecord) GetClientIP() net.IP {
@@ -50,7 +51,7 @@ func (r *InputRecord) GetClientIP() net.IP {
 }
 
 func (rec *InputRecord) ClusteringClientID() string {
-	return servicelog.GenerateRandomClusteringID()
+	return storage.GenerateRandomClusteringID()
 }
 
 func (rec *InputRecord) ClusterSize() int {
@@ -72,9 +73,9 @@ func (rec *InputRecord) IsSuspicious() bool {
 	return false
 }
 
-func (r *InputRecord) ExportError() *servicelog.ErrorRecord {
+func (r *InputRecord) ExportError() *storage.ErrorRecord {
 	if r.Error != "" {
-		return &servicelog.ErrorRecord{
+		return &storage.ErrorRecord{
 			Name: r.Error,
 		}
 	}

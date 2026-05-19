@@ -18,12 +18,15 @@ package trfactory
 
 import (
 	"fmt"
+	"klogproc/servicelog/kontext018"
 
-	"klogproc/servicelog"
-	"klogproc/servicelog/apiguard"
 	"klogproc/servicelog/kontext013"
 	"klogproc/servicelog/kontext015"
-	"klogproc/servicelog/kontext018"
+	"klogproc/servicelog/treqapi"
+	"klogproc/servicelog/wag07"
+
+	"klogproc/servicelog/apiguard"
+
 	"klogproc/servicelog/korpusdb"
 	"klogproc/servicelog/kwords"
 	"klogproc/servicelog/kwords2"
@@ -38,11 +41,11 @@ import (
 	"klogproc/servicelog/ske"
 	"klogproc/servicelog/syd"
 	"klogproc/servicelog/treq"
-	"klogproc/servicelog/treqapi"
 	"klogproc/servicelog/vlo"
 	"klogproc/servicelog/wag06"
-	"klogproc/servicelog/wag07"
 	"klogproc/servicelog/wsserver"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 // ------------------------------------
@@ -52,7 +55,7 @@ type apiguardLineParser struct {
 }
 
 // ParseLine parses a passed line of a respective log
-func (parser *apiguardLineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *apiguardLineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -65,7 +68,7 @@ type kontext013LineParser struct {
 }
 
 // ParseLine parses a passed line of a respective log
-func (parser *kontext013LineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *kontext013LineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -78,7 +81,7 @@ type kontext015LineParser struct {
 }
 
 // ParseLine parses a passed line of a respective log
-func (parser *kontext015LineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *kontext015LineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -91,7 +94,7 @@ type kontext018LineParser struct {
 }
 
 // ParseLine parses a passed line of a respective log
-func (parser *kontext018LineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *kontext018LineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -101,7 +104,7 @@ type kwordsLineParser struct {
 	lp *kwords.LineParser
 }
 
-func (parser *kwordsLineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *kwordsLineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -111,7 +114,7 @@ type kwords2LineParser struct {
 	lp *kwords2.LineParser
 }
 
-func (parser *kwords2LineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *kwords2LineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -121,7 +124,7 @@ type korpusDBLineParser struct {
 	lp *korpusdb.LineParser
 }
 
-func (parser *korpusDBLineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *korpusDBLineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -131,7 +134,7 @@ type mapkaLineParser struct {
 	lp *mapka.LineParser
 }
 
-func (parser *mapkaLineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *mapkaLineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -141,7 +144,7 @@ type mapka2LineParser struct {
 	lp *mapka2.LineParser
 }
 
-func (parser *mapka2LineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *mapka2LineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -151,7 +154,7 @@ type mapka3LineParser struct {
 	lp *mapka3.LineParser
 }
 
-func (parser *mapka3LineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *mapka3LineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -161,7 +164,7 @@ type morfioLineParser struct {
 	lp *morfio.LineParser
 }
 
-func (parser *morfioLineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *morfioLineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -171,7 +174,7 @@ type shinyLineParser struct {
 	lp *shiny.LineParser
 }
 
-func (parser *shinyLineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *shinyLineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -181,7 +184,7 @@ type skeLineParser struct {
 	lp *ske.LineParser
 }
 
-func (parser *skeLineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *skeLineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -192,7 +195,7 @@ type sydLineParser struct {
 }
 
 // ParseLine parses a passed line of a respective log
-func (parser *sydLineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *sydLineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -202,7 +205,7 @@ type treqLineParser struct {
 	lp *treq.LineParser
 }
 
-func (parser *treqLineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *treqLineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -212,7 +215,7 @@ type treqAPILineParser struct {
 	lp *treqapi.LineParser
 }
 
-func (parser *treqAPILineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *treqAPILineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -222,7 +225,7 @@ type wag06LineParser struct {
 	lp *wag06.LineParser
 }
 
-func (parser *wag06LineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *wag06LineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -232,7 +235,7 @@ type wag07LineParser struct {
 	lp *wag07.LineParser
 }
 
-func (parser *wag07LineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *wag07LineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -242,7 +245,7 @@ type wsserverLineParser struct {
 	lp *wsserver.LineParser
 }
 
-func (parser *wsserverLineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *wsserverLineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -252,7 +255,7 @@ type masmLineParser struct {
 	lp *masm.LineParser
 }
 
-func (parser *masmLineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *masmLineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -262,7 +265,7 @@ type mqueryLineParser struct {
 	lp *mquery.LineParser
 }
 
-func (parser *mqueryLineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *mqueryLineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -272,7 +275,7 @@ type mquerySRULineParser struct {
 	lp *mquerysru.LineParser
 }
 
-func (parser *mquerySRULineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *mquerySRULineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
@@ -282,73 +285,73 @@ type VLOLineParser struct {
 	lp *vlo.LineParser
 }
 
-func (parser *VLOLineParser) ParseLine(s string, lineNum int64) (servicelog.InputRecord, error) {
+func (parser *VLOLineParser) ParseLine(s string, lineNum int64) (storage.InputRecord, error) {
 	return parser.lp.ParseLine(s, lineNum)
 }
 
 // ------------------------------------
 
 // NewLineParser creates a parser for individual lines of a respective appType
-func NewLineParser(appType string, version string, appErrRegister servicelog.AppErrorRegister) (servicelog.LineParser, error) {
+func NewLineParser(appType string, version string, appErrRegister storage.AppErrorRegister) (storage.LineParser, error) {
 	switch appType {
-	case servicelog.AppTypeAPIGuard, servicelog.AppTypeAPIGuardMquery:
+	case storage.AppTypeAPIGuard, storage.AppTypeAPIGuardMquery:
 		return &apiguardLineParser{lp: &apiguard.LineParser{}}, nil
-	case servicelog.AppTypeAkalex, servicelog.AppTypeCalc, servicelog.AppTypeLists,
-		servicelog.AppTypeQuitaUp, servicelog.AppTypeGramatikat:
+	case storage.AppTypeAkalex, storage.AppTypeCalc, storage.AppTypeLists,
+		storage.AppTypeQuitaUp, storage.AppTypeGramatikat:
 		return &shinyLineParser{lp: &shiny.LineParser{}}, nil
-	case servicelog.AppTypeKontext:
+	case storage.AppTypeKontext:
 		switch version {
-		case servicelog.AppVersionKontext013,
-			servicelog.AppVersionKontext014:
+		case storage.AppVersionKontext013,
+			storage.AppVersionKontext014:
 			return &kontext013LineParser{lp: kontext013.NewLineParser(appErrRegister)}, nil
-		case servicelog.AppVersionKontext015,
-			servicelog.AppVersionKontext016,
-			servicelog.AppVersionKontext017,
-			servicelog.AppVersionKontext017API:
+		case storage.AppVersionKontext015,
+			storage.AppVersionKontext016,
+			storage.AppVersionKontext017,
+			storage.AppVersionKontext017API:
 			return &kontext015LineParser{lp: kontext015.NewLineParser(appErrRegister)}, nil
-		case servicelog.AppVersionKontext018:
+		case storage.AppVersionKontext018:
 			return &kontext018LineParser{lp: kontext018.NewLineParser()}, nil
 		default:
 			return nil, fmt.Errorf("cannot find parser - unsupported version of KonText specified: %s", version)
 		}
-	case servicelog.AppTypeKwords:
+	case storage.AppTypeKwords:
 		switch version {
-		case servicelog.AppVersionKwords1:
+		case storage.AppVersionKwords1:
 			return &kwordsLineParser{lp: &kwords.LineParser{}}, nil
-		case servicelog.AppVersionKwords2:
+		case storage.AppVersionKwords2:
 			return &kwords2LineParser{lp: &kwords2.LineParser{}}, nil
 		default:
 			return nil, fmt.Errorf("cannot find parser - unsupported version of KWords specified: %s", version)
 		}
-	case servicelog.AppTypeKorpusDB:
+	case storage.AppTypeKorpusDB:
 		return &korpusDBLineParser{lp: &korpusdb.LineParser{}}, nil
-	case servicelog.AppTypeMapka:
+	case storage.AppTypeMapka:
 		switch version {
-		case servicelog.AppVersionMapka1:
+		case storage.AppVersionMapka1:
 			return &mapkaLineParser{lp: &mapka.LineParser{}}, nil
-		case servicelog.AppVersionMapka2:
+		case storage.AppVersionMapka2:
 			return &mapka2LineParser{lp: &mapka2.LineParser{}}, nil
-		case servicelog.AppVersionMapka3:
+		case storage.AppVersionMapka3:
 			return &mapka3LineParser{lp: &mapka3.LineParser{}}, nil
 		default:
 			return nil, fmt.Errorf("cannot find parser - unsupported version of Mapka specified: %s", version)
 		}
-	case servicelog.AppTypeMorfio:
+	case storage.AppTypeMorfio:
 		return &morfioLineParser{lp: &morfio.LineParser{}}, nil
-	case servicelog.AppTypeSke:
+	case storage.AppTypeSke:
 		return &skeLineParser{lp: &ske.LineParser{}}, nil
-	case servicelog.AppTypeSyd:
+	case storage.AppTypeSyd:
 		return &sydLineParser{lp: &syd.LineParser{}}, nil
-	case servicelog.AppTypeTreq:
+	case storage.AppTypeTreq:
 		switch version {
-		case servicelog.AppVersionTreq1API:
+		case storage.AppVersionTreq1API:
 			return &treqAPILineParser{lp: &treqapi.LineParser{}}, nil
 		case "":
 			return &treqLineParser{lp: &treq.LineParser{}}, nil
 		default:
 			return nil, fmt.Errorf("cannot find parser - unsupported version of Treq specified: %s", version)
 		}
-	case servicelog.AppTypeWag:
+	case storage.AppTypeWag:
 		switch version {
 		case "0.6":
 			return &wag06LineParser{lp: &wag06.LineParser{}}, nil
@@ -357,15 +360,15 @@ func NewLineParser(appType string, version string, appErrRegister servicelog.App
 		default:
 			return nil, fmt.Errorf("cannot find parser - unsupported version of WaG specified: %s", version)
 		}
-	case servicelog.AppTypeWsserver:
+	case storage.AppTypeWsserver:
 		return &wsserverLineParser{lp: &wsserver.LineParser{}}, nil
-	case servicelog.AppTypeMasm:
+	case storage.AppTypeMasm:
 		return &masmLineParser{lp: &masm.LineParser{}}, nil
-	case servicelog.AppTypeMquery:
+	case storage.AppTypeMquery:
 		return &mqueryLineParser{lp: &mquery.LineParser{}}, nil
-	case servicelog.AppTypeMquerySRU:
+	case storage.AppTypeMquerySRU:
 		return &mquerySRULineParser{lp: &mquerysru.LineParser{}}, nil
-	case servicelog.AppTypeVLO:
+	case storage.AppTypeVLO:
 		return &VLOLineParser{lp: &vlo.LineParser{}}, nil
 	default:
 		return nil, fmt.Errorf("Parser not found for application type %s", appType)

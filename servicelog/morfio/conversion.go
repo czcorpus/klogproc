@@ -19,9 +19,9 @@ package morfio
 import (
 	"fmt"
 	"strconv"
-	"time"
 
-	"klogproc/servicelog"
+	"github.com/czcorpus/klogproc-core/storage"
+	morfioCore "github.com/czcorpus/klogproc-core/storage/morfio"
 )
 
 // Transformer converts a Morfio log record to a destination format
@@ -30,16 +30,16 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeMorfio
+	return storage.AppTypeMorfio
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
 	userID := -1
 	if tLogRecord.UserID != "-" && tLogRecord.UserID != "" {
@@ -55,19 +55,17 @@ func (t *Transformer) Transform(
 		return nil, err
 	}
 
-	caseIns, err := servicelog.ImportBool(tLogRecord.CaseInsensitive, "caseInsensitive")
+	caseIns, err := storage.ImportBool(tLogRecord.CaseInsensitive, "caseInsensitive")
 	if err != nil {
 		return nil, err
 	}
 
-	ans := &OutputRecord{
+	ans := &morfioCore.OutputRecord{
 		// ID set later
 		Type:            "morfio",
-		time:            tLogRecord.GetTime(),
-		Datetime:        tLogRecord.GetTime().Format(time.RFC3339),
 		IPAddress:       tLogRecord.IPAddress,
 		UserID:          tLogRecord.UserID,
-		IsAnonymous:     userID == -1 || servicelog.UserBelongsToList(userID, t.AnonymousUsers),
+		IsAnonymous:     userID == -1 || storage.UserBelongsToList(userID, t.AnonymousUsers),
 		IsQuery:         true,
 		KeyReq:          tLogRecord.KeyReq,
 		KeyUsed:         tLogRecord.KeyUsed,
@@ -79,7 +77,7 @@ func (t *Transformer) Transform(
 		OutputAttr:      tLogRecord.OutputAttr,
 		CaseInsensitive: caseIns,
 	}
-
+	ans.SetTime(tLogRecord.GetTime())
 	ans.ID = ans.GenerateDeterministicID()
 	return ans, nil
 }
@@ -89,7 +87,7 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
-	return []servicelog.InputRecord{rec}, nil
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
+	return []storage.InputRecord{rec}, nil
 }

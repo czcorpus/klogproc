@@ -19,11 +19,13 @@ package kontext013
 import (
 	"encoding/json"
 	"fmt"
-	"klogproc/servicelog"
 	"net"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 var (
@@ -54,6 +56,55 @@ func ImportJSONLog(jsonLine []byte) (*InputRecord, error) {
 	return &record, nil
 }
 
+// importQueryType translates KonText/Bonito query type argument
+// into a more understandable form
+func importQueryType(record *InputRecord) string {
+	val := record.GetStringParam("queryselector")
+	switch val {
+	case "iqueryrow":
+		return "basic"
+	case "lemmarow":
+		return "lemma"
+	case "phraserow":
+		return "phrase"
+	case "wordrow":
+		return "word"
+	case "charrow":
+		return "char"
+	case "cqlrow":
+		return "cql"
+	default:
+		return ""
+	}
+}
+
+type fullCorpname struct {
+	Corpname string
+	limited  bool
+}
+
+// importCorpname extracts actual corpus name from
+// URL argument which may contain additional data (e.g. variant prefix)
+func importCorpname(record *InputRecord) fullCorpname {
+	var corpname string
+	var limited bool
+
+	if record.Params["corpname"] != "" {
+		corpname = record.GetStringParam("corpname")
+		corpname, _ = url.QueryUnescape(corpname)
+		corpname = strings.Split(corpname, ";")[0]
+		if strings.Index(corpname, "omezeni/") == 0 {
+			corpname = corpname[len("omezeni/"):]
+			limited = true
+
+		} else {
+			limited = false
+		}
+		return fullCorpname{corpname, limited}
+	}
+	return fullCorpname{}
+}
+
 // ------------------------------------------------------------
 
 // Request is a simple representation of
@@ -77,14 +128,14 @@ type InputRecord struct {
 	Params   map[string]interface{} `json:"params"`
 	PID      int                    `json:"pid"`
 	Settings map[string]interface{} `json:"settings"`
-	Error    servicelog.ErrorRecord `json:"error"`
+	Error    storage.ErrorRecord    `json:"error"`
 }
 
 // GetTime returns record's time as a Golang's Time
 // instance. Please note that the value is truncated
 // to seconds.
 func (rec *InputRecord) GetTime() time.Time {
-	return servicelog.ConvertDatetimeStringWithMillisNoTZ(rec.Date)
+	return storage.ConvertDatetimeStringWithMillisNoTZ(rec.Date)
 }
 
 // GetClientIP returns a client IP no matter in which
@@ -104,7 +155,7 @@ func (rec *InputRecord) GetClientIP() net.IP {
 }
 
 func (rec *InputRecord) ClusteringClientID() string {
-	return servicelog.GenerateRandomClusteringID()
+	return storage.GenerateRandomClusteringID()
 }
 
 func (rec *InputRecord) ClusterSize() int {

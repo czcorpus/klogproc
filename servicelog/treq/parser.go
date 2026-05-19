@@ -18,8 +18,9 @@ package treq
 
 import (
 	"fmt"
-	"klogproc/servicelog"
 	"strings"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 // LineParser is a parser for reading Treq application log
@@ -72,6 +73,6 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 			// No query2 in case of the 'D' query
 		}, err
 	}
-	return nil, servicelog.NewLineParsingError(
+	return nil, storage.NewLineParsingError(
 		lineNum, fmt.Sprintf("Invalid line format. Expecting min. 10 (type L) or min. 12 (type D) tab-separated items, found %d", len(items)))
 }

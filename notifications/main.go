@@ -29,6 +29,7 @@ import (
 
 	"github.com/czcorpus/cnc-gokit/mail"
 	"github.com/czcorpus/conomi/client"
+	"github.com/czcorpus/klogproc-core/analysis"
 	"github.com/rs/zerolog/log"
 )
 
@@ -43,7 +44,7 @@ func NewNotifier(
 	conf *mail.NotificationConf,
 	conf2 *client.ConomiClientConf,
 	loc *time.Location,
-) (Notifier, error) {
+) (analysis.Notifier, error) {
 	if conf != nil && conf2 != nil {
 		return nil, errors.New("either Conomi or e-mail notifier can be configured")
 	}

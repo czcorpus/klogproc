@@ -17,9 +17,10 @@
 package mquerysru
 
 import (
-	"klogproc/servicelog"
 	"strings"
-	"time"
+
+	"github.com/czcorpus/klogproc-core/storage"
+	mquerySruCore "github.com/czcorpus/klogproc-core/storage/mquerysru"
 )
 
 // Transformer converts a source log object into a destination one
@@ -27,7 +28,7 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeMquerySRU
+	return storage.AppTypeMquerySRU
 }
 
 func (t *Transformer) getCorpus(logRecord *InputRecord) string {
@@ -49,16 +50,14 @@ func (t *Transformer) corpusPID2ID(s string) string {
 }
 
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
-	rec := &OutputRecord{
+	rec := &mquerySruCore.OutputRecord{
 		Type:      t.AppType(),
-		Datetime:  tLogRecord.GetTime().Format(time.RFC3339),
-		datetime:  tLogRecord.GetTime(),
 		Level:     tLogRecord.Level,
 		IPAddress: tLogRecord.ClientIP,
 		ProcTime:  tLogRecord.Latency,
@@ -69,6 +68,7 @@ func (t *Transformer) Transform(
 		IsQuery:   tLogRecord.IsQuery(),
 		Args:      tLogRecord.Args,
 	}
+	rec.SetTime(tLogRecord.GetTime())
 	rec.ID = rec.GenerateDeterministicID()
 	return rec, nil
 }
@@ -78,7 +78,7 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
-	return []servicelog.InputRecord{rec}, nil
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
+	return []storage.InputRecord{rec}, nil
 }

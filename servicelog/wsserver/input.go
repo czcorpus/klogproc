@@ -17,9 +17,10 @@
 package wsserver
 
 import (
-	"klogproc/servicelog"
 	"net"
 	"time"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 // InputRecord represents a raw-parsed version of Word-Sim-Server's access log
@@ -37,7 +38,7 @@ type InputRecord struct {
 // GetTime returns a normalized log date and time information
 func (r *InputRecord) GetTime() time.Time {
 	if r.isProcessable {
-		return servicelog.ConvertDatetimeStringNoTZ(r.Datetime)
+		return storage.ConvertDatetimeStringNoTZ(r.Datetime)
 	}
 	return time.Time{}
 }
@@ -48,7 +49,7 @@ func (r *InputRecord) GetClientIP() net.IP {
 }
 
 func (r *InputRecord) ClusteringClientID() string {
-	return servicelog.GenerateRandomClusteringID()
+	return storage.GenerateRandomClusteringID()
 }
 
 func (r *InputRecord) ClusterSize() int {

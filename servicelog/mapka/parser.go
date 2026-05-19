@@ -20,16 +20,18 @@ import (
 	"strings"
 
 	"klogproc/load/accesslog"
+
+	mapkaCore "github.com/czcorpus/klogproc-core/storage/mapka"
 )
 
-func getAction(path string) (string, *RequestParams) {
-	var params *RequestParams
+func getAction(path string) (string, *mapkaCore.RequestParams) {
+	var params *mapkaCore.RequestParams
 	if strings.HasPrefix(path, "/mapka") {
 		elms := strings.Split(strings.Trim(path, "/"), "/")
 		if len(elms) > 1 {
 			if elms[1] == "text" {
 				if len(elms) >= 4 {
-					params = &RequestParams{
+					params = &mapkaCore.RequestParams{
 						CardType:   &elms[2],
 						CardFolder: &elms[3],
 					}
@@ -39,7 +41,7 @@ func getAction(path string) (string, *RequestParams) {
 			} else if elms[1] == "overlay" {
 				if len(elms) >= 3 {
 					sub := strings.Split(elms[2], "+")
-					params = &RequestParams{
+					params = &mapkaCore.RequestParams{
 						OverlayFile: &sub[len(sub)-1],
 					}
 				}

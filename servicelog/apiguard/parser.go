@@ -19,7 +19,8 @@ package apiguard
 import (
 	"encoding/json"
 	"fmt"
-	"klogproc/servicelog"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 // LineParser is a parser for reading APIGuard application logs
@@ -32,7 +33,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 	var record InputRecord
 	err := json.Unmarshal([]byte(s), &record)
 	if err != nil {
-		return nil, servicelog.NewStreamedLineParsingError(s, fmt.Sprintf("failed to parse line: %s", err))
+		return nil, storage.NewStreamedLineParsingError(s, fmt.Sprintf("failed to parse line: %s", err))
 	}
 	return &record, nil
 }

@@ -17,9 +17,10 @@
 package syd
 
 import (
-	"klogproc/servicelog"
 	"net"
 	"time"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 type InputRecord struct {
@@ -34,7 +35,7 @@ type InputRecord struct {
 }
 
 func (r *InputRecord) GetTime() time.Time {
-	return servicelog.ConvertDatetimeString(r.Datetime)
+	return storage.ConvertDatetimeString(r.Datetime)
 }
 
 func (r *InputRecord) GetClientIP() net.IP {
@@ -42,7 +43,7 @@ func (r *InputRecord) GetClientIP() net.IP {
 }
 
 func (r *InputRecord) ClusteringClientID() string {
-	return servicelog.GenerateRandomClusteringID()
+	return storage.GenerateRandomClusteringID()
 }
 
 func (r *InputRecord) ClusterSize() int {

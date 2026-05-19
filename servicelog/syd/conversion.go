@@ -19,9 +19,9 @@ package syd
 import (
 	"fmt"
 	"strconv"
-	"time"
 
-	"klogproc/servicelog"
+	"github.com/czcorpus/klogproc-core/storage"
+	sydCore "github.com/czcorpus/klogproc-core/storage/syd"
 )
 
 // Transformer converts a SyD log record to a destination format
@@ -33,16 +33,16 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeSyd
+	return storage.AppTypeSyd
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
 	var userID *int
 	if tLogRecord.UserID != "-" {
@@ -53,13 +53,11 @@ func (t *Transformer) Transform(
 		userID = &uid
 	}
 
-	r := &OutputRecord{
+	r := &sydCore.OutputRecord{
 		Type:        t.AppType(),
-		Datetime:    tLogRecord.GetTime().Format(time.RFC3339),
-		time:        tLogRecord.GetTime(),
 		IPAddress:   tLogRecord.IPAddress,
 		UserID:      userID,
-		IsAnonymous: userID == nil || servicelog.UserBelongsToList(*userID, t.anonymousUsers),
+		IsAnonymous: userID == nil || storage.UserBelongsToList(*userID, t.anonymousUsers),
 		KeyReq:      tLogRecord.KeyReq,
 		KeyUsed:     tLogRecord.KeyUsed,
 		Key:         tLogRecord.Key,
@@ -67,6 +65,7 @@ func (t *Transformer) Transform(
 		RunScript:   tLogRecord.RunScript,
 		IsQuery:     true,
 	}
+	r.SetTime(tLogRecord.GetTime())
 	r.ID = r.GenerateDeterministicID()
 	if tLogRecord.Ltool == "S" {
 		r.Corpus = t.syncCorpora
@@ -81,9 +80,9 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
-	return []servicelog.InputRecord{rec}, nil
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
+	return []storage.InputRecord{rec}, nil
 }
 
 // NewTransformer is a recommended factory for new Transformer instances

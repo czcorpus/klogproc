@@ -17,9 +17,9 @@
 package kontext015
 
 import (
-	"klogproc/servicelog"
 	"testing"
 
+	"github.com/czcorpus/klogproc-core/storage"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -83,7 +83,7 @@ func TestIsIgnoredError(t *testing.T) {
 		reg := &onErrorHandler{}
 		p := LineParser{appErrorRegister: reg}
 		rec, err := p.ParseLine(line, 71)
-		_, ok := err.(servicelog.LineParsingError)
+		_, ok := err.(storage.LineParsingError)
 		assert.True(t, ok)
 		assert.Nil(t, rec)
 		assert.Equal(t, "", reg.Msg)
@@ -101,7 +101,7 @@ func TestIsNotIgnoredError(t *testing.T) {
 		reg := &onErrorHandler{}
 		p := LineParser{appErrorRegister: reg}
 		rec, err := p.ParseLine(line, 71)
-		_, ok := err.(servicelog.LineParsingError)
+		_, ok := err.(storage.LineParsingError)
 		assert.True(t, ok)
 		assert.Nil(t, rec)
 		assert.Equal(t, line, reg.Msg)

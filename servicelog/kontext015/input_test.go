@@ -173,3 +173,11 @@ func TestGetAlignedCorpora(t *testing.T) {
 	assert.Contains(t, ac, "intercorp_v11_de")
 	assert.Equal(t, 2, len(ac))
 }
+
+func TestImportCorpname(t *testing.T) {
+	p := make(map[string]interface{})
+	p["corpname"] = "foobar7"
+	r := &InputRecord{Args: p}
+	c := ImportCorpname(r)
+	assert.Equal(t, "foobar7", c)
+}

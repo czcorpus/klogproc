@@ -18,7 +18,8 @@ package kontext018
 
 import (
 	"encoding/json"
-	"klogproc/servicelog"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 // LineParser is a parser for reading KonText application logs
@@ -31,7 +32,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 	var record InputRecord
 	err := json.Unmarshal([]byte(s), &record)
 	if err != nil {
-		return nil, servicelog.NewStreamedLineParsingError(s, "json Unmarshal error [kontext]")
+		return nil, storage.NewStreamedLineParsingError(s, "json Unmarshal error [kontext]")
 	}
 	if record.Logger == "QUERY" {
 		record.isProcessable = true

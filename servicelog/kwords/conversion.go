@@ -19,9 +19,9 @@ package kwords
 import (
 	"fmt"
 	"strconv"
-	"time"
 
-	"klogproc/servicelog"
+	"github.com/czcorpus/klogproc-core/storage"
+	kwordsCore "github.com/czcorpus/klogproc-core/storage/kwords"
 )
 
 // Transformer converts a Morfio log record to a destination format
@@ -30,16 +30,16 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeKwords
+	return storage.AppTypeKwords
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
 	userID := -1
 	if tLogRecord.UserID != "-" && tLogRecord.UserID != "" {
@@ -67,35 +67,33 @@ func (t *Transformer) Transform(
 		}
 		refLength = &rl
 	}
-	pronouns, err := servicelog.ImportBool(tLogRecord.Prep, "pronouns")
+	pronouns, err := storage.ImportBool(tLogRecord.Prep, "pronouns")
 	if err != nil {
 		return nil, err
 	}
-	prep, err := servicelog.ImportBool(tLogRecord.Prep, "prep")
+	prep, err := storage.ImportBool(tLogRecord.Prep, "prep")
 	if err != nil {
 		return nil, err
 	}
-	con, err := servicelog.ImportBool(tLogRecord.Prep, "con")
+	con, err := storage.ImportBool(tLogRecord.Prep, "con")
 	if err != nil {
 		return nil, err
 	}
-	num, err := servicelog.ImportBool(tLogRecord.Prep, "num")
+	num, err := storage.ImportBool(tLogRecord.Prep, "num")
 	if err != nil {
 		return nil, err
 	}
-	caseInsen, err := servicelog.ImportBool(tLogRecord.Prep, "caseInsensitive")
+	caseInsen, err := storage.ImportBool(tLogRecord.Prep, "caseInsensitive")
 	if err != nil {
 		return nil, err
 	}
 
-	ans := &OutputRecord{
+	ans := &kwordsCore.OutputRecord{
 		// ID set later
 		Type:            "kwords",
-		time:            tLogRecord.GetTime(),
-		Datetime:        tLogRecord.GetTime().Format(time.RFC3339),
 		IPAddress:       tLogRecord.IPAddress,
 		UserID:          tLogRecord.UserID,
-		IsAnonymous:     userID == -1 || servicelog.UserBelongsToList(userID, t.AnonymousUsers),
+		IsAnonymous:     userID == -1 || storage.UserBelongsToList(userID, t.AnonymousUsers),
 		IsQuery:         true,
 		NumFiles:        numFiles,
 		TargetInputType: tLogRecord.TargetInputType,
@@ -109,7 +107,7 @@ func (t *Transformer) Transform(
 		CaseInsensitive: caseInsen,
 		// GeoIP set elsewhere
 	}
-
+	ans.SetTime(tLogRecord.GetTime())
 	ans.ID = ans.GenerateDeterministicID()
 	return ans, nil
 }
@@ -119,7 +117,7 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
-	return []servicelog.InputRecord{rec}, nil
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
+	return []storage.InputRecord{rec}, nil
 }

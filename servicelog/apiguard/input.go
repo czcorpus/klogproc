@@ -19,9 +19,10 @@ package apiguard
 import (
 	"encoding/json"
 	"fmt"
-	"klogproc/servicelog"
 	"net"
 	"time"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 type FlexibleArgs map[string]json.RawMessage
@@ -78,7 +79,7 @@ type InputRecord struct {
 // instance. Please note that the value is truncated
 // to seconds.
 func (rec *InputRecord) GetTime() time.Time {
-	return servicelog.ConvertDatetimeString(rec.Time)
+	return storage.ConvertDatetimeString(rec.Time)
 }
 
 // GetClientIP returns a client IP no matter in which
@@ -91,7 +92,7 @@ func (rec *InputRecord) GetClientIP() net.IP {
 }
 
 func (rec *InputRecord) ClusteringClientID() string {
-	return servicelog.GenerateRandomClusteringID()
+	return storage.GenerateRandomClusteringID()
 }
 
 func (rec *InputRecord) ClusterSize() int {

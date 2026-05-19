@@ -18,8 +18,8 @@
 package masm
 
 import (
-	"klogproc/servicelog"
-	"time"
+	"github.com/czcorpus/klogproc-core/storage"
+	masmCore "github.com/czcorpus/klogproc-core/storage/masm"
 )
 
 // Transformer converts a source log object into a destination one
@@ -27,19 +27,17 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeMapka
+	return storage.AppTypeMapka
 }
 
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
-	rec := &OutputRecord{
-		time:           tLogRecord.GetTime(),
-		Datetime:       tLogRecord.GetTime().Format(time.RFC3339),
+	rec := &masmCore.OutputRecord{
 		Type:           t.AppType(),
 		Level:          tLogRecord.Level,
 		Message:        tLogRecord.Message,
@@ -51,6 +49,7 @@ func (t *Transformer) Transform(
 		ProcTimeSecs:   tLogRecord.ProcTimeSecs,
 		Error:          tLogRecord.ExportError(),
 	}
+	rec.SetTime(tLogRecord.GetTime())
 	rec.ID = rec.GenerateDeterministicID()
 	return rec, nil
 }
@@ -60,7 +59,7 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
-	return []servicelog.InputRecord{rec}, nil
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
+	return []storage.InputRecord{rec}, nil
 }

@@ -26,10 +26,10 @@ import (
 	"time"
 
 	"klogproc/fsop"
-	"klogproc/servicelog"
 
 	"github.com/czcorpus/cnc-gokit/collections"
 	"github.com/czcorpus/cnc-gokit/fs"
+	"github.com/czcorpus/klogproc-core/storage"
 
 	"github.com/rs/zerolog/log"
 )
@@ -40,11 +40,11 @@ const (
 
 type updateRequest struct {
 	FilePath string
-	Value    servicelog.LogRange
+	Value    storage.LogRange
 }
 
 // WorklogRecord provides log reading position info for all configured apps
-type WorklogRecord = map[string]servicelog.LogRange
+type WorklogRecord = map[string]storage.LogRange
 
 // Worklog provides functions to store/retrieve information about
 // file reading operations to be able to continue in case of an
@@ -53,7 +53,7 @@ type WorklogRecord = map[string]servicelog.LogRange
 // situation (e.g. ignored lines are confirmed sooner that the ones
 // send to Elastic).
 type Worklog struct {
-	rec            *collections.ConcurrentMap[string, servicelog.LogRange]
+	rec            *collections.ConcurrentMap[string, storage.LogRange]
 	updRequests    chan updateRequest
 	storeFilePath  string
 	backupFilePath string
@@ -84,7 +84,7 @@ func (w *Worklog) Init(ctx context.Context) error {
 		if len(wlData) > 0 {
 			log.Info().Msg("Found worklog file")
 			var err error
-			w.rec, err = collections.NewConcurrentMapFromJSON[string, servicelog.LogRange](wlData)
+			w.rec, err = collections.NewConcurrentMapFromJSON[string, storage.LogRange](wlData)
 			if err != nil {
 				return fmt.Errorf("failed to initialize tail worklog: %w", err)
 			}
@@ -222,7 +222,7 @@ func (w *Worklog) save() error {
 
 // UpdateFileInfo adds individual app reading position info. Please
 // note that this does not save the worklog.
-func (w *Worklog) UpdateFileInfo(filePath string, logPosition servicelog.LogRange) {
+func (w *Worklog) UpdateFileInfo(filePath string, logPosition storage.LogRange) {
 	w.updRequests <- updateRequest{
 		FilePath: filePath,
 		Value:    logPosition,
@@ -238,7 +238,7 @@ func (w *Worklog) ResetFile(filePath string) (int64, error) {
 	}
 	w.updRequests <- updateRequest{
 		FilePath: filePath,
-		Value: servicelog.LogRange{
+		Value: storage.LogRange{
 			Inode:     inode,
 			SeekStart: 0,
 			SeekEnd:   0,
@@ -249,12 +249,12 @@ func (w *Worklog) ResetFile(filePath string) (int64, error) {
 }
 
 // GetData retrieves reading info for a provided app
-func (w *Worklog) GetData(filePath string) servicelog.LogRange {
+func (w *Worklog) GetData(filePath string) storage.LogRange {
 	v, ok := w.rec.GetWithTest(filePath)
 	if ok {
 		return v
 	}
-	return servicelog.LogRange{Inode: -1, SeekStart: 0, SeekEnd: 0}
+	return storage.LogRange{Inode: -1, SeekStart: 0, SeekEnd: 0}
 }
 
 // NewWorklog creates a new Worklog instance. Please note that
@@ -264,6 +264,6 @@ func NewWorklog(path, instanceID string) *Worklog {
 	return &Worklog{
 		storeFilePath:  filepath.Join(path, instanceID+".json"),
 		backupFilePath: filepath.Join(path, instanceID+".json.bak"),
-		rec:            collections.NewConcurrentMap[string, servicelog.LogRange](),
+		rec:            collections.NewConcurrentMap[string, storage.LogRange](),
 	}
 }

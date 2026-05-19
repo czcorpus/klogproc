@@ -19,38 +19,37 @@ package wag07
 import (
 	"strconv"
 
-	"klogproc/analysis"
-	"klogproc/load"
-	"klogproc/notifications"
-	"klogproc/servicelog"
-	"klogproc/servicelog/wag06"
+	"github.com/czcorpus/klogproc-core/analysis"
+	"github.com/czcorpus/klogproc-core/logbuffer"
+	"github.com/czcorpus/klogproc-core/storage"
+	wag06Core "github.com/czcorpus/klogproc-core/storage/wag06"
 )
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	analyzer       servicelog.Preprocessor
+	analyzer       storage.Preprocessor
 	anonymousUsers []int
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeWag
+	return storage.AppTypeWag
 }
 
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
-	rec := wag06.NewTimedOutputRecord(tLogRecord.GetTime())
+	rec := wag06Core.NewTimedOutputRecord(tLogRecord.GetTime())
 	rec.Type = t.AppType()
 	rec.Action = tLogRecord.Action
 	rec.IPAddress = tLogRecord.Request.Origin
 	rec.UserAgent = tLogRecord.Request.HTTPUserAgent
 	rec.ReferringDomain = tLogRecord.Request.Referer
 	rec.UserID = strconv.Itoa(tLogRecord.UserID)
-	rec.IsAnonymous = servicelog.UserBelongsToList(tLogRecord.UserID, t.anonymousUsers)
+	rec.IsAnonymous = storage.UserBelongsToList(tLogRecord.UserID, t.anonymousUsers)
 	rec.IsQuery = tLogRecord.IsQuery
 	rec.IsMobileClient = tLogRecord.IsMobileClient
 	rec.HasPosSpecification = tLogRecord.HasPosSpecification
@@ -68,18 +67,18 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
 	return t.analyzer.Preprocess(rec, prevRecs), nil
 }
 
 func NewTransformer(
-	bufferConf *load.BufferConf,
+	bufferConf *logbuffer.BufferConf,
 	anonymousUsers []int,
 	realtimeClock bool,
-	emailNotifier notifications.Notifier,
+	emailNotifier analysis.Notifier,
 ) *Transformer {
-	var analyzer servicelog.Preprocessor
+	var analyzer storage.Preprocessor
 	if bufferConf != nil && bufferConf.BotDetection != nil {
 		analyzer = analysis.NewBotAnalyzer[*InputRecord]("wag", bufferConf, realtimeClock, emailNotifier)
 

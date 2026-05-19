@@ -22,12 +22,12 @@ import (
 	"reflect"
 	"strconv"
 
-	"klogproc/analysis"
-	"klogproc/load"
-	"klogproc/notifications"
-	"klogproc/servicelog"
 	k015 "klogproc/servicelog/kontext015"
 
+	"github.com/czcorpus/klogproc-core/analysis"
+	"github.com/czcorpus/klogproc-core/logbuffer"
+	"github.com/czcorpus/klogproc-core/storage"
+	k015Core "github.com/czcorpus/klogproc-core/storage/kontext015"
 	"github.com/rs/zerolog/log"
 )
 
@@ -107,26 +107,26 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeKontext
+	return storage.AppTypeKontext
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
 	corpname := k015.ImportCorpname(tLogRecord)
-	r := &k015.OutputRecord{
+	r := &k015Core.OutputRecord{
 		Type:           t.AppType(),
 		Action:         tLogRecord.Action,
 		Corpus:         corpname,
 		AlignedCorpora: tLogRecord.GetAlignedCorpora(),
-		IPAddress:      servicelog.IPToOutString(tLogRecord.GetClientIP()),
-		IsAnonymous:    servicelog.UserBelongsToList(tLogRecord.UserID, t.anonymousUsers),
-		IsQuery:        k015.IsEntryQuery(tLogRecord.Action) && !tLogRecord.IsIndirectCall,
+		IPAddress:      storage.IPToOutString(tLogRecord.GetClientIP()),
+		IsAnonymous:    storage.UserBelongsToList(tLogRecord.UserID, t.anonymousUsers),
+		IsQuery:        k015Core.IsEntryQuery(tLogRecord.Action) && !tLogRecord.IsIndirectCall,
 		IsAPI:          tLogRecord.IsAPI,
 		ProcTime:       tLogRecord.ProcTime,
 		QueryType:      k015.ImportQueryType(tLogRecord),
@@ -145,15 +145,15 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
-	return []servicelog.InputRecord{rec}, nil
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
+	return []storage.InputRecord{rec}, nil
 }
 
 func NewTransformer(
-	bufferConf *load.BufferConf,
+	bufferConf *logbuffer.BufferConf,
 	realtimeClock bool,
-	emailNotifier notifications.Notifier,
+	emailNotifier analysis.Notifier,
 	anonymousUsers []int,
 ) *Transformer {
 	analyzer := analysis.NewBotAnalyzer[*InputRecord]("kontext", bufferConf, realtimeClock, emailNotifier)
