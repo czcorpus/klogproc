@@ -17,12 +17,12 @@
 package mquery
 
 import (
-	"klogproc/servicelog"
 	"net"
 	"strings"
 	"time"
 
 	"github.com/czcorpus/cnc-gokit/unireq"
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 // InputRecord represents a raw-parsed version of masm query log
@@ -45,9 +45,9 @@ type InputRecord struct {
 // GetTime returns a normalized log date and time information
 func (r *InputRecord) GetTime() time.Time {
 	if r.Time[len(r.Time)-1] == 'Z' {
-		return servicelog.ConvertDatetimeString(r.Time[:len(r.Time)-1] + "+00:00")
+		return storage.ConvertDatetimeString(r.Time[:len(r.Time)-1] + "+00:00")
 	}
-	return servicelog.ConvertDatetimeString(r.Time)
+	return storage.ConvertDatetimeString(r.Time)
 }
 
 func (r *InputRecord) GetClientIP() net.IP {
@@ -55,7 +55,7 @@ func (r *InputRecord) GetClientIP() net.IP {
 }
 
 func (rec *InputRecord) ClusteringClientID() string {
-	return servicelog.GenerateRandomClusteringID()
+	return storage.GenerateRandomClusteringID()
 }
 
 func (rec *InputRecord) ClusterSize() int {
@@ -95,9 +95,9 @@ func (rec *InputRecord) GetAction() string {
 	return ""
 }
 
-func (rec *InputRecord) ExportError() *servicelog.ErrorRecord {
+func (rec *InputRecord) ExportError() *storage.ErrorRecord {
 	if rec.ErrorMessage != "" {
-		return &servicelog.ErrorRecord{
+		return &storage.ErrorRecord{
 			Name: rec.ErrorMessage,
 		}
 	}

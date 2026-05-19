@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
-	"klogproc/servicelog"
+	"github.com/czcorpus/klogproc-core/storage"
+	kdbCore "github.com/czcorpus/klogproc-core/storage/korpusdb"
 )
 
 func getQueryType(rec *InputRecord) string {
@@ -58,16 +58,16 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeKorpusDB
+	return storage.AppTypeKorpusDB
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
 	userID := -1
 	if tLogRecord.UserID != "" { // null is converted into an empty string
@@ -78,21 +78,20 @@ func (t *Transformer) Transform(
 		userID = uid
 	}
 
-	out := &OutputRecord{
+	out := &kdbCore.OutputRecord{
 		Type:         t.AppType(),
-		Datetime:     tLogRecord.GetTime().Format(time.RFC3339),
-		time:         tLogRecord.GetTime(),
 		Path:         tLogRecord.Path,
 		Page:         tLogRecord.Request.Page,
 		IPAddress:    tLogRecord.IP,
 		UserID:       tLogRecord.UserID,
 		ClientFlag:   tLogRecord.Request.ClientFlag,
-		IsAnonymous:  userID == -1 || servicelog.UserBelongsToList(userID, t.AnonymousUsers),
+		IsAnonymous:  userID == -1 || storage.UserBelongsToList(userID, t.AnonymousUsers),
 		IsQuery:      testIsQuery(tLogRecord),
 		IsAPI:        testIsAPI(tLogRecord),
 		IsPhraseBank: testIsPhraseBank(tLogRecord),
 		QueryType:    getQueryType(tLogRecord),
 	}
+	out.SetTime(tLogRecord.GetTime())
 	out.ID = out.GenerateDeterministicID()
 	return out, nil
 }
@@ -102,9 +101,9 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
-	return []servicelog.InputRecord{rec}, nil
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
+	return []storage.InputRecord{rec}, nil
 }
 
 func NewTransformer() *Transformer {

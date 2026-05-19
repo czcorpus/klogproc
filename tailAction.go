@@ -25,19 +25,19 @@ import (
 	"syscall"
 	"time"
 
-	"klogproc/analysis"
 	"klogproc/config"
 	"klogproc/healthchk"
 	"klogproc/load/alarm"
 	"klogproc/load/tail"
-	"klogproc/logbuffer"
 	"klogproc/notifications"
-	"klogproc/save"
-	"klogproc/save/elastic"
-	"klogproc/servicelog"
 	"klogproc/trfactory"
 
 	"github.com/czcorpus/cnc-gokit/collections"
+	"github.com/czcorpus/klogproc-core/analysis"
+	"github.com/czcorpus/klogproc-core/logbuffer"
+	"github.com/czcorpus/klogproc-core/save"
+	"github.com/czcorpus/klogproc-core/save/elastic"
+	"github.com/czcorpus/klogproc-core/storage"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/rs/zerolog/log"
 )
@@ -57,14 +57,14 @@ type tailProcessor struct {
 	checkIntervalSecs int
 	maxLinesPerCheck  int
 	conf              *config.Main
-	lineParser        servicelog.LineParser
-	logTransformer    servicelog.LogItemTransformer
+	lineParser        storage.LineParser
+	logTransformer    storage.LogItemTransformer
 	geoDB             *geoip2.Reader
 	anonymousUsers    []int
 	elasticChunkSize  int
-	alarm             servicelog.AppErrorRegister
-	analysis          chan<- servicelog.InputRecord
-	logBuffer         servicelog.ServiceLogBuffer
+	alarm             storage.AppErrorRegister
+	analysis          chan<- storage.InputRecord
+	logBuffer         storage.ServiceLogBuffer
 	procHealthChecker processingHealthChecker
 	dryRun            bool
 }
@@ -72,7 +72,7 @@ type tailProcessor struct {
 func (tp *tailProcessor) OnCheckStart() (tail.LineProcConfirmChan, *tail.LogDataWriter) {
 	itemConfirm := make(tail.LineProcConfirmChan, 10)
 	dataWriter := tail.LogDataWriter{
-		Elastic: make(chan *servicelog.BoundOutputRecord, tp.elasticChunkSize*2),
+		Elastic: make(chan *storage.BoundOutputRecord, tp.elasticChunkSize*2),
 		Ignored: make(chan save.IgnoredItemMsg),
 	}
 
@@ -115,12 +115,12 @@ func (tp *tailProcessor) OnCheckStart() (tail.LineProcConfirmChan, *tail.LogData
 func (tp *tailProcessor) OnEntry(
 	dataWriter *tail.LogDataWriter,
 	item string,
-	logPosition servicelog.LogRange,
+	logPosition storage.LogRange,
 ) {
 	parsed, err := tp.lineParser.ParseLine(item, -1) // TODO (line num - hard to keep track)
 	if err != nil {
 		switch tErr := err.(type) {
-		case servicelog.LineParsingError:
+		case storage.LineParsingError:
 			log.Warn().Err(tErr).Msgf("parsing error in file %s", tp.filePath)
 		default:
 			log.Error().Err(tErr).Send()
@@ -152,7 +152,7 @@ func (tp *tailProcessor) OnEntry(
 				return
 			}
 			applyLocation(precord, tp.geoDB, outRec)
-			dataWriter.Elastic <- &servicelog.BoundOutputRecord{
+			dataWriter.Elastic <- &storage.BoundOutputRecord{
 				FilePath: tp.filePath,
 				Rec:      outRec,
 				FilePos:  logPosition,
@@ -199,8 +199,8 @@ func (tp *tailProcessor) MaxLinesPerCheck() int {
 func newProcAlarm(
 	tailConf *tail.FileConf,
 	conf *tail.Conf,
-	notifier notifications.Notifier,
-) (servicelog.AppErrorRegister, error) {
+	notifier analysis.Notifier,
+) (storage.AppErrorRegister, error) {
 	if conf.NumErrorsAlarm > 0 && conf.ErrCountTimeRangeSecs > 0 && notifier != nil {
 		return alarm.NewTailProcAlarm(
 			conf.NumErrorsAlarm,
@@ -217,10 +217,10 @@ func newTailProcessor(
 	tailConf *tail.FileConf,
 	conf config.Main,
 	geoDB *geoip2.Reader,
-	logBuffers map[string]servicelog.ServiceLogBuffer,
+	logBuffers map[string]storage.ServiceLogBuffer,
 	options *ProcessOptions,
 	healthChecker processingHealthChecker,
-	notifier notifications.Notifier,
+	notifier analysis.Notifier,
 ) *tailProcessor {
 
 	procAlarm, err := newProcAlarm(tailConf, conf.LogTail, notifier)
@@ -280,7 +280,7 @@ func newTailProcessor(
 					Str("appType", tailConf.AppType).
 					Str("file", tailConf.Path).
 					Msg("creating reusable log processing buffer")
-				buffStorage = logbuffer.NewStorage[servicelog.InputRecord, logbuffer.SerializableState](
+				buffStorage = logbuffer.NewStorage[storage.InputRecord, logbuffer.SerializableState](
 					tailConf.Buffer,
 					options.worklogReset,
 					conf.LogTail.LogBufferStateDir,
@@ -291,7 +291,7 @@ func newTailProcessor(
 			}
 
 		} else {
-			buffStorage = logbuffer.NewStorage[servicelog.InputRecord, logbuffer.SerializableState](
+			buffStorage = logbuffer.NewStorage[storage.InputRecord, logbuffer.SerializableState](
 				tailConf.Buffer,
 				options.worklogReset,
 				conf.LogTail.LogBufferStateDir,
@@ -301,7 +301,7 @@ func newTailProcessor(
 		}
 
 	} else {
-		buffStorage = logbuffer.NewDummyStorage[servicelog.InputRecord, logbuffer.SerializableState](
+		buffStorage = logbuffer.NewDummyStorage[storage.InputRecord, logbuffer.SerializableState](
 			func() logbuffer.SerializableState {
 				return &analysis.BotAnalysisState{
 					PrevNums:          logbuffer.NewSampleWithReplac[int](tailConf.Buffer.BotDetection.PrevNumReqsSampleSize),
@@ -344,7 +344,7 @@ func runTailAction(
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	var notifier notifications.Notifier
+	var notifier analysis.Notifier
 	notifier, err := notifications.NewNotifier(
 		conf.EmailNotification, conf.ConomiNotification, conf.TimezoneLocation())
 	if err != nil {
@@ -365,7 +365,7 @@ func runTailAction(
 	var wg sync.WaitGroup
 	wg.Add(len(conf.LogTail.Files))
 
-	logBuffers := make(map[string]servicelog.ServiceLogBuffer)
+	logBuffers := make(map[string]storage.ServiceLogBuffer)
 	fullFiles, err := conf.LogTail.FullFiles()
 	if err != nil {
 		return fmt.Errorf("runTailAction failed to initialize files configuration: %w", err)

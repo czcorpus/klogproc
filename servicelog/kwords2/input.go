@@ -17,10 +17,11 @@
 package kwords2
 
 import (
-	"klogproc/servicelog"
 	"net"
 	"strings"
 	"time"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 /*
@@ -130,7 +131,7 @@ type InputRecord struct {
 }
 
 func (rec *InputRecord) GetTime() time.Time {
-	return servicelog.ConvertDatetimeStringWithMillisNoTZ(rec.Time)
+	return storage.ConvertDatetimeStringWithMillisNoTZ(rec.Time)
 }
 
 func (rec *InputRecord) GetClientIP() net.IP {
@@ -142,7 +143,7 @@ func (rec *InputRecord) GetClientIP() net.IP {
 }
 
 func (rec *InputRecord) ClusteringClientID() string {
-	return servicelog.GenerateRandomClusteringID()
+	return storage.GenerateRandomClusteringID()
 }
 
 func (rec *InputRecord) ClusterSize() int {
@@ -166,9 +167,9 @@ func (rec *InputRecord) IsSuspicious() bool {
 	return false
 }
 
-func (rec *InputRecord) ExportError() *servicelog.ErrorRecord {
+func (rec *InputRecord) ExportError() *storage.ErrorRecord {
 	if rec.Exception != "" {
-		return &servicelog.ErrorRecord{
+		return &storage.ErrorRecord{
 			Name: rec.Exception,
 		}
 	}

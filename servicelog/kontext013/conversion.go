@@ -18,9 +18,9 @@ package kontext013
 
 import (
 	"strconv"
-	"time"
 
-	"klogproc/servicelog"
+	"github.com/czcorpus/klogproc-core/storage"
+	kontext013Core "github.com/czcorpus/klogproc-core/storage/kontext013"
 )
 
 // Transformer converts a source log object into a destination one
@@ -29,28 +29,26 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeKontext
+	return storage.AppTypeKontext
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
 	fullCorpname := importCorpname(tLogRecord)
-	r := &OutputRecord{
+	r := &kontext013Core.OutputRecord{
 		Type:           t.AppType(),
 		Action:         tLogRecord.Action,
 		Corpus:         fullCorpname.Corpname,
 		AlignedCorpora: tLogRecord.GetAlignedCorpora(),
-		Datetime:       tLogRecord.GetTime().Format(time.RFC3339),
-		datetime:       tLogRecord.GetTime(),
 		IPAddress:      tLogRecord.GetClientIP().String(),
-		IsAnonymous:    servicelog.UserBelongsToList(tLogRecord.UserID, t.AnonymousUsers),
-		IsQuery:        isEntryQuery(tLogRecord.Action),
+		IsAnonymous:    storage.UserBelongsToList(tLogRecord.UserID, t.AnonymousUsers),
+		IsQuery:        kontext013Core.IsEntryQuery(tLogRecord.Action),
 		Limited:        fullCorpname.limited,
 		ProcTime:       tLogRecord.ProcTime,
 		QueryType:      importQueryType(tLogRecord),
@@ -58,6 +56,7 @@ func (t *Transformer) Transform(
 		UserID:         strconv.Itoa(tLogRecord.UserID),
 		Error:          tLogRecord.Error.AsPointer(),
 	}
+	r.SetTime(tLogRecord.GetTime())
 	r.ID = r.GenerateDeterministicID()
 	return r, nil
 }
@@ -67,7 +66,7 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
-	return []servicelog.InputRecord{rec}, nil
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
+	return []storage.InputRecord{rec}, nil
 }

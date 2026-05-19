@@ -17,9 +17,11 @@
 package mapka
 
 import (
-	"klogproc/servicelog"
 	"net"
 	"time"
+
+	"github.com/czcorpus/klogproc-core/storage"
+	mapkaCore "github.com/czcorpus/klogproc-core/storage/mapka"
 )
 
 // Request is a simple representation of
@@ -31,20 +33,13 @@ type Request struct {
 	RemoteAddr       string `json:"REMOTE_ADDR"`
 }
 
-// RequestParams is a mix of some significant params of watched requests
-type RequestParams struct {
-	CardType    *string `json:"cardType"`
-	CardFolder  *string `json:"cardFolder"`
-	OverlayFile *string `json:"overlayFile"`
-}
-
 // InputRecord represents a raw-parsed version of MAPKA's access log
 type InputRecord struct {
 	Action        string
 	Path          string
 	Datetime      string
 	Request       *Request
-	Params        *RequestParams `json:"params"`
+	Params        *mapkaCore.RequestParams `json:"params"`
 	ProcTime      float64
 	isProcessable bool
 }
@@ -52,7 +47,7 @@ type InputRecord struct {
 // GetTime returns a normalized log date and time information
 func (r *InputRecord) GetTime() time.Time {
 	if r.isProcessable {
-		return servicelog.ConvertAccessLogDatetimeString(r.Datetime)
+		return storage.ConvertAccessLogDatetimeString(r.Datetime)
 	}
 	return time.Time{}
 }
@@ -66,7 +61,7 @@ func (r *InputRecord) GetClientIP() net.IP {
 }
 
 func (rec *InputRecord) ClusteringClientID() string {
-	return servicelog.GenerateRandomClusteringID()
+	return storage.GenerateRandomClusteringID()
 }
 
 func (rec *InputRecord) ClusterSize() int {

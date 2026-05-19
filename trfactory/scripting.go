@@ -18,14 +18,15 @@ package trfactory
 
 import (
 	"fmt"
-	"klogproc/notifications"
-	"klogproc/scripting"
-	"klogproc/servicelog"
-	"klogproc/servicelog/kontext015"
-	"klogproc/servicelog/korpusdb"
-	"klogproc/servicelog/kwords2"
-	"klogproc/servicelog/ske"
-	"klogproc/servicelog/treq"
+
+	"github.com/czcorpus/klogproc-core/analysis"
+	"github.com/czcorpus/klogproc-core/scripting"
+	"github.com/czcorpus/klogproc-core/storage"
+	k015Core "github.com/czcorpus/klogproc-core/storage/kontext015"
+	kdbCore "github.com/czcorpus/klogproc-core/storage/korpusdb"
+	kwords2Core "github.com/czcorpus/klogproc-core/storage/kwords2"
+	skeCore "github.com/czcorpus/klogproc-core/storage/ske"
+	treqCore "github.com/czcorpus/klogproc-core/storage/treq"
 )
 
 // GetLogTransformer creates a log transformer with optional support for Lua scripting.
@@ -33,10 +34,10 @@ import (
 // access, the transformer delegates its methods to the traditional "static" transformer
 // (i.e. the one compiled directly to klogproc).
 func GetLogTransformer(
-	logConf servicelog.LogProcConf,
+	logConf storage.LogProcConf,
 	anonymousUsers []int,
 	realtimeClock bool,
-	emailNotifier notifications.Notifier,
+	emailNotifier analysis.Notifier,
 ) (*scripting.Transformer, error) {
 	tr, err := GetStaticLogTransformer(logConf, anonymousUsers, realtimeClock, emailNotifier)
 	if err != nil {
@@ -49,64 +50,64 @@ func GetLogTransformer(
 
 	version := logConf.GetVersion()
 	switch logConf.GetAppType() {
-	case servicelog.AppTypeKontext:
-		if version == servicelog.AppVersionKontext018 ||
-			version == servicelog.AppVersionKontext017 ||
-			version == servicelog.AppVersionKontext017API ||
-			version == servicelog.AppVersionKontext016 ||
-			version == servicelog.AppVersionKontext015 {
+	case storage.AppTypeKontext:
+		if version == storage.AppVersionKontext018 ||
+			version == storage.AppVersionKontext017 ||
+			version == storage.AppVersionKontext017API ||
+			version == storage.AppVersionKontext016 ||
+			version == storage.AppVersionKontext015 {
 			env, err := scripting.CreateEnvironment(
 				logConf,
 				anonymousUsers,
 				tr,
-				func() servicelog.OutputRecord { return &kontext015.OutputRecord{} },
+				func() storage.OutputRecord { return &k015Core.OutputRecord{} },
 			)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)
 			}
 			return scripting.NewTransformer(env, tr), nil
 		}
-	case servicelog.AppTypeKorpusDB:
+	case storage.AppTypeKorpusDB:
 		env, err := scripting.CreateEnvironment(
 			logConf,
 			anonymousUsers,
 			tr,
-			func() servicelog.OutputRecord { return &korpusdb.OutputRecord{} },
+			func() storage.OutputRecord { return &kdbCore.OutputRecord{} },
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)
 		}
 		return scripting.NewTransformer(env, tr), nil
-	case servicelog.AppTypeKwords:
-		if version == servicelog.AppVersionKwords2 {
+	case storage.AppTypeKwords:
+		if version == storage.AppVersionKwords2 {
 			env, err := scripting.CreateEnvironment(
 				logConf,
 				anonymousUsers,
 				tr,
-				func() servicelog.OutputRecord { return &kwords2.OutputRecord{} },
+				func() storage.OutputRecord { return &kwords2Core.OutputRecord{} },
 			)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)
 			}
 			return scripting.NewTransformer(env, tr), nil
 		}
-	case servicelog.AppTypeSke:
+	case storage.AppTypeSke:
 		env, err := scripting.CreateEnvironment(
 			logConf,
 			anonymousUsers,
 			tr,
-			func() servicelog.OutputRecord { return &ske.OutputRecord{} },
+			func() storage.OutputRecord { return &skeCore.OutputRecord{} },
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)
 		}
 		return scripting.NewTransformer(env, tr), nil
-	case servicelog.AppTypeTreq:
+	case storage.AppTypeTreq:
 		env, err := scripting.CreateEnvironment(
 			logConf,
 			anonymousUsers,
 			tr,
-			func() servicelog.OutputRecord { return &treq.OutputRecord{} },
+			func() storage.OutputRecord { return &treqCore.OutputRecord{} },
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create scripting transformer for %s: %w", logConf.GetAppType(), err)

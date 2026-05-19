@@ -16,16 +16,6 @@
 
 package load
 
-import (
-	"errors"
-
-	"github.com/rs/zerolog/log"
-)
-
-const (
-	DfltPrevNumReqsSampleSize = 10
-)
-
 type ClusteringDBScanConf struct {
 	MinDensity int     `json:"minDensity"`
 	Epsilon    float64 `json:"epsilon"`
@@ -56,69 +46,4 @@ type BotDetectionConf struct {
 	TrafficReportingThreshold float64 `json:"trafficReportingThreshold"`
 
 	PrevNumReqsSampleSize int `json:"prevNumReqsSampleSize"`
-}
-
-type BufferConf struct {
-
-	// ID buffers with ID can be shared between multiple log readers.
-	// This makes sense mostly for services composed of multiple
-	// homogenous processes each writing to its log file (e.g. Node.JS)
-	ID string `json:"id"`
-
-	HistoryLookupItems int `json:"historyLookupItems"`
-
-	// AnalysisIntervalSecs specifies how often klogproc analyses previous
-	// records. The interval is also important because it is a base for other
-	// configured values (typically different limits/thresholds)
-	AnalysisIntervalSecs int                   `json:"analysisIntervalSecs"`
-	ClusteringDBScan     *ClusteringDBScanConf `json:"clusteringDbScan"`
-	BotDetection         *BotDetectionConf     `json:"botDetection"`
-}
-
-func (bc *BufferConf) IsShared() bool {
-	return bc.ID != ""
-}
-
-func (bc *BufferConf) IsReference() bool {
-	return bc != nil && bc.ID != "" && bc.HistoryLookupItems == 0 &&
-		bc.BotDetection == nil && bc.ClusteringDBScan == nil &&
-		bc.AnalysisIntervalSecs == 0
-}
-
-func (bc *BufferConf) HasConfiguredBufferProcessing() bool {
-	return bc.HistoryLookupItems > 0 && bc.AnalysisIntervalSecs > 0 &&
-		(bc.BotDetection != nil || bc.ClusteringDBScan != nil)
-}
-
-func (bc *BufferConf) Validate() error {
-	if bc.HistoryLookupItems <= 0 {
-		return errors.New(
-			"failed to validate batch file processing buffer: historyLookupItems must be > 0")
-	}
-	if bc.AnalysisIntervalSecs <= 0 {
-		return errors.New(
-			"failed to validate batch file processing buffer: analysisIntervalSecs must be > 0")
-	}
-	if bc.ClusteringDBScan != nil {
-		if bc.ClusteringDBScan.Epsilon <= 0 {
-			return errors.New(
-				"failed to validate batch file processing buffer: clusteringDbScan.epsilon must be > 0")
-		}
-		if bc.ClusteringDBScan.MinDensity <= 0 {
-			return errors.New(
-				"failed to validate batch file processing buffer: clusteringDbScan.minDensity must be > 0")
-		}
-	}
-	if bc.BotDetection != nil {
-		if bc.BotDetection.PrevNumReqsSampleSize == 0 {
-			log.Warn().
-				Int("value", DfltPrevNumReqsSampleSize).
-				Msg("botDetection.prevNumReqsSampleSize not set, using default")
-			bc.BotDetection.PrevNumReqsSampleSize = DfltPrevNumReqsSampleSize
-
-		} else if bc.BotDetection.PrevNumReqsSampleSize < 0 {
-			return errors.New("failed to validate botDetection.prevNumReqsSampleSize, must be > 0")
-		}
-	}
-	return nil
 }

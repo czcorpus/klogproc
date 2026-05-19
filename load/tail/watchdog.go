@@ -25,9 +25,9 @@ import (
 	"sync"
 	"time"
 
-	"klogproc/load"
-	"klogproc/save"
-	"klogproc/servicelog"
+	"github.com/czcorpus/klogproc-core/logbuffer"
+	"github.com/czcorpus/klogproc-core/save"
+	"github.com/czcorpus/klogproc-core/storage"
 
 	"github.com/czcorpus/cnc-gokit/fs"
 	"github.com/rs/zerolog/log"
@@ -45,10 +45,10 @@ type FileConf struct {
 	AppType string `json:"appType"`
 	// Version represents a major and minor version signature as used in semantic versioning
 	// (e.g. 0.15, 1.2)
-	Version             string           `json:"version"`
-	Buffer              *load.BufferConf `json:"buffer"`
-	ScriptPath          string           `json:"scriptPath"`
-	InactivitySecsAlarm int              `json:"inactivitySecsAlarm"`
+	Version             string                `json:"version"`
+	Buffer              *logbuffer.BufferConf `json:"buffer"`
+	ScriptPath          string                `json:"scriptPath"`
+	InactivitySecsAlarm int                   `json:"inactivitySecsAlarm"`
 }
 
 func (fc *FileConf) GetAppType() string {
@@ -59,7 +59,7 @@ func (fc *FileConf) GetVersion() string {
 	return fc.Version
 }
 
-func (fc *FileConf) GetBuffer() *load.BufferConf {
+func (fc *FileConf) GetBuffer() *logbuffer.BufferConf {
 	return fc.Buffer
 }
 
@@ -125,7 +125,7 @@ func (conf *Conf) GetInactivityAlarmLimits() map[string]int {
 // only for one of the processors (which is reasonable as
 // otherwise, there would be quite lot of rendundant conf. data)
 func (conf *Conf) FullFiles() ([]FileConf, error) {
-	buffConfs := make(map[string]*load.BufferConf)
+	buffConfs := make(map[string]*logbuffer.BufferConf)
 	for _, v := range conf.Files {
 		if v.Buffer != nil && v.Buffer.HasConfiguredBufferProcessing() && v.Buffer.IsShared() {
 			buffConfs[v.Buffer.ID] = v.Buffer
@@ -187,7 +187,7 @@ type LineProcConfirmChan chan interface{}
 // in the previous check, both runs can independently write
 // their data.
 type LogDataWriter struct {
-	Elastic chan *servicelog.BoundOutputRecord
+	Elastic chan *storage.BoundOutputRecord
 	Ignored chan save.IgnoredItemMsg
 }
 
@@ -207,7 +207,7 @@ type FileTailProcessor interface {
 	OnCheckStart() (LineProcConfirmChan, *LogDataWriter)
 
 	// OnEntry is called on each processed line
-	OnEntry(writer *LogDataWriter, item string, logPosition servicelog.LogRange)
+	OnEntry(writer *LogDataWriter, item string, logPosition storage.LogRange)
 
 	// OnCheckStop marks the end of the single file check
 	OnCheckStop(writer *LogDataWriter)

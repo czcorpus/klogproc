@@ -17,9 +17,11 @@
 package korpusdb
 
 import (
-	"klogproc/servicelog"
 	"net"
 	"time"
+
+	"github.com/czcorpus/klogproc-core/storage"
+	kdbCore "github.com/czcorpus/klogproc-core/storage/korpusdb"
 )
 
 type QueryFeat struct {
@@ -33,17 +35,12 @@ type Query struct {
 	Feats []QueryFeat `json:"feats"`
 }
 
-type Pagination struct {
-	From int `json:"from"`
-	Size int `json:"size"`
-}
-
 type Request struct {
-	Feats      []string                 `json:"feats"`
-	Query      Query                    `json:"query"`
-	Page       Pagination               `json:"page"`
-	Sort       []map[string]interface{} `json:"sort"`
-	ClientFlag string                   `json:"_client"`
+	Feats      []string           `json:"feats"`
+	Query      Query              `json:"query"`
+	Page       kdbCore.Pagination `json:"page"`
+	Sort       []map[string]any   `json:"sort"`
+	ClientFlag string             `json:"_client"`
 }
 
 // InputRecord is a KorpusDB parsed log record
@@ -57,7 +54,7 @@ type InputRecord struct {
 }
 
 func (rec *InputRecord) GetTime() time.Time {
-	return servicelog.ConvertDatetimeStringWithMillisNoTZ(rec.TS)
+	return storage.ConvertDatetimeStringWithMillisNoTZ(rec.TS)
 }
 
 func (rec *InputRecord) GetClientIP() net.IP {
@@ -65,7 +62,7 @@ func (rec *InputRecord) GetClientIP() net.IP {
 }
 
 func (rec *InputRecord) ClusteringClientID() string {
-	return servicelog.GenerateRandomClusteringID()
+	return storage.GenerateRandomClusteringID()
 }
 
 func (rec *InputRecord) ClusterSize() int {

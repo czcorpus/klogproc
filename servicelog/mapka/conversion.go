@@ -18,38 +18,36 @@ package mapka
 
 import (
 	"strconv"
-	"time"
 
-	"klogproc/servicelog"
+	"github.com/czcorpus/klogproc-core/storage"
+	mapkaCore "github.com/czcorpus/klogproc-core/storage/mapka"
 )
 
 // Transformer converts a source log object into a destination one
 type Transformer struct {
-	prevReqs       *PrevReqPool
+	prevReqs       *mapkaCore.PrevReqPool
 	anonymousUsers []int
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeMapka
+	return storage.AppTypeMapka
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
 	userID := -1
 
-	r := &OutputRecord{
+	r := &mapkaCore.OutputRecord{
 		Type:        t.AppType(),
-		time:        tLogRecord.GetTime(),
-		Datetime:    tLogRecord.GetTime().Format(time.RFC3339),
 		IPAddress:   tLogRecord.Request.RemoteAddr,
 		UserAgent:   tLogRecord.Request.HTTPUserAgent,
-		IsAnonymous: userID == -1 || servicelog.UserBelongsToList(userID, t.anonymousUsers),
+		IsAnonymous: userID == -1 || storage.UserBelongsToList(userID, t.anonymousUsers),
 		IsQuery:     false,
 		UserID:      strconv.Itoa(userID),
 		Action:      tLogRecord.Action,
@@ -57,6 +55,7 @@ func (t *Transformer) Transform(
 		ProcTime:    tLogRecord.ProcTime,
 		Params:      tLogRecord.Params,
 	}
+	r.SetTime(tLogRecord.GetTime())
 	r.ID = r.GenerateDeterministicID()
 	if t.prevReqs.ContainsSimilar(r) && r.Action == "overlay" ||
 		!t.prevReqs.ContainsSimilar(r) && r.Action == "text" {
@@ -71,9 +70,9 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
-	return []servicelog.InputRecord{rec}, nil
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
+	return []storage.InputRecord{rec}, nil
 }
 
 // NewTransformer is a default constructor for the Transformer.
@@ -83,6 +82,6 @@ func NewTransformer(
 ) *Transformer {
 	return &Transformer{
 		anonymousUsers: anonymousUsers,
-		prevReqs:       NewPrevReqPool(5),
+		prevReqs:       mapkaCore.NewPrevReqPool(5),
 	}
 }

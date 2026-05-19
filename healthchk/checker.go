@@ -23,10 +23,10 @@ package healthchk
 import (
 	"context"
 	"fmt"
-	"klogproc/notifications"
 	"sync"
 	"time"
 
+	"github.com/czcorpus/klogproc-core/analysis"
 	"github.com/rs/zerolog/log"
 )
 
@@ -47,7 +47,7 @@ type ConomiNotifier struct {
 	incomingUpdates chan updateInfo
 	maxInactivity   map[string]time.Duration
 	dataLock        sync.Mutex
-	notifier        notifications.Notifier
+	notifier        analysis.Notifier
 	notificationTag string
 }
 
@@ -131,7 +131,7 @@ func NewConomiNotifier(
 	tz *time.Location,
 	intervalSecs int,
 	maxInactivitySecs map[string]int,
-	notifier notifications.Notifier,
+	notifier analysis.Notifier,
 	notificationTag string,
 ) *ConomiNotifier {
 

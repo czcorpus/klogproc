@@ -24,11 +24,11 @@ import (
 	"klogproc/fsop"
 	"klogproc/load/batch"
 	"klogproc/load/tail"
-	"klogproc/save/elastic"
 
 	"github.com/czcorpus/cnc-gokit/logging"
 	"github.com/czcorpus/cnc-gokit/mail"
 	conomiClient "github.com/czcorpus/conomi/client"
+	"github.com/czcorpus/klogproc-core/save/elastic"
 	"github.com/rs/zerolog/log"
 )
 

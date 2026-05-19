@@ -17,8 +17,6 @@ package trfactory
 import (
 	"fmt"
 
-	"klogproc/notifications"
-	"klogproc/servicelog"
 	"klogproc/servicelog/apiguard"
 	apiguardKontext018 "klogproc/servicelog/apiguard-kontext018"
 	apiguardKwords "klogproc/servicelog/apiguard-kwords"
@@ -46,64 +44,67 @@ import (
 	"klogproc/servicelog/wag06"
 	"klogproc/servicelog/wag07"
 	"klogproc/servicelog/wsserver"
+
+	"github.com/czcorpus/klogproc-core/analysis"
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 // GetStaticLogTransformer returns a type-safe transformer for a concrete app type
 func GetStaticLogTransformer(
-	logConf servicelog.LogProcConf,
+	logConf storage.LogProcConf,
 	anonymousUsers []int,
 	realtimeClock bool,
-	emailNotifier notifications.Notifier,
-) (servicelog.LogItemTransformer, error) {
+	emailNotifier analysis.Notifier,
+) (storage.LogItemTransformer, error) {
 
 	appType := logConf.GetAppType()
 	version := logConf.GetVersion()
 	bufferConf := logConf.GetBuffer()
 
 	switch appType {
-	case servicelog.AppTypeAPIGuard:
+	case storage.AppTypeAPIGuard:
 		return &apiguard.Transformer{}, nil
-	case servicelog.AppTypeAPIGuardMquery:
+	case storage.AppTypeAPIGuardMquery:
 		return &apiguardMquery.Transformer{}, nil
-	case servicelog.AppTypeAPIGuardKontext:
+	case storage.AppTypeAPIGuardKontext:
 		switch version {
-		case servicelog.AppVersionKontext018:
+		case storage.AppVersionKontext018:
 			return &apiguardKontext018.Transformer{AnonymousUsers: anonymousUsers}, nil
 		default:
 			return nil, fmt.Errorf("cannot create ApiGuard transformer, unsupported KonText version: %s", version)
 		}
-	case servicelog.AppTypeAPIGuardTreq:
+	case storage.AppTypeAPIGuardTreq:
 		switch version {
-		case servicelog.AppVersionTreq1API:
+		case storage.AppVersionTreq1API:
 			return nil, fmt.Errorf("cannot create ApiGuard transformer, unsupported Treq version: %s", version)
 		default:
 			return &apiguardTreq.Transformer{AnonymousUsers: anonymousUsers}, nil
 		}
-	case servicelog.AppTypeAPIGuardKwords:
+	case storage.AppTypeAPIGuardKwords:
 		switch version {
-		case servicelog.AppVersionKwords1:
+		case storage.AppVersionKwords1:
 			return &apiguardKwords.Transformer{AnonymousUsers: anonymousUsers}, nil
 		default:
 			return nil, fmt.Errorf("cannot create ApiGuard transformer, unsupported KWords version: %s", version)
 		}
-	case servicelog.AppTypeAkalex, servicelog.AppTypeCalc, servicelog.AppTypeLists,
-		servicelog.AppTypeQuitaUp, servicelog.AppTypeGramatikat:
+	case storage.AppTypeAkalex, storage.AppTypeCalc, storage.AppTypeLists,
+		storage.AppTypeQuitaUp, storage.AppTypeGramatikat:
 		return shiny.NewTransformer(appType, anonymousUsers), nil
-	case servicelog.AppTypeKontext:
+	case storage.AppTypeKontext:
 		switch version {
-		case servicelog.AppVersionKontext013, servicelog.AppVersionKontext014:
+		case storage.AppVersionKontext013, storage.AppVersionKontext014:
 			return &kontext013.Transformer{
 				AnonymousUsers: anonymousUsers}, nil
-		case servicelog.AppVersionKontext015,
-			servicelog.AppVersionKontext016,
-			servicelog.AppVersionKontext017:
+		case storage.AppVersionKontext015,
+			storage.AppVersionKontext016,
+			storage.AppVersionKontext017:
 			return &kontext015.Transformer{
 				AnonymousUsers: anonymousUsers,
 				IsAPI:          true,
 			}, nil
-		case servicelog.AppVersionKontext017API:
+		case storage.AppVersionKontext017API:
 			return &kontext015.Transformer{AnonymousUsers: anonymousUsers}, nil
-		case servicelog.AppVersionKontext018:
+		case storage.AppVersionKontext018:
 			return kontext018.NewTransformer(
 				bufferConf,
 				realtimeClock,
@@ -113,61 +114,61 @@ func GetStaticLogTransformer(
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported KonText version: %s", version)
 		}
-	case servicelog.AppTypeKwords:
+	case storage.AppTypeKwords:
 		switch version {
-		case servicelog.AppVersionKwords1:
+		case storage.AppVersionKwords1:
 			return &kwords.Transformer{AnonymousUsers: anonymousUsers}, nil
-		case servicelog.AppVersionKwords2:
+		case storage.AppVersionKwords2:
 			return &kwords2.Transformer{AnonymousUsers: anonymousUsers}, nil
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported KWords version: %s", version)
 		}
 
-	case servicelog.AppTypeKorpusDB:
+	case storage.AppTypeKorpusDB:
 		return korpusdb.NewTransformer(), nil
-	case servicelog.AppTypeMapka:
+	case storage.AppTypeMapka:
 		switch version {
-		case servicelog.AppVersionMapka1:
+		case storage.AppVersionMapka1:
 			return mapka.NewTransformer(anonymousUsers), nil
-		case servicelog.AppVersionMapka2:
+		case storage.AppVersionMapka2:
 			return mapka2.NewTransformer(anonymousUsers), nil
-		case servicelog.AppVersionMapka3:
+		case storage.AppVersionMapka3:
 			return mapka3.NewTransformer(bufferConf, anonymousUsers, realtimeClock), nil
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported Mapka version: %s", version)
 		}
-	case servicelog.AppTypeMorfio:
+	case storage.AppTypeMorfio:
 		return &morfio.Transformer{
 			AnonymousUsers: anonymousUsers}, nil
-	case servicelog.AppTypeSke:
+	case storage.AppTypeSke:
 		return ske.NewTransformer(anonymousUsers), nil
-	case servicelog.AppTypeSyd:
+	case storage.AppTypeSyd:
 		return syd.NewTransformer(version, anonymousUsers), nil
-	case servicelog.AppTypeTreq:
+	case storage.AppTypeTreq:
 		switch version {
-		case servicelog.AppVersionTreq1API:
+		case storage.AppVersionTreq1API:
 			return &treqapi.Transformer{AnonymousUsers: anonymousUsers}, nil
 		default:
 			return &treq.Transformer{AnonymousUsers: anonymousUsers}, nil
 		}
-	case servicelog.AppTypeWag:
+	case storage.AppTypeWag:
 		switch version {
-		case servicelog.AppVersionWag06:
+		case storage.AppVersionWag06:
 			return &wag06.Transformer{}, nil
-		case servicelog.AppVersionWag07:
+		case storage.AppVersionWag07:
 			return wag07.NewTransformer(bufferConf, anonymousUsers, realtimeClock, emailNotifier), nil
 		default:
 			return nil, fmt.Errorf("cannot create transformer, unsupported WaG version: %s", version)
 		}
-	case servicelog.AppTypeWsserver:
+	case storage.AppTypeWsserver:
 		return &wsserver.Transformer{}, nil
-	case servicelog.AppTypeMasm:
+	case storage.AppTypeMasm:
 		return &masm.Transformer{}, nil
-	case servicelog.AppTypeMquery:
+	case storage.AppTypeMquery:
 		return &mquery.Transformer{}, nil
-	case servicelog.AppTypeMquerySRU:
+	case storage.AppTypeMquerySRU:
 		return &mquerysru.Transformer{}, nil
-	case servicelog.AppTypeVLO:
+	case storage.AppTypeVLO:
 		return &vlo.Transformer{}, nil
 	default:
 		return nil, fmt.Errorf("cannot find log transformer for app type %s", appType)

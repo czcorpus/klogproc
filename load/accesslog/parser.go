@@ -18,11 +18,11 @@ package accesslog
 
 import (
 	"fmt"
-	"klogproc/servicelog"
 	"net/url"
 	"strconv"
 	"strings"
 
+	"github.com/czcorpus/klogproc-core/storage"
 	"github.com/rs/zerolog/log"
 )
 
@@ -153,7 +153,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*ParsedAccessLog, erro
 	var tokens []string
 	tokens, err = lp.tokenize(s)
 	if err != nil {
-		return nil, servicelog.NewLineParsingError(lineNum, err.Error())
+		return nil, storage.NewLineParsingError(lineNum, err.Error())
 	}
 
 	ans.IPAddress = tokens[0]
@@ -167,14 +167,14 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*ParsedAccessLog, erro
 		ans.HTTPVersion = urlBlock[2]
 		parsedURL, err = url.Parse(urlBlock[1])
 		if err != nil {
-			return nil, servicelog.NewLineParsingError(lineNum, err.Error())
+			return nil, storage.NewLineParsingError(lineNum, err.Error())
 		}
 	}
 	if parsedURL != nil {
 		ans.Path = parsedURL.Path
 		ans.URLArgs, err = url.ParseQuery(parsedURL.RawQuery)
 		if err != nil {
-			return nil, servicelog.NewLineParsingError(lineNum, err.Error())
+			return nil, storage.NewLineParsingError(lineNum, err.Error())
 		}
 	}
 	ans.Referrer = tokens[7]

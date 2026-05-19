@@ -17,9 +17,10 @@
 package kwords
 
 import (
-	"klogproc/servicelog"
 	"net"
 	"time"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 // InputRecord is a Kwords parsed log record
@@ -40,7 +41,7 @@ type InputRecord struct {
 }
 
 func (rec *InputRecord) GetTime() time.Time {
-	return servicelog.ConvertDatetimeString(rec.Datetime)
+	return storage.ConvertDatetimeString(rec.Datetime)
 }
 
 func (rec *InputRecord) GetClientIP() net.IP {
@@ -48,7 +49,7 @@ func (rec *InputRecord) GetClientIP() net.IP {
 }
 
 func (rec *InputRecord) ClusteringClientID() string {
-	return servicelog.GenerateRandomClusteringID()
+	return storage.GenerateRandomClusteringID()
 }
 
 func (rec *InputRecord) ClusterSize() int {

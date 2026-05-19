@@ -18,9 +18,10 @@ package kontext013
 
 import (
 	"fmt"
-	"klogproc/servicelog"
 	"regexp"
 	"strings"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 var (
@@ -46,7 +47,7 @@ func getLineType(s string) string {
 
 // LineParser is a parser for reading KonText application logs
 type LineParser struct {
-	appErrorRegister servicelog.AppErrorRegister
+	appErrorRegister storage.AppErrorRegister
 }
 
 func (lp *LineParser) isIgnoredError(s string) bool {
@@ -68,11 +69,11 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 		if tp == "ERROR" && !lp.isIgnoredError(s) {
 			lp.appErrorRegister.OnError(s)
 		}
-		return nil, servicelog.NewLineParsingError(lineNum, fmt.Sprintf("ignored non-query entry"))
+		return nil, storage.NewLineParsingError(lineNum, fmt.Sprintf("ignored non-query entry"))
 	}
 }
 
 // NewLineParser is a factory for LineParser
-func NewLineParser(appErrRegister servicelog.AppErrorRegister) *LineParser {
+func NewLineParser(appErrRegister storage.AppErrorRegister) *LineParser {
 	return &LineParser{appErrorRegister: appErrRegister}
 }

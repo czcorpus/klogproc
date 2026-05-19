@@ -17,12 +17,12 @@
 package apiguardTreq
 
 import (
-	"klogproc/servicelog"
 	"klogproc/servicelog/apiguard"
-	"klogproc/servicelog/treq"
 	"strconv"
 	"strings"
 
+	"github.com/czcorpus/klogproc-core/storage"
+	treqCore "github.com/czcorpus/klogproc-core/storage/treq"
 	"github.com/rs/zerolog/log"
 )
 
@@ -32,16 +32,16 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeAPIGuardTreq
+	return storage.AppTypeAPIGuardTreq
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*apiguard.InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
 
 	var userID string
@@ -49,15 +49,15 @@ func (t *Transformer) Transform(
 		userID = strconv.Itoa(*tLogRecord.UserID)
 	}
 
-	r := &treq.OutputRecord{
-		Type:        servicelog.AppTypeTreq,
+	r := &treqCore.OutputRecord{
+		Type:        storage.AppTypeTreq,
 		IsAPI:       true,
 		IsQuery:     true,
 		QLang:       tLogRecord.Args.Get("from"),
 		SecondLang:  tLogRecord.Args.Get("to"),
 		IPAddress:   tLogRecord.IPAddress,
 		UserID:      userID,
-		IsAnonymous: tLogRecord.UserID == nil || servicelog.UserBelongsToList(*tLogRecord.UserID, t.AnonymousUsers),
+		IsAnonymous: tLogRecord.UserID == nil || storage.UserBelongsToList(*tLogRecord.UserID, t.AnonymousUsers),
 		IsRegexp:    tLogRecord.Args.Get("regex") == "true",
 		IsCaseInsen: tLogRecord.Args.Get("ci") == "true",
 		IsMultiWord: tLogRecord.Args.Get("multiword") == "true",
@@ -73,22 +73,22 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
 	tLogRecord, ok := rec.(*apiguard.InputRecord)
 	if !ok {
-		return nil, servicelog.ErrFailedTypeAssertion
+		return nil, storage.ErrFailedTypeAssertion
 	}
 
 	if !strings.HasSuffix(tLogRecord.Service, "treq") {
 		log.Warn().Msg("Found non-treq service record, skipping")
-		return []servicelog.InputRecord{}, nil
+		return []storage.InputRecord{}, nil
 	}
 
 	if !tLogRecord.IsCached {
 		log.Debug().Msg("Skipping non-cached treq request")
-		return []servicelog.InputRecord{}, nil
+		return []storage.InputRecord{}, nil
 	}
 
-	return []servicelog.InputRecord{rec}, nil
+	return []storage.InputRecord{rec}, nil
 }

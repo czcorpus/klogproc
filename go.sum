@@ -11,6 +11,8 @@ github.com/czcorpus/cnc-gokit v0.19.0 h1:fhhN5Niekn2lY4aVHR3ENNlt5G+9DLGmPIZHYKD
 github.com/czcorpus/cnc-gokit v0.19.0/go.mod h1:4vHbyf+qV8kHHwvWnPhiccMo5pVGY3tnSSRCP0mr2xc=
 github.com/czcorpus/conomi v0.0.7 h1:1E36ozDNfKmT0OKca2wSZPitsF8Zz0+Ys9d0WRY3Ay4=
 github.com/czcorpus/conomi v0.0.7/go.mod h1:mcgk79NYf35sco1unxJE3W/xiLddUJI6RjuGwytc5So=
+github.com/czcorpus/klogproc-core v1.5.2 h1:9Fgo4+mR9ss4lQ+AAcUDxRDvdUYhoeQO/KMdO+ToI18=
+github.com/czcorpus/klogproc-core v1.5.2/go.mod h1:Rfeatc2rCFQOZv+Z7Q+V0LeE2V5+aMDaxAMcTBCrbf0=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

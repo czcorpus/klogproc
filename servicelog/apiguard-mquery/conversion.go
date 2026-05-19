@@ -17,12 +17,12 @@
 package apiguardMquery
 
 import (
-	"klogproc/servicelog"
 	"klogproc/servicelog/apiguard"
-	"klogproc/servicelog/mquery"
 	"strings"
 
 	"github.com/czcorpus/cnc-gokit/unireq"
+	"github.com/czcorpus/klogproc-core/storage"
+	apiguardMqueryCore "github.com/czcorpus/klogproc-core/storage/mquery"
 	"github.com/rs/zerolog/log"
 )
 
@@ -31,16 +31,16 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeAPIGuardMquery
+	return storage.AppTypeAPIGuardMquery
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*apiguard.InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
 
 	var action, corpusID string
@@ -52,8 +52,8 @@ func (t *Transformer) Transform(
 		action = split[len(split)-2]
 		corpusID = split[len(split)-1]
 	}
-	r := &mquery.OutputRecord{
-		Type:      servicelog.AppTypeMquery,
+	r := &apiguardMqueryCore.OutputRecord{
+		Type:      storage.AppTypeMquery,
 		Level:     tLogRecord.Level,
 		IsCached:  tLogRecord.IsCached,
 		IPAddress: tLogRecord.IPAddress,
@@ -73,28 +73,28 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
 	tLogRecord, ok := rec.(*apiguard.InputRecord)
 	if !ok {
-		return nil, servicelog.ErrFailedTypeAssertion
+		return nil, storage.ErrFailedTypeAssertion
 	}
 
 	if !strings.HasSuffix(tLogRecord.Service, "mquery") {
 		log.Warn().Msg("Found non-mquery service record, skipping")
-		return []servicelog.InputRecord{}, nil
+		return []storage.InputRecord{}, nil
 	}
 
 	if !tLogRecord.IsCached {
-		return []servicelog.InputRecord{}, nil
+		return []storage.InputRecord{}, nil
 	}
 
 	for _, v := range []string{"login", "preflight", "merge-freqs", "speeches", "time-dist-word"} {
 		if strings.HasSuffix(tLogRecord.RequestPath, v) {
 			log.Debug().Msgf("Skipping virtual apiguard mquery action: %s", v)
-			return []servicelog.InputRecord{}, nil
+			return []storage.InputRecord{}, nil
 		}
 	}
 
-	return []servicelog.InputRecord{rec}, nil
+	return []storage.InputRecord{rec}, nil
 }

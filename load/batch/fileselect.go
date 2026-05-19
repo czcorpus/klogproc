@@ -32,11 +32,11 @@ import (
 	"time"
 
 	"klogproc/fsop"
-	"klogproc/load"
 	"klogproc/load/alarm"
-	"klogproc/servicelog"
 
 	"github.com/czcorpus/cnc-gokit/fs"
+	"github.com/czcorpus/klogproc-core/logbuffer"
+	"github.com/czcorpus/klogproc-core/storage"
 	"github.com/rs/zerolog/log"
 )
 
@@ -48,13 +48,13 @@ var (
 // Conf represents a configuration for a single batch task. Currently it is not
 // possible to have configured multiple tasks in a single file. (TODO)
 type Conf struct {
-	SrcPath                string           `json:"srcPath"`
-	PartiallyMatchingFiles bool             `json:"partiallyMatchingFiles"`
-	WorklogPath            string           `json:"worklogPath"`
-	LogBufferStateDir      string           `json:"logBufferStateDir"`
-	AppType                string           `json:"appType"`
-	Buffer                 *load.BufferConf `json:"buffer"`
-	ScriptPath             string           `json:"scriptPath"`
+	SrcPath                string                `json:"srcPath"`
+	PartiallyMatchingFiles bool                  `json:"partiallyMatchingFiles"`
+	WorklogPath            string                `json:"worklogPath"`
+	LogBufferStateDir      string                `json:"logBufferStateDir"`
+	AppType                string                `json:"appType"`
+	Buffer                 *logbuffer.BufferConf `json:"buffer"`
+	ScriptPath             string                `json:"scriptPath"`
 
 	// Version represents a major and minor version signature as used in semantic versioning
 	// (e.g. 0.15, 1.2)
@@ -72,7 +72,7 @@ func (c *Conf) GetVersion() string {
 	return c.Version
 }
 
-func (c *Conf) GetBuffer() *load.BufferConf {
+func (c *Conf) GetBuffer() *logbuffer.BufferConf {
 	return c.Buffer
 }
 
@@ -110,7 +110,7 @@ func importTimeRangeEntry(v string) (time.Time, error) {
 		}
 		return time.Unix(int64(vc), 0), nil
 	}
-	t := servicelog.ConvertDatetimeString(v)
+	t := storage.ConvertDatetimeString(v)
 	if t.IsZero() {
 		return t, fmt.Errorf("unrecognized time format. Must be either a numeric UNIX timestamp or YYYY-MM-DDTHH:mm:ss\u00B1hh:mm")
 	}
@@ -210,7 +210,7 @@ func getFilesInDir(dirPath string, minTimestamp int64, strictMatch bool, tzShift
 
 // logItemProcessor is an object handling a specific log file with a specific format
 type logItemProcessor interface {
-	ProcItem(logRec servicelog.InputRecord) []servicelog.OutputRecord
+	ProcItem(logRec storage.InputRecord) []storage.OutputRecord
 	GetAppType() string
 	GetAppVersion() string
 }
@@ -224,7 +224,7 @@ func CreateLogFileProcFunc(
 	ctx context.Context,
 	processor logItemProcessor,
 	datetimeRange DatetimeRange,
-	destChans ...chan *servicelog.BoundOutputRecord,
+	destChans ...chan *storage.BoundOutputRecord,
 ) LogFileProcFunc {
 	return func(conf *Conf, minTimestamp int64) {
 		defer func() {
@@ -240,7 +240,7 @@ func CreateLogFileProcFunc(
 			files = []string{conf.SrcPath}
 		}
 		log.Info().Msgf("Found %d file(s) to process in %s", len(files), conf.SrcPath)
-		var procAlarm servicelog.AppErrorRegister
+		var procAlarm storage.AppErrorRegister
 		if conf.NumErrorsAlarm > 0 {
 			procAlarm = &alarm.BatchProcAlarm{}
 

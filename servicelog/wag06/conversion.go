@@ -17,10 +17,10 @@
 package wag06
 
 import (
-	"klogproc/servicelog"
 	"net/url"
-	"time"
 
+	"github.com/czcorpus/klogproc-core/storage"
+	wag06Core "github.com/czcorpus/klogproc-core/storage/wag06"
 	"github.com/rs/zerolog/log"
 )
 
@@ -42,21 +42,19 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeWag
+	return storage.AppTypeWag
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
-	r := &OutputRecord{
+	r := &wag06Core.OutputRecord{
 		Type:                t.AppType(),
-		time:                tLogRecord.GetTime(),
-		Datetime:            tLogRecord.GetTime().Format(time.RFC3339),
 		IPAddress:           tLogRecord.Request.RemoteAddr,
 		UserAgent:           tLogRecord.Request.HTTPUserAgent,
 		ReferringDomain:     domainFromURL(tLogRecord.Request.Referer),
@@ -71,6 +69,7 @@ func (t *Transformer) Transform(
 		Action:              tLogRecord.Action,
 		ProcTime:            tLogRecord.ProcTime,
 	}
+	r.SetTime(tLogRecord.GetTime())
 	r.ID = r.GenerateDeterministicID()
 	return r, nil
 }
@@ -80,7 +79,7 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
-	return []servicelog.InputRecord{rec}, nil
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
+	return []storage.InputRecord{rec}, nil
 }

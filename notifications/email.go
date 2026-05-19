@@ -30,13 +30,6 @@ const (
 	defaultSender = "klogproc@localhost"
 )
 
-// Notifier is a general type representing a service
-// for sending warnings to administrators
-// (typically when a suspicious activity is detected from processed logs)
-type Notifier interface {
-	SendNotification(tag, subject string, metadata map[string]any, paragraphs ...string) error
-}
-
 // defaultEmailNotifier provides basic e-mail notification
 // as used by other parts of klogproc (e.g. sending alarm info).
 // It should be instantiated via NewEmailNotifier.

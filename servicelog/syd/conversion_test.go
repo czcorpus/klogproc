@@ -19,6 +19,7 @@ package syd
 import (
 	"testing"
 
+	sydCore "github.com/czcorpus/klogproc-core/storage/syd"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +30,7 @@ func TestTransformDia(t *testing.T) {
 		Ltool:  "D",
 	}
 	outRec, err := tmr.Transform(rec)
-	tOutRec, ok := outRec.(*OutputRecord)
+	tOutRec, ok := outRec.(*sydCore.OutputRecord)
 	assert.True(t, ok)
 	assert.Nil(t, err)
 	assert.Contains(t, tOutRec.Corpus, "diakon")
@@ -43,7 +44,7 @@ func TestTransformSync(t *testing.T) {
 		Ltool:  "S",
 	}
 	outRec, err := tmr.Transform(rec)
-	tOutRec, ok := outRec.(*OutputRecord)
+	tOutRec, ok := outRec.(*sydCore.OutputRecord)
 	assert.True(t, ok)
 	assert.Nil(t, err)
 	assert.Contains(t, tOutRec.Corpus, "syn2010")
@@ -59,7 +60,7 @@ func TestAcceptsDashAsUserID(t *testing.T) {
 	}
 	outRec, err := tmr.Transform(rec)
 	assert.Nil(t, err)
-	tOutRec, ok := outRec.(*OutputRecord)
+	tOutRec, ok := outRec.(*sydCore.OutputRecord)
 	assert.True(t, ok)
 	assert.Nil(t, tOutRec.UserID)
 }
@@ -72,7 +73,7 @@ func TestAnonymousUserDetection(t *testing.T) {
 	}
 	outRec, err := tmr.Transform(rec)
 	assert.Nil(t, err)
-	tOutRec, ok := outRec.(*OutputRecord)
+	tOutRec, ok := outRec.(*sydCore.OutputRecord)
 	assert.True(t, ok)
 	assert.True(t, tOutRec.IsAnonymous)
 
@@ -81,7 +82,7 @@ func TestAnonymousUserDetection(t *testing.T) {
 	}
 	outRec, err = tmr.Transform(rec)
 	assert.Nil(t, err)
-	tOutRec, ok = outRec.(*OutputRecord)
+	tOutRec, ok = outRec.(*sydCore.OutputRecord)
 	assert.True(t, ok)
 	assert.False(t, tOutRec.IsAnonymous)
 }

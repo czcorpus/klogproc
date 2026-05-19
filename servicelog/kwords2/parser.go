@@ -19,7 +19,8 @@ package kwords2
 import (
 	"encoding/json"
 	"fmt"
-	"klogproc/servicelog"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 type LineParser struct {
@@ -29,7 +30,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 	var record InputRecord
 	err := json.Unmarshal([]byte(s), &record)
 	if err != nil {
-		return nil, servicelog.NewStreamedLineParsingError(
+		return nil, storage.NewStreamedLineParsingError(
 			s, fmt.Sprintf("json Unmarshal error [kwords2]: %s", err))
 	}
 	return &record, nil

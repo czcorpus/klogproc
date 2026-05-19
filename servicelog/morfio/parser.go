@@ -18,8 +18,9 @@ package morfio
 
 import (
 	"fmt"
-	"klogproc/servicelog"
 	"strings"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 // LineParser is a parser for reading Morfio application log
@@ -54,6 +55,6 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 			CaseInsensitive: items[11],
 		}, err
 	}
-	return nil, servicelog.NewLineParsingError(
+	return nil, storage.NewLineParsingError(
 		lineNum, fmt.Sprintf("Invalid line format for Morfio. Expecting 12 tab-separated items, found %d", len(items)))
 }

@@ -18,8 +18,9 @@ package kwords
 
 import (
 	"fmt"
-	"klogproc/servicelog"
 	"strings"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 /*
@@ -58,7 +59,7 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 			CaseInsensitive: items[12],
 		}, err
 	}
-	return nil, servicelog.NewLineParsingError(
+	return nil, storage.NewLineParsingError(
 		lineNum,
 		fmt.Sprintf("Invalid line format for KWords. Expecting 13 tab-separated items, found %d", len(items)),
 	)

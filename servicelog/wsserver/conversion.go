@@ -17,8 +17,10 @@
 package wsserver
 
 import (
-	"klogproc/servicelog"
 	"strings"
+
+	"github.com/czcorpus/klogproc-core/storage"
+	wsserverCore "github.com/czcorpus/klogproc-core/storage/wsserver"
 )
 
 func cleanIPInfo(ip string) string {
@@ -30,29 +32,28 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeWsserver
+	return storage.AppTypeWsserver
 }
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
-	ans := &OutputRecord{
+	ans := &wsserverCore.OutputRecord{
 		Action:    tLogRecord.Action,
 		Corpus:    tLogRecord.Corpus,
 		Model:     tLogRecord.Model,
-		time:      tLogRecord.GetTime(),
 		ProcTime:  tLogRecord.ProcTime,
 		IsQuery:   true,
 		IPAddress: cleanIPInfo(tLogRecord.IPAddress),
 		UserAgent: tLogRecord.HTTPUserAgent,
 		UserID:    "-1",
 	}
-
+	ans.SetTime(tLogRecord.GetTime())
 	ans.ID = ans.GenerateDeterministicID()
 	return ans, nil
 }
@@ -62,7 +63,7 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
-	return []servicelog.InputRecord{rec}, nil
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
+	return []storage.InputRecord{rec}, nil
 }

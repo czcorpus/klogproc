@@ -18,11 +18,11 @@ package treqapi
 
 import (
 	"fmt"
-	"klogproc/scripting"
-	"klogproc/servicelog"
-	"klogproc/servicelog/treq"
 	"strconv"
 
+	"github.com/czcorpus/klogproc-core/scripting"
+	"github.com/czcorpus/klogproc-core/storage"
+	treqCore "github.com/czcorpus/klogproc-core/storage/treq"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -32,15 +32,15 @@ type Transformer struct {
 }
 
 func (t *Transformer) AppType() string {
-	return servicelog.AppTypeTreq
+	return storage.AppTypeTreq
 }
 
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
 
 	userID := -1
@@ -54,7 +54,7 @@ func (t *Transformer) Transform(
 		}
 	}
 
-	out := &treq.OutputRecord{
+	out := &treqCore.OutputRecord{
 		Type:        "treq",
 		IsAPI:       true,
 		IsQuery:     true,
@@ -62,7 +62,7 @@ func (t *Transformer) Transform(
 		SecondLang:  tLogRecord.To,
 		IPAddress:   tLogRecord.IP,
 		UserID:      tLogRecord.UserID,
-		IsAnonymous: userID == -1 || servicelog.UserBelongsToList(userID, t.AnonymousUsers),
+		IsAnonymous: userID == -1 || storage.UserBelongsToList(userID, t.AnonymousUsers),
 		IsRegexp:    tLogRecord.Regex,
 		IsCaseInsen: tLogRecord.CI,
 		IsMultiWord: tLogRecord.Multiword,
@@ -78,7 +78,7 @@ func (t *Transformer) Transform(
 	return out, nil
 }
 
-func (t *Transformer) SetOutputProperty(rec servicelog.OutputRecord, name string, value lua.LValue) error {
+func (t *Transformer) SetOutputProperty(rec storage.OutputRecord, name string, value lua.LValue) error {
 	return scripting.ErrScriptingNotSupported
 }
 
@@ -87,7 +87,7 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
-	return []servicelog.InputRecord{rec}, nil
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
+	return []storage.InputRecord{rec}, nil
 }

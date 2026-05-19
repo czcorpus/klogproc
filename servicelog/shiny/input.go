@@ -17,9 +17,10 @@
 package shiny
 
 import (
-	"klogproc/servicelog"
 	"net"
 	"time"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 type User struct {
@@ -41,9 +42,9 @@ type InputRecord struct {
 // GetTime returns a normalized log date and time information
 func (r *InputRecord) GetTime() time.Time {
 	if r.TS[len(r.TS)-1] == 'Z' { // UTC time
-		return servicelog.ConvertDatetimeStringNoTZ(r.TS[:len(r.TS)-1])
+		return storage.ConvertDatetimeStringNoTZ(r.TS[:len(r.TS)-1])
 	}
-	return servicelog.ConvertDatetimeString(r.TS)
+	return storage.ConvertDatetimeString(r.TS)
 }
 
 // GetClientIP returns a normalized IP address info
@@ -52,7 +53,7 @@ func (r *InputRecord) GetClientIP() net.IP {
 }
 
 func (rec *InputRecord) ClusteringClientID() string {
-	return servicelog.GenerateRandomClusteringID()
+	return storage.GenerateRandomClusteringID()
 }
 
 func (rec *InputRecord) ClusterSize() int {

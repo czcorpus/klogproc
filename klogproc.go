@@ -34,7 +34,8 @@ import (
 	"klogproc/config"
 	"klogproc/load/batch"
 	"klogproc/notifications"
-	"klogproc/save/elastic"
+
+	"github.com/czcorpus/klogproc-core/save/elastic"
 )
 
 const (

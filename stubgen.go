@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"klogproc/servicelog"
 	"klogproc/servicelog/apiguard"
 	"klogproc/servicelog/kontext013"
 	"klogproc/servicelog/kontext015"
@@ -28,6 +27,29 @@ import (
 	"klogproc/servicelog/wsserver"
 	"reflect"
 	"text/template"
+
+	apiguardCore "github.com/czcorpus/klogproc-core/storage/apiguard"
+	k013Core "github.com/czcorpus/klogproc-core/storage/kontext013"
+	k015Core "github.com/czcorpus/klogproc-core/storage/kontext015"
+	kdbCore "github.com/czcorpus/klogproc-core/storage/korpusdb"
+	kwordsCore "github.com/czcorpus/klogproc-core/storage/kwords"
+	kwords2Core "github.com/czcorpus/klogproc-core/storage/kwords2"
+	mapkaCore "github.com/czcorpus/klogproc-core/storage/mapka"
+	mapka2Core "github.com/czcorpus/klogproc-core/storage/mapka2"
+	mapka3Core "github.com/czcorpus/klogproc-core/storage/mapka3"
+	masmCore "github.com/czcorpus/klogproc-core/storage/masm"
+	morfioCore "github.com/czcorpus/klogproc-core/storage/morfio"
+	mqueryCore "github.com/czcorpus/klogproc-core/storage/mquery"
+	mquerySRUCore "github.com/czcorpus/klogproc-core/storage/mquerysru"
+	shinyCore "github.com/czcorpus/klogproc-core/storage/shiny"
+	skeCore "github.com/czcorpus/klogproc-core/storage/ske"
+	sydCore "github.com/czcorpus/klogproc-core/storage/syd"
+	treqCore "github.com/czcorpus/klogproc-core/storage/treq"
+	vloCore "github.com/czcorpus/klogproc-core/storage/vlo"
+	wag06Core "github.com/czcorpus/klogproc-core/storage/wag06"
+	wsserverCore "github.com/czcorpus/klogproc-core/storage/wsserver"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 type FieldInfo struct {
@@ -114,7 +136,7 @@ func analyzeStruct(t reflect.Type, indent string) []FieldInfo {
 	return fields
 }
 
-func generateLuaStubForType(inputRec servicelog.InputRecord, outputRec servicelog.OutputRecord) (string, error) {
+func generateLuaStubForType(inputRec storage.InputRecord, outputRec storage.OutputRecord) (string, error) {
 	t1 := reflect.TypeOf(inputRec)
 	if t1.Kind() == reflect.Ptr {
 		t1 = t1.Elem()
@@ -244,83 +266,83 @@ func generateLuaStub(appType, version string) error {
 	var src string
 	var err error
 	switch appType {
-	case servicelog.AppTypeAkalex:
-		src, err = generateLuaStubForType(&shiny.InputRecord{}, &shiny.OutputRecord{})
-	case servicelog.AppTypeAPIGuard:
-		src, err = generateLuaStubForType(&apiguard.InputRecord{}, &apiguard.OutputRecord{})
-	case servicelog.AppTypeCalc:
-		src, err = generateLuaStubForType(&shiny.InputRecord{}, &shiny.OutputRecord{})
-	case servicelog.AppTypeGramatikat:
-		src, err = generateLuaStubForType(&shiny.InputRecord{}, &shiny.OutputRecord{})
-	case servicelog.AppTypeKontext:
+	case storage.AppTypeAkalex:
+		src, err = generateLuaStubForType(&shiny.InputRecord{}, &shinyCore.OutputRecord{})
+	case storage.AppTypeAPIGuard:
+		src, err = generateLuaStubForType(&apiguard.InputRecord{}, &apiguardCore.OutputRecord{})
+	case storage.AppTypeCalc:
+		src, err = generateLuaStubForType(&shiny.InputRecord{}, &shinyCore.OutputRecord{})
+	case storage.AppTypeGramatikat:
+		src, err = generateLuaStubForType(&shiny.InputRecord{}, &shinyCore.OutputRecord{})
+	case storage.AppTypeKontext:
 		switch version {
-		case servicelog.AppVersionKontext013,
-			servicelog.AppVersionKontext014:
-			src, err = generateLuaStubForType(&kontext013.InputRecord{}, &kontext013.OutputRecord{})
-		case servicelog.AppVersionKontext015,
-			servicelog.AppVersionKontext016,
-			servicelog.AppVersionKontext017,
-			servicelog.AppVersionKontext017API,
-			servicelog.AppVersionKontext018:
-			src, err = generateLuaStubForType(&kontext015.InputRecord{}, &kontext015.OutputRecord{})
+		case storage.AppVersionKontext013,
+			storage.AppVersionKontext014:
+			src, err = generateLuaStubForType(&kontext013.InputRecord{}, &k013Core.OutputRecord{})
+		case storage.AppVersionKontext015,
+			storage.AppVersionKontext016,
+			storage.AppVersionKontext017,
+			storage.AppVersionKontext017API,
+			storage.AppVersionKontext018:
+			src, err = generateLuaStubForType(&kontext015.InputRecord{}, &k015Core.OutputRecord{})
 		case "018":
-			src, err = generateLuaStubForType(&kontext018.InputRecord{}, &kontext015.OutputRecord{})
+			src, err = generateLuaStubForType(&kontext018.InputRecord{}, &k015Core.OutputRecord{})
 		default:
 			return fmt.Errorf("failed to create Lua script stub for 'kontext': unknown version '%s'", version)
 		}
-	case servicelog.AppTypeKorpusDB:
-		src, err = generateLuaStubForType(&korpusdb.InputRecord{}, &korpusdb.OutputRecord{})
-	case servicelog.AppTypeKwords:
+	case storage.AppTypeKorpusDB:
+		src, err = generateLuaStubForType(&korpusdb.InputRecord{}, &kdbCore.OutputRecord{})
+	case storage.AppTypeKwords:
 		switch version {
 		case "1":
-			src, err = generateLuaStubForType(&kwords.InputRecord{}, &kwords.OutputRecord{})
+			src, err = generateLuaStubForType(&kwords.InputRecord{}, &kwordsCore.OutputRecord{})
 		case "2":
-			src, err = generateLuaStubForType(&kwords2.InputRecord{}, &kwords2.OutputRecord{})
+			src, err = generateLuaStubForType(&kwords2.InputRecord{}, &kwords2Core.OutputRecord{})
 		default:
 			return fmt.Errorf("failed to create Lua script stub for 'kwords': unknown version '%s'", version)
 		}
-	case servicelog.AppTypeLists:
-		src, err = generateLuaStubForType(&shiny.InputRecord{}, &shiny.OutputRecord{})
-	case servicelog.AppTypeMapka:
+	case storage.AppTypeLists:
+		src, err = generateLuaStubForType(&shiny.InputRecord{}, &shinyCore.OutputRecord{})
+	case storage.AppTypeMapka:
 		switch version {
 		case "1":
-			src, err = generateLuaStubForType(&mapka.InputRecord{}, &mapka.OutputRecord{})
+			src, err = generateLuaStubForType(&mapka.InputRecord{}, &mapkaCore.OutputRecord{})
 		case "2":
-			src, err = generateLuaStubForType(&mapka2.InputRecord{}, &mapka2.OutputRecord{})
+			src, err = generateLuaStubForType(&mapka2.InputRecord{}, &mapka2Core.OutputRecord{})
 		case "3":
-			src, err = generateLuaStubForType(&mapka3.InputRecord{}, &mapka3.OutputRecord{})
+			src, err = generateLuaStubForType(&mapka3.InputRecord{}, &mapka3Core.OutputRecord{})
 		default:
 			return fmt.Errorf("failed to create Lua script stub for 'mapka': unknown version '%s'", version)
 		}
-	case servicelog.AppTypeMorfio:
-		src, err = generateLuaStubForType(&morfio.InputRecord{}, &morfio.OutputRecord{})
-	case servicelog.AppTypeQuitaUp:
-		src, err = generateLuaStubForType(&shiny.InputRecord{}, &shiny.OutputRecord{})
-	case servicelog.AppTypeSke:
-		src, err = generateLuaStubForType(&ske.InputRecord{}, &ske.OutputRecord{})
-	case servicelog.AppTypeSyd:
-		src, err = generateLuaStubForType(&syd.InputRecord{}, &syd.OutputRecord{})
-	case servicelog.AppTypeTreq:
-		src, err = generateLuaStubForType(&treq.InputRecord{}, &treq.OutputRecord{})
-	case servicelog.AppTypeWag:
+	case storage.AppTypeMorfio:
+		src, err = generateLuaStubForType(&morfio.InputRecord{}, &morfioCore.OutputRecord{})
+	case storage.AppTypeQuitaUp:
+		src, err = generateLuaStubForType(&shiny.InputRecord{}, &shinyCore.OutputRecord{})
+	case storage.AppTypeSke:
+		src, err = generateLuaStubForType(&ske.InputRecord{}, &skeCore.OutputRecord{})
+	case storage.AppTypeSyd:
+		src, err = generateLuaStubForType(&syd.InputRecord{}, &sydCore.OutputRecord{})
+	case storage.AppTypeTreq:
+		src, err = generateLuaStubForType(&treq.InputRecord{}, &treqCore.OutputRecord{})
+	case storage.AppTypeWag:
 		switch version {
 		case "0.6":
-			src, err = generateLuaStubForType(&wag06.InputRecord{}, &wag06.OutputRecord{})
+			src, err = generateLuaStubForType(&wag06.InputRecord{}, &wag06Core.OutputRecord{})
 		case "0.7":
-			src, err = generateLuaStubForType(&wag07.InputRecord{}, &wag06.OutputRecord{})
+			src, err = generateLuaStubForType(&wag07.InputRecord{}, &wag06Core.OutputRecord{})
 		default:
 			return fmt.Errorf("failed to create Lua script stub for 'wag': unknown version '%s'", version)
 		}
-	case servicelog.AppTypeWsserver:
-		src, err = generateLuaStubForType(&wsserver.InputRecord{}, &wsserver.OutputRecord{})
-	case servicelog.AppTypeMasm:
-		src, err = generateLuaStubForType(&masm.InputRecord{}, &masm.OutputRecord{})
-	case servicelog.AppTypeMquery:
-		src, err = generateLuaStubForType(&mquery.InputRecord{}, &mquery.OutputRecord{})
-	case servicelog.AppTypeMquerySRU:
-		src, err = generateLuaStubForType(&mquerysru.InputRecord{}, &mquerysru.OutputRecord{})
-	case servicelog.AppTypeVLO:
-		src, err = generateLuaStubForType(&vlo.InputRecord{}, &vlo.OutputRecord{})
+	case storage.AppTypeWsserver:
+		src, err = generateLuaStubForType(&wsserver.InputRecord{}, &wsserverCore.OutputRecord{})
+	case storage.AppTypeMasm:
+		src, err = generateLuaStubForType(&masm.InputRecord{}, &masmCore.OutputRecord{})
+	case storage.AppTypeMquery:
+		src, err = generateLuaStubForType(&mquery.InputRecord{}, &mqueryCore.OutputRecord{})
+	case storage.AppTypeMquerySRU:
+		src, err = generateLuaStubForType(&mquerysru.InputRecord{}, &mquerySRUCore.OutputRecord{})
+	case storage.AppTypeVLO:
+		src, err = generateLuaStubForType(&vlo.InputRecord{}, &vloCore.OutputRecord{})
 	default:
 		return fmt.Errorf("failed to create Lua script stub: unknown application '%s'", version)
 	}

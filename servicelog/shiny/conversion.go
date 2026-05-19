@@ -18,9 +18,9 @@ package shiny
 
 import (
 	"strconv"
-	"time"
 
-	"klogproc/servicelog"
+	"github.com/czcorpus/klogproc-core/storage"
+	shinyCore "github.com/czcorpus/klogproc-core/storage/shiny"
 )
 
 // Transformer converts a source log object into a destination one
@@ -35,28 +35,27 @@ func (t *Transformer) AppType() string {
 
 // Transform creates a new OutputRecord out of an existing InputRecord
 func (t *Transformer) Transform(
-	logRecord servicelog.InputRecord,
-) (servicelog.OutputRecord, error) {
+	logRecord storage.InputRecord,
+) (storage.OutputRecord, error) {
 	tLogRecord, ok := logRecord.(*InputRecord)
 	if !ok {
-		panic(servicelog.ErrFailedTypeAssertion)
+		panic(storage.ErrFailedTypeAssertion)
 	}
 	userID := tLogRecord.User.ID
 	if userID == 0 && len(t.anonymousUsers) > 0 {
 		userID = t.anonymousUsers[0]
 	}
-	ans := &OutputRecord{
+	ans := &shinyCore.OutputRecord{
 		Type:        t.AppType(),
-		time:        tLogRecord.GetTime(),
-		Datetime:    tLogRecord.GetTime().Format(time.RFC3339),
 		IsQuery:     true,
 		IPAddress:   tLogRecord.ClientIP,
 		User:        tLogRecord.User.User,
 		UserID:      strconv.Itoa(userID),
-		IsAnonymous: servicelog.UserBelongsToList(userID, t.anonymousUsers),
+		IsAnonymous: storage.UserBelongsToList(userID, t.anonymousUsers),
 		Lang:        tLogRecord.Lang,
 		UserAgent:   tLogRecord.UserAgent,
 	}
+	ans.SetTime(tLogRecord.GetTime())
 	ans.ID = ans.GenerateDeterministicID()
 	return ans, nil
 }
@@ -66,18 +65,18 @@ func (t *Transformer) HistoryLookupItems() int {
 }
 
 func (t *Transformer) Preprocess(
-	rec servicelog.InputRecord, prevRecs servicelog.ServiceLogBuffer,
-) ([]servicelog.InputRecord, error) {
-	return []servicelog.InputRecord{rec}, nil
+	rec storage.InputRecord, prevRecs storage.ServiceLogBuffer,
+) ([]storage.InputRecord, error) {
+	return []storage.InputRecord{rec}, nil
 }
 
 func NewTransformer(
 	appType string,
 	anonymousUsers []int,
 ) *Transformer {
-	if appType != servicelog.AppTypeAkalex && appType != servicelog.AppTypeCalc &&
-		appType != servicelog.AppTypeGramatikat && appType != servicelog.AppTypeQuitaUp &&
-		appType != servicelog.AppTypeLists {
+	if appType != storage.AppTypeAkalex && appType != storage.AppTypeCalc &&
+		appType != storage.AppTypeGramatikat && appType != storage.AppTypeQuitaUp &&
+		appType != storage.AppTypeLists {
 		panic("invalid application type for a Shiny transformer")
 	}
 	return &Transformer{

@@ -17,9 +17,10 @@
 package treqapi
 
 import (
-	"klogproc/servicelog"
 	"net"
 	"time"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 /*
@@ -47,7 +48,7 @@ type InputRecord struct {
 }
 
 func (rec *InputRecord) GetTime() time.Time {
-	return servicelog.ConvertDatetimeString(rec.Time)
+	return storage.ConvertDatetimeString(rec.Time)
 }
 
 func (rec *InputRecord) GetClientIP() net.IP {
@@ -55,7 +56,7 @@ func (rec *InputRecord) GetClientIP() net.IP {
 }
 
 func (rec *InputRecord) ClusteringClientID() string {
-	return servicelog.GenerateRandomClusteringID()
+	return storage.GenerateRandomClusteringID()
 }
 
 func (rec *InputRecord) ClusterSize() int {

@@ -18,12 +18,13 @@ package vlo
 
 import (
 	"encoding/json"
-	"klogproc/servicelog"
+
+	"github.com/czcorpus/klogproc-core/storage"
 )
 
 // LineParser is a parser for reading KonText application logs
 type LineParser struct {
-	appErrorRegister servicelog.AppErrorRegister
+	appErrorRegister storage.AppErrorRegister
 }
 
 // ParseLine parses a query log line - i.e. it expects
@@ -38,6 +39,6 @@ func (lp *LineParser) ParseLine(s string, lineNum int64) (*InputRecord, error) {
 }
 
 // NewLineParser is a factory for LineParser
-func NewLineParser(appErrRegister servicelog.AppErrorRegister) *LineParser {
+func NewLineParser(appErrRegister storage.AppErrorRegister) *LineParser {
 	return &LineParser{appErrorRegister: appErrRegister}
 }
