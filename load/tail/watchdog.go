@@ -267,7 +267,7 @@ func GoRun(
 			if _, err := sum.Write([]byte(v.Path)); err != nil {
 				log.Error().Err(err).Send()
 				errChan <- err
-				break
+				return
 			}
 		}
 		worklog := NewWorklog(conf.WorklogDir, hex.EncodeToString(sum.Sum(nil)[:8]))

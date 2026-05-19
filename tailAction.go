@@ -365,8 +365,6 @@ func runTailAction(
 	)
 
 	tailProcessors := make([]tail.FileTailProcessor, len(conf.LogTail.Files))
-	var wg sync.WaitGroup
-	wg.Add(len(conf.LogTail.Files))
 
 	logBuffers := make(map[string]storage.ServiceLogBuffer)
 	fullFiles, err := conf.LogTail.FullFiles()
@@ -378,9 +376,6 @@ func runTailAction(
 		tailProcessors[i] = newTailProcessor(
 			ctx, &f, *conf, geoDB, logBuffers, options, hlthChecker, notifier)
 	}
-	go func() {
-		wg.Wait()
-	}()
 
 	errChan := tail.GoRun(ctx, conf.LogTail, tailProcessors, options.worklogReset)
 	err = <-errChan
