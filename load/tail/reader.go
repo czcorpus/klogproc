@@ -78,17 +78,21 @@ func (ftw *FileTailReader) ApplyNewContent(
 		ftw.internalSeek = prevPosition.SeekStart
 		log.Warn().Msgf("FileTailReader(%s) updated internalSeek position to %d due to unsaved last record", ftw.filePath, prevPosition.SeekStart)
 
-	} else if ftw.internalSeek != prevPosition.SeekEnd {
-		// some external action has changed processed position (typically in case of a write error)
-		if ftw.internalSeek == -1 {
-			ftw.file.Close()
-			ftw.file, err = os.Open(ftw.processor.FilePath())
-			if err != nil {
-				return err
-			}
+	} else if ftw.internalSeek != prevPosition.SeekEnd && ftw.internalSeek == -1 {
+		ftw.file.Close()
+		ftw.file, err = os.Open(ftw.processor.FilePath())
+		if err != nil {
+			return err
 		}
 		ftw.internalSeek = prevPosition.SeekEnd
-		log.Warn().Msgf("FileTailReader[%s] updated internalSeek position to %d due to updated position status", ftw.filePath, ftw.internalSeek)
+		log.Warn().
+			Msgf("FileTailReader[%s] set uninitialized internalSeek position to %d", ftw.filePath, ftw.internalSeek)
+
+	} else if ftw.internalSeek > prevPosition.SeekEnd {
+		log.Warn().
+			Int64("internalSeek", ftw.internalSeek).
+			Int64("SeekEnd", prevPosition.SeekEnd).
+			Msgf("FileTailReader[%s] ahead of confirms - skipping this round", ftw.filePath)
 	}
 	// always make sure the current position is OK (it can be off e.g. thanks
 	// to using the buffered reader)
