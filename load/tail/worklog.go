@@ -41,6 +41,7 @@ const (
 type updateRequest struct {
 	FilePath string
 	Value    storage.LogRange
+	done     chan struct{}
 }
 
 // WorklogRecord provides log reading position info for all configured apps
@@ -53,6 +54,7 @@ type WorklogRecord = map[string]storage.LogRange
 // situation (e.g. ignored lines are confirmed sooner that the ones
 // send to Elastic).
 type Worklog struct {
+	ctx            context.Context
 	rec            *collections.ConcurrentMap[string, storage.LogRange]
 	updRequests    chan updateRequest
 	storeFilePath  string
@@ -90,6 +92,7 @@ func (w *Worklog) Init(ctx context.Context) error {
 			}
 		}
 	}
+	w.ctx = ctx
 	w.updRequests = make(chan updateRequest)
 	w.initialized = true
 	w.goAutosave(ctx)
@@ -161,6 +164,9 @@ func (w *Worklog) goReadRequests(ctx context.Context) {
 					!req.Value.Written && (curr.Written || req.Value.SeekEnd < curr.SeekEnd) {
 					w.rec.Set(req.FilePath, req.Value)
 				}
+				if req.done != nil {
+					close(req.done)
+				}
 			case <-ctx.Done():
 				log.Warn().Msg("worklog stopping to listen for updates due to cancellation")
 				return
@@ -220,13 +226,31 @@ func (w *Worklog) save() error {
 	return nil
 }
 
+// sendUpdate hands req off to goReadRequests and blocks until the update
+// has actually been applied to w.rec (or the worklog is shutting down).
+// This matters because callers rely on a subsequent GetData() reflecting
+// the update - without waiting here there'd be a window where the update
+// was merely queued, letting a concurrent GetData() see a stale record.
+func (w *Worklog) sendUpdate(req updateRequest) {
+	req.done = make(chan struct{})
+	select {
+	case w.updRequests <- req:
+	case <-w.ctx.Done():
+		return
+	}
+	select {
+	case <-req.done:
+	case <-w.ctx.Done():
+	}
+}
+
 // UpdateFileInfo adds individual app reading position info. Please
 // note that this does not save the worklog.
 func (w *Worklog) UpdateFileInfo(filePath string, logPosition storage.LogRange) {
-	w.updRequests <- updateRequest{
+	w.sendUpdate(updateRequest{
 		FilePath: filePath,
 		Value:    logPosition,
-	}
+	})
 }
 
 // ResetFile sets a zero seek and line for a new or an existing file.
@@ -236,7 +260,7 @@ func (w *Worklog) ResetFile(filePath string) (int64, error) {
 	if err != nil {
 		return -1, err
 	}
-	w.updRequests <- updateRequest{
+	w.sendUpdate(updateRequest{
 		FilePath: filePath,
 		Value: storage.LogRange{
 			Inode:     inode,
@@ -244,7 +268,7 @@ func (w *Worklog) ResetFile(filePath string) (int64, error) {
 			SeekEnd:   0,
 			Written:   true, // otherwise update request won't be accepted
 		},
-	}
+	})
 	return inode, nil
 }
 
