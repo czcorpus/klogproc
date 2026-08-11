@@ -20,6 +20,7 @@ import (
 	"net"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/czcorpus/klogproc-core/storage"
 )
@@ -89,7 +90,7 @@ type Headers map[string]string
 
 func (h Headers) getHeader(name string) string {
 	for k, v := range h {
-		if strings.ToLower(k) == strings.ToLower(name) {
+		if strings.EqualFold(k, name) {
 			return v
 		}
 	}
@@ -167,10 +168,17 @@ func (rec *InputRecord) IsSuspicious() bool {
 	return false
 }
 
+const exportErrorMaxLen = 100
+
 func (rec *InputRecord) ExportError() *storage.ErrorRecord {
 	if rec.Exception != "" {
+		name := rec.Exception
+		if utf8.RuneCountInString(name) > exportErrorMaxLen {
+			runes := []rune(name)
+			name = string(runes[:exportErrorMaxLen]) + "..."
+		}
 		return &storage.ErrorRecord{
-			Name: rec.Exception,
+			Name: name,
 		}
 	}
 	return nil
