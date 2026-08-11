@@ -1,10 +1,16 @@
+local UI_PREFIX = "kwords-ui"
+
 function preprocess (log_rec, buffer)
     return {log_rec}
 end
 
 function transform (input_rec)
     local out = transform_default(input_rec)
-    if input_rec.Headers["x-is-web-app"] == "1" or input_rec.Headers["x-is-web-app"] == "true" then
+    local client = input_rec.Headers["x-client"] or ""
+    if #client > 0 then
+        set_out_prop(out, "ClientFlag", client)
+    end
+    if client:sub(1, #UI_PREFIX) == UI_PREFIX then
         set_out_prop(out, "IsAPI", false)
     else
         set_out_prop(out, "IsAPI", true)
@@ -14,4 +20,3 @@ function transform (input_rec)
     end
     return out
 end
-
