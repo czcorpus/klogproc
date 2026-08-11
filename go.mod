@@ -1,11 +1,11 @@
 module klogproc
 
-go 1.25.5
+go 1.25.12
 
 require (
 	github.com/czcorpus/cnc-gokit v0.19.0
 	github.com/czcorpus/conomi v0.0.7
-	github.com/czcorpus/klogproc-core v1.6.2
+	github.com/czcorpus/klogproc-core v1.9.0
 	github.com/fatih/color v1.18.0
 	github.com/google/uuid v1.3.0
 	github.com/oschwald/geoip2-golang v1.8.0
@@ -43,10 +43,10 @@ require (
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	golang.org/x/arch v0.3.0 // indirect
-	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/crypto v0.54.0 // indirect
+	golang.org/x/net v0.57.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
